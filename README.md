@@ -7,6 +7,7 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.143-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black.svg)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791.svg)](https://www.postgresql.org/)
+[![Phase 2 Complete](https://img.shields.io/badge/Phase_2-Identity_%26_RBAC_%E2%9C%85-brightgreen.svg)](#phase-status)
 
 ---
 
@@ -41,7 +42,7 @@ SABTRACK is engineered as a **Modular Monolith** with a decoupled frontend:
 ```mermaid
 flowchart LR
     Resident[Resident / Admin Portal] -->|Next.js 16 App Router / Port 3000| Web[Frontend PWA]
-    Web -->|JSON REST API /api/v1 (HttpOnly)| API[FastAPI Backend / Port 8000]
+    Web -->|JSON REST API /api/v1 HttpOnly Cookie + CSRF| API[FastAPI Backend / Port 8000]
     API --> DB[(PostgreSQL 16)]
     API --> Store[(Private Object Storage)]
 ```
@@ -49,11 +50,24 @@ flowchart LR
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui tokens.
 - **Backend:** Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, psycopg 3.x.
 - **Database:** PostgreSQL 16 (Primary development and production database).
-- **Testing:** Pytest (Backend API tests), Vitest (React component tests).
+- **Security:** Argon2id password hashing, server-managed HttpOnly session cookies, CSRF double-submit protection.
+- **Testing:** Pytest (Backend API & RBAC tests), Vitest (React component tests).
 
 ---
 
-## 4. Local Quick Start (Windows)
+## 4. Phase Status
+
+| Phase | Description | Status | Commit |
+|---|---|---|---|
+| **Phase 1** | Foundation — FastAPI, PostgreSQL, Next.js, Health Check, Design System | ✅ Complete | `b5831f4` |
+| **Phase 2** | Identity, RBAC, Sessions, CSRF, Portal Navigation Shells | ✅ Complete | `098632c` |
+| **Phase 3** | Core Waste Operations — Reports, Schedules, Announcements, File Uploads | 🔄 Pending Approval | — |
+| **Phase 4** | SAB-Points Ledger, Analytics Dashboard, AI Integration | ⏳ Future | — |
+| **Phase 5** | Production Deployment, Hardening, Accessibility | ⏳ Future | — |
+
+---
+
+## 5. Local Quick Start (Windows)
 
 ### Prerequisites
 - Python 3.13+ installed
@@ -61,46 +75,71 @@ flowchart LR
 - Git installed
 - PostgreSQL 16 (See [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) for Windows installation instructions)
 
-### Launching Development Environment
-Launch both the backend and frontend simultaneously with:
+### Setup Steps
 ```cmd
+REM 1. Clone and enter the project
+cd C:\Users\jazzt\Projects\SABTRACK
+
+REM 2. Apply database migrations
+cd apps\api
+.\.venv\Scripts\python.exe -m alembic upgrade head
+cd ..\..
+
+REM 3. Seed demo accounts (development only)
+.\scripts\seed-users.bat
+
+REM 4. Launch both services
 .\scripts\dev.bat
 ```
 
-Or run services individually:
-- **FastAPI Backend:** `.\scripts\run-api.bat` $\rightarrow$ http://127.0.0.1:8000
-  - Interactive API Docs: http://127.0.0.1:8000/api/v1/docs
-  - Health Check: http://127.0.0.1:8000/api/v1/health
-- **Next.js Frontend:** `.\scripts\run-web.bat` $\rightarrow$ http://localhost:3000
+### Service URLs
+- **Frontend:** http://localhost:3000
+- **Backend API:** http://127.0.0.1:8000
+- **API Docs (Swagger):** http://127.0.0.1:8000/api/v1/docs
+- **Health Check:** http://127.0.0.1:8000/api/v1/health
+
+### Demo Login
+Navigate to `http://localhost:3000/login` and use the **Evaluation Demo Accounts** panel to test each role:
+
+| Role | Email |
+|---|---|
+| Resident | `resident.demo@sabtrack.local` |
+| Barangay Staff | `staff.demo@sabtrack.local` |
+| Barangay Admin | `admin.demo@sabtrack.local` |
+| System Maintainer | `maintainer.demo@sabtrack.local` |
+
+*(Password: `SabtrackDevPass2026!` — development demo only)*
 
 ---
 
-## 5. Running Automated Tests
+## 6. Running Automated Tests
 
 Run the full automated test suite:
 ```cmd
 .\scripts\run-tests.bat
 ```
 
-- **Backend tests:** `cd apps/api && .\.venv\Scripts\python.exe -m pytest tests -v`
-- **Frontend tests:** `cd apps/web && cmd.exe /c npm test`
-- **Frontend build:** `cd apps/web && cmd.exe /c npm run build`
+**Current test results (Phase 2):**
+- ✅ Backend Pytest: **14/14** (3 health + 11 auth/RBAC)
+- ✅ Frontend Vitest: **2/2**
+- ✅ Next.js build: **Clean** (zero TypeScript errors, 16 routes)
 
 ---
 
-## 6. Project Documentation & Governance
+## 7. Project Documentation & Governance
 
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System architecture, module boundaries, data rules, and analytics procedure.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — System architecture, session lifecycle, RBAC matrix, ER diagrams, and analytics procedure.
 - [docs/DECISION_LOG.md](docs/DECISION_LOG.md) — Living log of confirmed, proposed, and pending decisions.
-- [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) — Step-by-step Windows setup and PostgreSQL configuration runbook.
+- [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md) — Step-by-step Windows setup, PostgreSQL configuration, seeding, and demo login runbook.
 - [AGENTS.md](AGENTS.md) — Mandatory guidelines and guardrails for AI coding assistants.
 
 ---
 
-## 7. Research Ethics & Data Privacy
+## 8. Research Ethics & Data Privacy
 
 The project complies with the **Philippine Data Privacy Act of 2012 (RA 10173)**:
 - Complainant personal data is minimized and shielded from public access.
 - Image uploads are stored in an authenticated non-public directory with EXIF telemetry stripped.
 - Demonstration data in development is synthetic (`is_demo_data=True`).
+- Session tokens are stored as SHA-256 hashes only; never persisted in plaintext.
 - Official field operational rules and zoning boundaries are subject to ongoing barangay validation.

@@ -57,11 +57,21 @@ DATABASE_URL=postgresql+psycopg://postgres:your_password@localhost:5432/sabtrack
 ```
 
 ### Step 2.5: Apply Alembic Migrations
-Run the initial migration to create the configurable areas table:
+Run all migrations to set up the full schema (areas + identity):
 ```cmd
 cd apps\api
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
+This applies:
+- `0001_initial_areas.py` — Configurable barangay areas table
+- `0002_identity_and_sessions.py` — Users, sessions, security audit logs
+
+### Step 2.6: Seed Development Demo Accounts
+After migrations, create the 4 demo role accounts:
+```cmd
+.\scripts\seed-users.bat
+```
+See **Section 7** for demo account details and security warnings.
 
 ---
 
@@ -125,10 +135,96 @@ Or test each service independently:
   cd apps\web
   cmd.exe /c npm test
   ```
+- **Frontend Build Verification:**
+  ```cmd
+  cd apps\web
+  cmd.exe /c npm run build
+  ```
+
+### Phase 2 Test Coverage
+
+| Test Suite | File | Tests | Status |
+|---|---|---|---|
+| Backend Health | `tests/test_health.py` | 3 | ✅ Passing |
+| Backend Auth & RBAC | `tests/test_auth_rbac.py` | 11 | ✅ Passing |
+| Frontend Components | `tests/HealthDashboard.test.tsx` | 2 | ✅ Passing |
+| **Total** | | **16** | **✅ All Pass** |
 
 ---
 
-## 6. Docker Support (Future / Grading Deployment)
+## 6. Phase 2 Login & Authentication Testing
+
+Once both services are running and the database is seeded:
+
+1. Open `http://localhost:3000`
+2. Click **Sign In** or navigate to `http://localhost:3000/login`
+3. Use the **Evaluation Demo Accounts** panel to pre-fill credentials for any role
+4. After login, you are redirected to the **Resident Portal** (if `RESIDENT`) or can navigate to `/admin` (if `BARANGAY_STAFF` or `BARANGAY_ADMIN`)
+
+**Manual RBAC verification via API docs:**  
+Navigate to `http://127.0.0.1:8000/api/v1/docs` and test:
+- `POST /api/v1/auth/login` — authenticates and sets cookies
+- `GET /api/v1/auth/me` — returns session profile
+- `GET /api/v1/resident/my-reports` — requires `RESIDENT` role
+- `GET /api/v1/admin/reports-queue` — requires `BARANGAY_STAFF` or higher
+- `GET /api/v1/system/diagnostics` — requires `SYSTEM_MAINTAINER` only
+
+---
+
+## 7. Demo Seed Accounts (Development Only)
+
+Run `.\scripts\seed-users.bat` to create the following accounts. **These are development-only. Never use these credentials in production.**
+
+| Email | Role | Password |
+|---|---|---|
+| `resident.demo@sabtrack.local` | `RESIDENT` | `SabtrackDevPass2026!` |
+| `staff.demo@sabtrack.local` | `BARANGAY_STAFF` | `SabtrackDevPass2026!` |
+| `admin.demo@sabtrack.local` | `BARANGAY_ADMIN` | `SabtrackDevPass2026!` |
+| `maintainer.demo@sabtrack.local` | `SYSTEM_MAINTAINER` | `SabtrackDevPass2026!` |
+
+> **Security Warning:** The seed script uses `is_demo_data=True` to flag synthetic records. Re-running the seeder is idempotent — existing demo accounts are skipped. These credentials are committed in documentation as they are fictional development fixtures. Production credentials must never appear in version-controlled files.
+
+---
+
+## 8. Environment Variables Reference
+
+### `apps/api/.env` (Backend)
+
+```env
+# Database
+DATABASE_URL=postgresql+psycopg://postgres:your_password@localhost:5432/sabtrack_dev
+
+# Application
+SECRET_KEY=your_strong_random_secret_key_here
+ENVIRONMENT=development
+LOG_LEVEL=INFO
+
+# CORS
+CORS_ORIGINS=http://localhost:3000
+
+# Session Cookies
+SESSION_COOKIE_NAME=sabtrack_session
+SESSION_COOKIE_SECURE=False       # Set to True in production (HTTPS only)
+SESSION_COOKIE_SAMESITE=lax
+SESSION_EXPIRE_SECONDS=604800     # 7 days
+
+# CSRF
+CSRF_COOKIE_NAME=sabtrack_csrf
+
+# Rate Limiting
+LOGIN_MAX_ATTEMPTS=5
+LOGIN_LOCKOUT_MINUTES=15
+```
+
+### `apps/web/.env.local` (Frontend)
+
+```env
+NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+```
+
+---
+
+## 9. Docker Support (Future / Grading Deployment)
 
 When Docker Desktop is installed, you can launch the containerized stack:
 ```cmd

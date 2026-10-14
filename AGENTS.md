@@ -16,11 +16,14 @@
 2. **Phase-Gated Development:**
    - Build incrementally. Never implement multiple phases at once.
    - Obtain user approval before generating domain code for new phases.
-   - Work in Phase 1 (Foundation) is complete. Phase 2 (Identity & RBAC) requires approval before implementation.
+   - **Phase 1 (Foundation) — COMPLETE** (commit `b5831f4`)
+   - **Phase 2 (Identity, RBAC, Sessions, Portal Navigation) — COMPLETE** (commit `098632c`)
+   - **Phase 3 (Core Waste Operations) — PENDING APPROVAL**
 
 3. **Database Rules:**
    - PostgreSQL is the mandatory primary development and production database.
    - Do NOT introduce SQLite fallbacks without explicit user approval.
+   - Exception: `sqlite:///:memory:` with `StaticPool` is used exclusively in Pytest (`conftest.py`) for hermetic test isolation. This is not a production fallback.
    - Schema modifications must be performed via Alembic migrations (`apps/api/alembic/versions`).
    - Geographic structures must remain dynamic (`areas` table), not hardcoded to fixed counts or names.
 
@@ -29,6 +32,14 @@
    - Image attachments must be stored in authenticated non-public storage.
    - Strip EXIF GPS telemetry upon ingestion.
    - AI features must be decision-support only, receiving pre-computed numerical aggregates without PII.
+   - Session tokens are stored hashed (SHA-256) in the database. The raw token is only transmitted via HttpOnly cookie.
+   - CSRF protection is enforced via double-submit cookie pattern on all state-mutating requests.
+
+5. **RBAC and Authentication:**
+   - The canonical RBAC source of truth is `apps/api/app/core/security.py` (`ROLE_PERMISSIONS` dict).
+   - All permission enforcement is backend-enforced. Frontend visibility checks (hiding nav links) are UX only, not security.
+   - Roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, `SYSTEM_MAINTAINER`.
+   - `SYSTEM_MAINTAINER` must never be granted access to confidential resident reports or unrestricted admin functions.
 
 ---
 
@@ -38,18 +49,31 @@
 SABTRACK/
 ├── apps/
 │   ├── api/                           # FastAPI Backend (Python 3.13)
-│   │   ├── app/                       # Application modules, core, and routers
-│   │   ├── alembic/                   # PostgreSQL schema migrations
-│   │   ├── tests/                     # Pytest suite
+│   │   ├── app/
+│   │   │   ├── api/v1/endpoints/      # auth.py, protected_demo.py, health.py
+│   │   │   ├── core/                  # config.py, deps.py, errors.py, security.py
+│   │   │   └── modules/
+│   │   │       ├── areas/             # Phase 1: Configurable geographic areas
+│   │   │       └── identity/          # Phase 2: User, Session, SecurityAuditLog models
+│   │   ├── alembic/versions/          # 0001_initial_areas.py, 0002_identity_and_sessions.py
+│   │   ├── tests/                     # conftest.py (SQLite in-memory), test_health.py, test_auth_rbac.py
 │   │   ├── requirements.txt
 │   │   └── .env.example
 │   └── web/                           # Next.js 16 / React 19 Frontend
-│       ├── src/                       # App Router, components, lib, types
+│       ├── src/
+│       │   ├── app/                   # App Router: /, /login, /resident/*, /admin/*
+│       │   ├── components/            # Header, Footer, ProtectedRoute, ModulePlaceholder, StatusCard
+│       │   ├── lib/                   # api-client.ts, auth-context.tsx, utils.ts
+│       │   └── types/                 # auth.ts
 │       ├── tests/                     # Vitest component test suite
 │       ├── package.json
 │       └── .env.example
 ├── docs/                              # Architecture, Decision Log, Setup Guide
 ├── scripts/                           # Windows development and test runners
+│   ├── dev.bat                        # Launch both services
+│   ├── run-api.bat / run-web.bat      # Individual service runners
+│   ├── run-tests.bat                  # Unified test suite
+│   └── seed-users.bat / seed-users.py # Dev-only demo account seeder
 ├── docker-compose.yml                 # Future containerized deployment
 └── README.md
 ```
@@ -62,6 +86,22 @@ SABTRACK/
 - **Run Backend API:** `.\scripts\run-api.bat`
 - **Run Frontend Web:** `.\scripts\run-web.bat`
 - **Run All Tests:** `.\scripts\run-tests.bat`
+- **Seed Demo Accounts (Dev Only):** `.\scripts\seed-users.bat`
 - **Backend Tests:** `cd apps/api && .\.venv\Scripts\python.exe -m pytest tests -v`
 - **Frontend Tests:** `cd apps/web && cmd.exe /c npm test`
 - **Frontend Build Check:** `cd apps/web && cmd.exe /c npm run build`
+
+---
+
+## 4. Seed Accounts (Development Only)
+
+Run `.\scripts\seed-users.bat` after applying migrations (`alembic upgrade head`) to create 4 demo accounts. These credentials are development-only and must NEVER be used in production:
+
+| Email | Role | Password |
+|---|---|---|
+| `resident.demo@sabtrack.local` | `RESIDENT` | `SabtrackDevPass2026!` |
+| `staff.demo@sabtrack.local` | `BARANGAY_STAFF` | `SabtrackDevPass2026!` |
+| `admin.demo@sabtrack.local` | `BARANGAY_ADMIN` | `SabtrackDevPass2026!` |
+| `maintainer.demo@sabtrack.local` | `SYSTEM_MAINTAINER` | `SabtrackDevPass2026!` |
+
+Seed data is tagged `is_demo_data=True`. Never ship or expose these credentials in production configuration.
