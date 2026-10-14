@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sabtrack-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: sabtrack_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sabtrack_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: sabtrack-api
+    restart: always
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg://postgres:postgres_dev_password@db:5432/sabtrack_dev
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: sabtrack-web
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
