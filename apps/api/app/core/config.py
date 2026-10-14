@@ -25,6 +25,20 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    # Session Authentication & Cookie Settings
+    SESSION_COOKIE_NAME: str = "sabtrack_session"
+    CSRF_COOKIE_NAME: str = "sabtrack_csrf"
+    SESSION_EXPIRE_SECONDS: int = 60 * 60 * 24 * 7  # 7 days
+    SESSION_COOKIE_SECURE: bool = Field(
+        default=False,
+        description="Set to True in HTTPS production environments"
+    )
+    SESSION_COOKIE_SAMESITE: str = "lax"
+
+    # Rate Limiting for Authentication
+    LOGIN_MAX_ATTEMPTS: int = 5
+    LOGIN_LOCKOUT_MINUTES: int = 15
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

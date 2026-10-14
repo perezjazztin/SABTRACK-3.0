@@ -1,5 +1,6 @@
 import { API_BASE_URL } from './config';
 import { HealthResponse } from '@/types/api';
+import { LoginCredentials, SessionUserResponse } from '@/types/auth';
 
 export class ApiClientError extends Error {
   constructor(
@@ -12,28 +13,47 @@ export class ApiClientError extends Error {
   }
 }
 
+// In-memory cache for active CSRF token
+let activeCsrfToken: string | null = null;
+
+export function setCsrfToken(token: string | null): void {
+  activeCsrfToken = token;
+}
+
+export function getCsrfToken(): string | null {
+  return activeCsrfToken;
+}
+
 /**
  * Centralized fetch helper for FastAPI backend endpoints.
+ * Automatically includes credentials (cookies) and CSRF header on mutating requests.
  */
 export async function apiFetch<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = (options.method || 'GET').toUpperCase();
 
-  const defaultHeaders: HeadersInit = {
+  const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
   };
+
+  // Attach X-CSRF-Token header to state-mutating requests
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && activeCsrfToken) {
+    headers['X-CSRF-Token'] = activeCsrfToken;
+  }
 
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...defaultHeaders,
-        ...options.headers,
+        ...headers,
+        ...((options.headers as Record<string, string>) || {}),
       },
-      // Prevent stale cache in development diagnostics
+      // Include cookies cross-origin / same-origin
+      credentials: 'include',
       cache: 'no-store',
     });
 
@@ -44,11 +64,13 @@ export async function apiFetch<T>(
       } catch {
         errorData = { message: response.statusText };
       }
-      throw new ApiClientError(
-        errorData?.error?.message || `API error (${response.status})`,
-        response.status,
-        errorData
-      );
+
+      const errorMessage =
+        errorData?.error?.message ||
+        errorData?.detail ||
+        `Request failed with status ${response.status}`;
+
+      throw new ApiClientError(errorMessage, response.status, errorData);
     }
 
     return (await response.json()) as T;
@@ -59,15 +81,50 @@ export async function apiFetch<T>(
     const message =
       error instanceof Error ? error.message : 'Network request failed';
     throw new ApiClientError(
-      `Unable to reach API backend at ${API_BASE_URL}. Please ensure the FastAPI server is running. (${message})`,
+      `Unable to reach API backend at ${API_BASE_URL}. (${message})`,
       0
     );
   }
 }
 
 /**
- * Fetches the system health status from the backend.
+ * System health check.
  */
 export async function getHealth(): Promise<HealthResponse> {
   return apiFetch<HealthResponse>('/api/v1/health');
+}
+
+/**
+ * Authenticate with credentials and initialize session.
+ */
+export async function login(credentials: LoginCredentials): Promise<SessionUserResponse> {
+  const data = await apiFetch<SessionUserResponse>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  });
+  if (data?.csrf_token) {
+    setCsrfToken(data.csrf_token);
+  }
+  return data;
+}
+
+/**
+ * Terminate active session and clear cookies.
+ */
+export async function logout(): Promise<void> {
+  await apiFetch<{ message: string }>('/api/v1/auth/logout', {
+    method: 'POST',
+  });
+  setCsrfToken(null);
+}
+
+/**
+ * Inspect active session identity and permissions.
+ */
+export async function getMe(): Promise<SessionUserResponse> {
+  const data = await apiFetch<SessionUserResponse>('/api/v1/auth/me');
+  if (data?.csrf_token) {
+    setCsrfToken(data.csrf_token);
+  }
+  return data;
 }
