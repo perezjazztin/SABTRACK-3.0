@@ -1,6 +1,12 @@
 import { API_BASE_URL } from './config';
 import { HealthResponse } from '@/types/api';
 import { LoginCredentials, SessionUserResponse } from '@/types/auth';
+import {
+  ReportCreatePayload,
+  ReportStatusUpdatePayload,
+  ReportListResponse,
+  WasteReport,
+} from '@/types/reports';
 
 export class ApiClientError extends Error {
   constructor(
@@ -127,4 +133,56 @@ export async function getMe(): Promise<SessionUserResponse> {
     setCsrfToken(data.csrf_token);
   }
   return data;
+}
+
+/**
+ * Submit a community waste report (Resident).
+ */
+export async function createReport(payload: ReportCreatePayload): Promise<WasteReport> {
+  return apiFetch<WasteReport>('/api/v1/reports', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Fetch reports submitted by current resident.
+ */
+export async function getMyReports(): Promise<ReportListResponse> {
+  return apiFetch<ReportListResponse>('/api/v1/reports/my');
+}
+
+/**
+ * Fetch all reports for staff/admin review with optional filters.
+ */
+export async function getAllReports(params?: {
+  category?: string;
+  status?: string;
+}): Promise<ReportListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.category) searchParams.set('category', params.category);
+  if (params?.status) searchParams.set('status', params.status);
+  const queryString = searchParams.toString();
+  const endpoint = `/api/v1/reports${queryString ? `?${queryString}` : ''}`;
+  return apiFetch<ReportListResponse>(endpoint);
+}
+
+/**
+ * Fetch single report details with full status history.
+ */
+export async function getReportById(id: number): Promise<WasteReport> {
+  return apiFetch<WasteReport>(`/api/v1/reports/${id}`);
+}
+
+/**
+ * Update report status and append to immutable history (Staff / Admin).
+ */
+export async function updateReportStatus(
+  id: number,
+  payload: ReportStatusUpdatePayload
+): Promise<WasteReport> {
+  return apiFetch<WasteReport>(`/api/v1/reports/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
 }

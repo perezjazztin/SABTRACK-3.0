@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import Base
 import app.modules.areas.models  # noqa: F401
 import app.modules.identity.models  # noqa: F401
+import app.modules.reports.models  # noqa: F401
 
 config = context.config
 

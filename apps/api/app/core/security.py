@@ -49,6 +49,8 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
     UserRole.BARANGAY_STAFF: {
         Permission.PROFILE_READ_SELF,
         Permission.PROFILE_UPDATE_SELF,
+        Permission.REPORTS_CREATE,
+        Permission.REPORTS_READ_SELF,
         Permission.REPORTS_REVIEW,
         Permission.PARTICIPATION_REVIEW,
         Permission.ANNOUNCEMENTS_MANAGE,
@@ -56,6 +58,8 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
     UserRole.BARANGAY_ADMIN: {
         Permission.PROFILE_READ_SELF,
         Permission.PROFILE_UPDATE_SELF,
+        Permission.REPORTS_CREATE,
+        Permission.REPORTS_READ_SELF,
         Permission.REPORTS_REVIEW,
         Permission.SCHEDULES_MANAGE,
         Permission.ANNOUNCEMENTS_MANAGE,
