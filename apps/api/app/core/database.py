@@ -11,12 +11,17 @@ class Base(DeclarativeBase):
     pass
 
 
-# PostgreSQL engine using psycopg 3.x driver
-# connect_args timeout prevents hung threads during connectivity checks
+# Engine with appropriate connect_args for PostgreSQL (timeout) or SQLite (threading)
+connect_args = {}
+if "sqlite" in settings.DATABASE_URL:
+    connect_args = {"check_same_thread": False}
+elif "psycopg" in settings.DATABASE_URL:
+    connect_args = {"connect_timeout": 3}
+
 engine = create_engine(
     settings.DATABASE_URL,
     pool_pre_ping=True,
-    connect_args={"connect_timeout": 3} if "psycopg" in settings.DATABASE_URL else {},
+    connect_args=connect_args,
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
