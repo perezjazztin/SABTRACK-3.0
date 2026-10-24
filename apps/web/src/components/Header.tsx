@@ -20,14 +20,11 @@ export const Header: React.FC = () => {
             </span>
             <span className="text-emerald-200 hidden sm:inline">|</span>
             <span className="text-emerald-200 hidden sm:inline">
-              IT 313 — System Analysis and Design
+              Official Solid Waste Management Portal
             </span>
           </div>
           <div className="flex items-center space-x-3 text-emerald-100">
-            <span className="hidden md:inline">SDG 11: Sustainable Communities</span>
-            <span className="bg-civic-emerald/30 text-emerald-200 px-2 py-0.5 rounded text-[11px] font-mono">
-              v3.0.0 (Phase 2 Active)
-            </span>
+            <span className="hidden md:inline">Republic Act 9003 — Ecological Solid Waste Management</span>
           </div>
         </div>
       </div>
