@@ -7,6 +7,14 @@ import {
   ReportListResponse,
   WasteReport,
 } from '@/types/reports';
+import {
+  ScheduleItem,
+  ScheduleListResponse,
+  ScheduleCreatePayload,
+  AdvisoryItem,
+  AdvisoryListResponse,
+  AdvisoryCreatePayload,
+} from '@/types/schedules';
 
 export class ApiClientError extends Error {
   constructor(
@@ -185,4 +193,61 @@ export async function updateReportStatus(
     method: 'PATCH',
     body: JSON.stringify(payload),
   });
+}
+
+
+export async function getSchedules(params?: {
+  areaId?: number;
+  dayOfWeek?: string;
+}): Promise<ScheduleListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.areaId) searchParams.set('area_id', params.areaId.toString());
+  if (params?.dayOfWeek) searchParams.set('day_of_week', params.dayOfWeek);
+  const query = searchParams.toString();
+  return apiFetch<ScheduleListResponse>(`/api/v1/schedules${query ? `?${query}` : ''}`);
+}
+
+export async function createSchedule(
+  payload: ScheduleCreatePayload
+): Promise<ScheduleItem> {
+  return apiFetch<ScheduleItem>('/api/v1/schedules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSchedule(scheduleId: number): Promise<{ message: string; id: number }> {
+  return apiFetch<{ message: string; id: number }>(`/api/v1/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getAdvisories(params?: {
+  areaId?: number;
+}): Promise<AdvisoryListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.areaId) searchParams.set('area_id', params.areaId.toString());
+  const query = searchParams.toString();
+  return apiFetch<AdvisoryListResponse>(`/api/v1/schedules/advisories${query ? `?${query}` : ''}`);
+}
+
+export async function createAdvisory(
+  payload: AdvisoryCreatePayload
+): Promise<AdvisoryItem> {
+  return apiFetch<AdvisoryItem>('/api/v1/schedules/advisories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+
+export interface AreaItem {
+  id: number;
+  code: string;
+  name: string;
+  description?: string | null;
+}
+
+export async function getScheduleAreas(): Promise<AreaItem[]> {
+  return apiFetch<AreaItem[]>('/api/v1/schedules/areas');
 }

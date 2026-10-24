@@ -19,6 +19,7 @@ from app.core.security import hash_password, UserRole
 from app.modules.areas.models import Area
 from app.modules.identity.models import User
 from app.modules.reports.models import Report, ReportStatusHistory, ReportCategory, ReportStatus
+from app.modules.schedules.models import Schedule, ScheduleAdvisory, DayOfWeek, WasteType, AdvisoryType
 
 # Development password configurable via environment variable
 DEV_PASSWORD = os.getenv("DEV_SEED_PASSWORD", "SabtrackDevPass2026!")
@@ -174,6 +175,83 @@ def seed_database() -> None:
 
                 db.commit()
                 print("  + Seeded 3 demonstration waste reports with immutable history.")
+
+        existing_schedules = db.scalars(select(Schedule)).all()
+        all_areas = db.scalars(select(Area)).all()
+        if not existing_schedules and all_areas:
+            zone_a = all_areas[0]
+            zone_b = all_areas[1] if len(all_areas) > 1 else all_areas[0]
+
+            demo_schedules = [
+                Schedule(
+                    area_id=zone_a.id,
+                    day_of_week=DayOfWeek.MONDAY,
+                    waste_type=WasteType.BIODEGRADABLE,
+                    start_time="06:00 AM",
+                    end_time="09:00 AM",
+                    notes="Kitchen scraps, garden waste, food leftovers in biodegradable green sacks.",
+                    is_active=True,
+                    is_demo_data=True,
+                ),
+                Schedule(
+                    area_id=zone_a.id,
+                    day_of_week=DayOfWeek.WEDNESDAY,
+                    waste_type=WasteType.NON_BIODEGRADABLE,
+                    start_time="06:00 AM",
+                    end_time="09:00 AM",
+                    notes="Residual waste, sanitized plastics, single-use containers in black sacks.",
+                    is_active=True,
+                    is_demo_data=True,
+                ),
+                Schedule(
+                    area_id=zone_a.id,
+                    day_of_week=DayOfWeek.SATURDAY,
+                    waste_type=WasteType.RECYCLABLE,
+                    start_time="08:00 AM",
+                    end_time="11:00 AM",
+                    notes="Cardboard, clean glass bottles, metal cans, and dry clean packaging.",
+                    is_active=True,
+                    is_demo_data=True,
+                ),
+                Schedule(
+                    area_id=zone_b.id,
+                    day_of_week=DayOfWeek.TUESDAY,
+                    waste_type=WasteType.BIODEGRADABLE,
+                    start_time="07:00 AM",
+                    end_time="10:00 AM",
+                    notes="Biodegradable waste pickup for Central Sector.",
+                    is_active=True,
+                    is_demo_data=True,
+                ),
+                Schedule(
+                    area_id=zone_b.id,
+                    day_of_week=DayOfWeek.THURSDAY,
+                    waste_type=WasteType.NON_BIODEGRADABLE,
+                    start_time="07:00 AM",
+                    end_time="10:00 AM",
+                    notes="Non-biodegradable residual pickup for Central Sector.",
+                    is_active=True,
+                    is_demo_data=True,
+                ),
+            ]
+            db.add_all(demo_schedules)
+
+            admin_user = db.scalar(select(User).where(User.email == "admin.demo@sabtrack.local"))
+            if admin_user:
+                advisory = ScheduleAdvisory(
+                    area_id=zone_a.id,
+                    title="Collection Delay Notice: Truck 2 Maintenance",
+                    message="Garbage collection for Zone A scheduled for Monday morning will be delayed. Truck will arrive starting at 10:30 AM due to scheduled maintenance.",
+                    advisory_type=AdvisoryType.DELAY,
+                    effective_date="October 26, 2026",
+                    created_by_id=admin_user.id,
+                    is_active=True,
+                    is_demo_data=True,
+                )
+                db.add(advisory)
+
+            db.commit()
+            print("  + Seeded 5 demonstration collection schedules and 1 advisory.")
 
         print("\n[SUCCESS] Seeding complete!")
         print(f"Default development password: '{DEV_PASSWORD}'")
