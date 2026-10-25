@@ -3,7 +3,7 @@
 **Course:** IT 313 — System Analysis and Design  
 **Client / Community:** Barangay Sabang, Lipa City, Batangas  
 **Proponents:** Jazztin H. Perez, Faith A. Valencia, May Sigrid M. Dimaano  
-**Status:** Phase 2 Identity & RBAC Complete — Phase 3 Pending Approval  
+**Status:** Phase 4 Analytics & Gamification Complete — Phase 5 Hardening & Deployment Pending  
 
 ---
 
@@ -19,8 +19,8 @@ flowchart TB
     subgraph Core_Backend[FastAPI Application Modules]
         Auth[Identity & RBAC ✓ Phase 2]
         Areas[Configurable Areas ✓ Phase 1]
-        Schedules[Collection Schedules — Phase 3]
-        Reports[Community Reporting Queue — Phase 3]
+        Schedules[Collection Schedules ✓ Phase 3]
+        Reports[Community Reporting Queue ✓ Phase 3]
         Points[SAB-Points Ledger — Phase 4]
         Analytics[SQL Analytics Engine — Phase 4]
         Audit[Security & Audit Logs ✓ Phase 2]
