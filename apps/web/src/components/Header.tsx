@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   Leaf,
@@ -27,6 +27,8 @@ export const Header: React.FC = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutStep, setSignOutStep] = useState<'closing' | 'done'>('closing');
   const router = useRouter();
+  const pathname = usePathname();
+  const isLandingPage = pathname === '/' || pathname === '' || pathname === '/#home' || pathname === '/#about' || pathname === '/#contact';
 
   const handleLogout = async () => {
     setIsSigningOut(true);
@@ -115,9 +117,9 @@ export const Header: React.FC = () => {
             </nav>
           )}
 
-          {/* Right Action Controls: Real-Time Clock, REGISTER & LOGIN (or Portals if logged in) */}
+          {/* Right Action Controls: Real-Time Clock (hidden on landing page), REGISTER & LOGIN (or Portals if logged in) */}
           <div className="hidden md:flex items-center space-x-3">
-            <RealTimeClock />
+            {!isLandingPage && <RealTimeClock />}
 
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-2 sm:space-x-3">
@@ -208,9 +210,11 @@ export const Header: React.FC = () => {
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-slate-200/60 bg-[#edf2f7] px-4 pt-3 pb-5 space-y-2.5 shadow-neu-raised">
-            <div className="pb-1 flex justify-center">
-              <RealTimeClock className="w-full justify-center" />
-            </div>
+            {!isLandingPage && (
+              <div className="pb-1 flex justify-center">
+                <RealTimeClock className="w-full justify-center" />
+              </div>
+            )}
             {!isAuthenticated && (
               <>
                 <Link

@@ -5,11 +5,13 @@ import { Header } from '@/components/Header';
 import * as authContext from '@/lib/auth-context';
 
 const mockPush = vi.fn();
+let mockPathname = '/';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  usePathname: () => mockPathname,
 }));
 
 describe('Header Component Navigation & Role Isolation', () => {
@@ -204,5 +206,31 @@ describe('Header Component Navigation & Role Isolation', () => {
       expect(mockLogout).toHaveBeenCalledTimes(1);
       expect(mockPush).toHaveBeenCalledWith('/');
     });
+  });
+
+  it('does NOT render RealTimeClock on the landing page (/) but renders on portal routes', () => {
+    mockPathname = '/';
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: null,
+      isAuthenticated: false,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      hasRole: vi.fn(),
+      hasPermission: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    const { unmount } = render(<Header />);
+    // Clock should NOT be present on landing page
+    expect(screen.queryByTestId('realtime-clock')).not.toBeInTheDocument();
+    unmount();
+
+    // Now switch to portal route
+    mockPathname = '/resident';
+    render(<Header />);
+    // Clock should be present on portal page
+    expect(screen.getByTestId('realtime-clock')).toBeInTheDocument();
   });
 });
