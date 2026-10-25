@@ -21,6 +21,13 @@ from app.modules.identity.models import User
 from app.modules.reports.models import Report, ReportStatusHistory, ReportCategory, ReportStatus
 from app.modules.schedules.models import Schedule, ScheduleAdvisory, DayOfWeek, WasteType, AdvisoryType
 from app.modules.announcements.models import Announcement, AnnouncementCategory
+from app.modules.gamification.models import (
+    Initiative,
+    ParticipationClaim,
+    PointsLedger,
+    ClaimStatus,
+    TransactionType,
+)
 
 # Development password configurable via environment variable
 DEV_PASSWORD = os.getenv("DEV_SEED_PASSWORD", "SabtrackDevPass2026!")
@@ -294,6 +301,87 @@ def seed_database() -> None:
                 db.add_all(demo_announcements)
                 db.commit()
                 print("  + Seeded 3 demonstration announcements.")
+
+        # Seed gamification initiatives and points ledger
+        existing_inits = db.scalars(select(Initiative)).all()
+        if not existing_inits:
+            init1 = Initiative(
+                title="Barangay Sabang Riverbank Clean-Up Drive",
+                description="Community clean-up along the Sabang creek and river pathways. Refreshments and certificates provided.",
+                points_reward=50,
+                event_date="November 7, 2026",
+                location="Barangay Sabang Plaza",
+                is_active=True,
+                is_demo_data=True,
+            )
+            init2 = Initiative(
+                title="Purok Recyclable Plastic Bottle Collection Campaign",
+                description="Drop off segregated and cleaned plastic bottles at the barangay materials recovery station.",
+                points_reward=35,
+                event_date="Every Saturday Morning",
+                location="Barangay Materials Recovery Facility (MRF)",
+                is_active=True,
+                is_demo_data=True,
+            )
+            db.add_all([init1, init2])
+            db.flush()
+
+            # Seed demo claims and points for demo resident
+            resident_user = db.scalar(select(User).where(User.email == "resident.demo@sabtrack.local"))
+            staff_user = db.scalar(select(User).where(User.email == "staff.demo@sabtrack.local"))
+
+            if resident_user and staff_user:
+                # 1. Approved claim with ledger points
+                claim_approved = ParticipationClaim(
+                    resident_id=resident_user.id,
+                    initiative_id=init1.id,
+                    activity_title="Riverbank Volunteer Attendance",
+                    description="Attended and assisted in collecting 3 sacks of plastic bottles and floating waste.",
+                    points_requested=50,
+                    status=ClaimStatus.APPROVED,
+                    reviewed_by_id=staff_user.id,
+                    review_notes="Attendance confirmed during roll-call by Kagawad in charge of Environment.",
+                    reviewed_at=datetime.now(timezone.utc),
+                    is_demo_data=True,
+                )
+                db.add(claim_approved)
+                db.flush()
+
+                # Add double-entry ledger record
+                ledger1 = PointsLedger(
+                    resident_id=resident_user.id,
+                    points=50,
+                    transaction_type=TransactionType.CLAIM_AWARD,
+                    claim_id=claim_approved.id,
+                    description="Verified participation: Riverbank Volunteer Attendance",
+                    created_at=datetime.now(timezone.utc),
+                )
+                db.add(ledger1)
+
+                # 2. Bonus points for early waste segregation compliance
+                ledger2 = PointsLedger(
+                    resident_id=resident_user.id,
+                    points=25,
+                    transaction_type=TransactionType.CIVIC_BONUS,
+                    description="Civic recognition: Perfect Purok waste segregation compliance",
+                    created_at=datetime.now(timezone.utc),
+                )
+                db.add(ledger2)
+
+                # 3. Pending claim awaiting staff review
+                claim_pending = ParticipationClaim(
+                    resident_id=resident_user.id,
+                    initiative_id=init2.id,
+                    activity_title="Segregated 8kg PET Bottles",
+                    description="Turned over clean plastic containers to Purok MRF drop box on Saturday.",
+                    points_requested=35,
+                    status=ClaimStatus.PENDING,
+                    is_demo_data=True,
+                )
+                db.add(claim_pending)
+
+            db.commit()
+            print("  + Seeded 2 initiatives, 2 participation claims, and 75 SAB-Points in ledger.")
 
         print("\n[SUCCESS] Seeding complete!")
         print(f"Default development password: '{DEV_PASSWORD}'")

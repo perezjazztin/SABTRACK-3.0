@@ -282,3 +282,54 @@ export async function deleteAnnouncement(
     method: 'DELETE',
   });
 }
+
+
+import {
+  InitiativeItem,
+  ClaimItem,
+  ResidentPointsSummary,
+  InitiativeCreatePayload,
+  ClaimCreatePayload,
+  ClaimReviewPayload,
+} from '@/types/gamification';
+
+export async function getMyPointsSummary(): Promise<ResidentPointsSummary> {
+  return apiFetch<ResidentPointsSummary>('/api/v1/gamification/my-points');
+}
+
+export async function getInitiatives(): Promise<InitiativeItem[]> {
+  return apiFetch<InitiativeItem[]>('/api/v1/gamification/initiatives');
+}
+
+export async function createInitiative(payload: InitiativeCreatePayload): Promise<InitiativeItem> {
+  return apiFetch<InitiativeItem>('/api/v1/gamification/initiatives', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitClaim(payload: ClaimCreatePayload): Promise<ClaimItem> {
+  return apiFetch<ClaimItem>('/api/v1/gamification/claims', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMyClaims(): Promise<ClaimItem[]> {
+  return apiFetch<ClaimItem[]>('/api/v1/gamification/claims/my');
+}
+
+export async function getAllClaims(status?: string): Promise<ClaimItem[]> {
+  const query = status ? `?status=${status}` : '';
+  return apiFetch<ClaimItem[]>(`/api/v1/gamification/claims${query}`);
+}
+
+export async function reviewClaim(
+  claimId: number,
+  payload: ClaimReviewPayload
+): Promise<ClaimItem> {
+  return apiFetch<ClaimItem>(`/api/v1/gamification/claims/${claimId}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
