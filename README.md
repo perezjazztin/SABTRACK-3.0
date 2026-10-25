@@ -120,9 +120,9 @@ Run the full automated test suite:
 ```
 
 **Current test results (Phase 4):**
-- ✅ Backend Pytest: **14/14** (3 health + 11 auth/RBAC)
-- ✅ Frontend Vitest: **2/2**
-- ✅ Next.js build: **Clean** (zero TypeScript errors, 16 routes)
+- ✅ Backend Pytest: **43/43** (Health, Auth/RBAC, Reports, Schedules, Announcements, Gamification, Analytics, Users)
+- ✅ Frontend Vitest: **9/9** (HealthDashboard, LoginPage, AnalyticsPage, UsersPage)
+- ✅ Next.js build: **Clean** (zero TypeScript errors, 18 routes)
 
 ---
 
