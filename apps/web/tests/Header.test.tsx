@@ -4,7 +4,7 @@ import React from 'react';
 import { Header } from '@/components/Header';
 import * as authContext from '@/lib/auth-context';
 
-describe('Header Component Navigation & Authentication States', () => {
+describe('Header Component Navigation & Role Isolation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -34,12 +34,12 @@ describe('Header Component Navigation & Authentication States', () => {
     expect(screen.getByRole('link', { name: /REGISTER/i })).toBeInTheDocument();
   });
 
-  it('removes HOME, ABOUT, CONTACT US, Demo Resident chip, and redundant RESIDENT badge once logged in', () => {
+  it('when logged in as RESIDENT: only shows Resident Portal description and prevents portal switching', () => {
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: {
         id: 'res-1',
         email: 'resident.demo@sabtrack.local',
-        full_name: 'Demo Resident (Fictional)',
+        full_name: 'Faith Valencia',
         role: 'RESIDENT',
         is_active: true,
       },
@@ -55,19 +55,113 @@ describe('Header Component Navigation & Authentication States', () => {
 
     render(<Header />);
 
-    // Public links must be REMOVED once logged in
+    // Public links removed
     expect(screen.queryByRole('link', { name: /^HOME$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^ABOUT$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /^CONTACT US$/i })).not.toBeInTheDocument();
 
-    // "Demo Resident (Fictional)" must NOT be displayed
-    expect(screen.queryByText(/Demo Resident \(Fictional\)/i)).not.toBeInTheDocument();
+    // Resident Portal must be present
+    expect(screen.getByRole('link', { name: /Resident Portal/i })).toBeInTheDocument();
 
-    // Redundant "RESIDENT" role chip must NOT be displayed alongside Resident Portal
+    // Must NOT be able to switch to Admin Console
+    expect(screen.queryByRole('link', { name: /Admin Console/i })).not.toBeInTheDocument();
+
+    // No redundant standalone "RESIDENT" badge
     expect(screen.queryByText(/^RESIDENT$/i)).not.toBeInTheDocument();
 
-    // Portal link and Sign Out must be present
-    expect(screen.getByRole('link', { name: /Resident Portal/i })).toBeInTheDocument();
+    // Sign out button must be present
+    expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
+  });
+
+  it('when logged in as BARANGAY_ADMIN: only shows Admin Console description and prevents portal switching', () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'admin-1',
+        email: 'admin.demo@sabtrack.local',
+        full_name: 'Admin User',
+        role: 'BARANGAY_ADMIN',
+        is_active: true,
+      },
+      isAuthenticated: true,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      hasRole: vi.fn(),
+      hasPermission: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    render(<Header />);
+
+    // Admin Console must be present
+    expect(screen.getByRole('link', { name: /Admin Console/i })).toBeInTheDocument();
+
+    // Must NOT be able to switch to Resident Portal
+    expect(screen.queryByRole('link', { name: /Resident Portal/i })).not.toBeInTheDocument();
+
+    // Sign out button must be present
+    expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
+  });
+
+  it('when logged in as BARANGAY_STAFF: only shows Admin Console description and prevents portal switching', () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'staff-1',
+        email: 'staff.demo@sabtrack.local',
+        full_name: 'Staff Reviewer',
+        role: 'BARANGAY_STAFF',
+        is_active: true,
+      },
+      isAuthenticated: true,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      hasRole: vi.fn(),
+      hasPermission: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    render(<Header />);
+
+    // Admin Console must be present
+    expect(screen.getByRole('link', { name: /Admin Console/i })).toBeInTheDocument();
+
+    // Must NOT be able to switch to Resident Portal
+    expect(screen.queryByRole('link', { name: /Resident Portal/i })).not.toBeInTheDocument();
+
+    // Sign out button must be present
+    expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
+  });
+
+  it('when logged in as SYSTEM_MAINTAINER: only shows System Maintainer description, no portal switching', () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'maint-1',
+        email: 'maintainer.demo@sabtrack.local',
+        full_name: 'Maintainer Demo',
+        role: 'SYSTEM_MAINTAINER',
+        is_active: true,
+      },
+      isAuthenticated: true,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: vi.fn(),
+      hasRole: vi.fn(),
+      hasPermission: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    render(<Header />);
+
+    // System Maintainer badge must be present
+    expect(screen.getByText(/System Maintainer/i)).toBeInTheDocument();
+
+    // Must NOT see Resident Portal or Admin Console
+    expect(screen.queryByRole('link', { name: /Resident Portal/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Admin Console/i })).not.toBeInTheDocument();
+
+    // Sign out button must be present
     expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
   });
 });

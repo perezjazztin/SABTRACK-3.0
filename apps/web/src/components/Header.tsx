@@ -15,6 +15,7 @@ import {
   HelpCircle,
   PhoneCall,
   Home as HomeIcon,
+  Wrench,
 } from 'lucide-react';
 
 export const Header: React.FC = () => {
@@ -73,7 +74,8 @@ export const Header: React.FC = () => {
         <div className="hidden md:flex items-center space-x-3">
           {isAuthenticated && user ? (
             <div className="flex items-center space-x-2 sm:space-x-3">
-              {['RESIDENT', 'BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
+              {/* Resident: Only Resident Portal description/access (cannot switch to admin) */}
+              {user.role === 'RESIDENT' && (
                 <Link
                   href="/resident"
                   className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800"
@@ -83,6 +85,7 @@ export const Header: React.FC = () => {
                 </Link>
               )}
 
+              {/* Barangay Staff & Admin: Only Admin Console description/access (cannot switch to resident) */}
               {['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
                 <Link
                   href="/admin"
@@ -93,14 +96,11 @@ export const Header: React.FC = () => {
                 </Link>
               )}
 
-              {/* User Identity Chip: Privacy-preserving role indicator (omitted for residents to avoid redundancy with Resident Portal button) */}
-              {user.role !== 'RESIDENT' && (
-                <div className="hidden lg:flex items-center space-x-2 pl-2">
-                  <div className="neu-chip px-3 py-1 rounded-xl text-right">
-                    <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
-                      {user.role.replace('_', ' ')}
-                    </div>
-                  </div>
+              {/* System Maintainer: Dedicated diagnostics/maintainer indicator */}
+              {user.role === 'SYSTEM_MAINTAINER' && (
+                <div className="neu-chip inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700">
+                  <Wrench className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
+                  <span>System Maintainer</span>
                 </div>
               )}
 
@@ -184,7 +184,7 @@ export const Header: React.FC = () => {
           <div className="pt-2 border-t border-slate-200/60 space-y-2">
             {isAuthenticated && user ? (
               <>
-                {['RESIDENT', 'BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
+                {user.role === 'RESIDENT' && (
                   <Link
                     href="/resident"
                     onClick={() => setMobileMenuOpen(false)}
@@ -203,6 +203,12 @@ export const Header: React.FC = () => {
                     <ShieldAlert className="w-4 h-4 text-slate-600" />
                     <span>Admin Console</span>
                   </Link>
+                )}
+                {user.role === 'SYSTEM_MAINTAINER' && (
+                  <div className="flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100/50">
+                    <Wrench className="w-4 h-4 text-slate-600" />
+                    <span>System Maintainer</span>
+                  </div>
                 )}
                 <button
                   type="button"

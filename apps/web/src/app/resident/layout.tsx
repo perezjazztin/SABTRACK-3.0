@@ -36,7 +36,7 @@ export default function ResidentLayout({
 
   return (
     <ProtectedRoute
-      requiredRole={['RESIDENT', 'BARANGAY_STAFF', 'BARANGAY_ADMIN']}
+      requiredRole='RESIDENT'
       moduleName="Resident Portal"
     >
       <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] w-full">
@@ -108,8 +108,8 @@ export default function ResidentLayout({
         </aside>
 
         {/* Main Content Area */}
-        <section className="flex-1 min-w-0 bg-[#F4F7F5]/40 overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        <section className="flex-1 min-w-0 bg-[#edf2f7] overflow-y-auto">
+          <div className="max-w-7xl mx-auto p-6 sm:p-8 lg:p-10">
             {children}
           </div>
         </section>
