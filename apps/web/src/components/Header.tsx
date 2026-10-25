@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import {
   Leaf,
@@ -21,6 +22,15 @@ import {
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push('/');
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 bg-[#edf2f7]/95 backdrop-blur-md border-b border-white/80 shadow-neu-sm transition-all">
@@ -107,7 +117,7 @@ export const Header: React.FC = () => {
               {/* Sign Out Button */}
               <button
                 type="button"
-                onClick={() => logout()}
+                onClick={handleLogout}
                 disabled={loading}
                 aria-label="Sign out of SABTRACK"
                 className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-rose-800 transition-colors disabled:opacity-50"
@@ -212,9 +222,9 @@ export const Header: React.FC = () => {
                 )}
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileMenuOpen(false);
-                    logout();
+                    await handleLogout();
                   }}
                   className="w-full neu-btn-secondary flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-700"
                 >

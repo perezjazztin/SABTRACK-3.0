@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { Header } from '@/components/Header';
 import * as authContext from '@/lib/auth-context';
+
+const mockPush = vi.fn();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
+}));
 
 describe('Header Component Navigation & Role Isolation', () => {
   beforeEach(() => {
@@ -163,5 +171,38 @@ describe('Header Component Navigation & Role Isolation', () => {
 
     // Sign out button must be present
     expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
+  });
+
+  it('navigates automatically to the home page (/) upon signing out', async () => {
+    const mockLogout = vi.fn().mockResolvedValue(undefined);
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'res-1',
+        email: 'resident.demo@sabtrack.local',
+        full_name: 'Faith Valencia',
+        role: 'RESIDENT',
+        is_active: true,
+      },
+      isAuthenticated: true,
+      loading: false,
+      login: vi.fn(),
+      register: vi.fn(),
+      logout: mockLogout,
+      hasRole: vi.fn(),
+      hasPermission: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    render(<Header />);
+
+    const signOutBtn = screen.getByRole('button', { name: /SIGN OUT/i });
+    expect(signOutBtn).toBeInTheDocument();
+
+    fireEvent.click(signOutBtn);
+
+    await waitFor(() => {
+      expect(mockLogout).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith('/');
+    });
   });
 });
