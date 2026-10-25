@@ -107,22 +107,29 @@ export default function ResidentAnnouncementsPage() {
   const regularItems = filtered.filter((a) => !a.is_pinned);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+              Barangay Sabang Council
+            </span>
+            <span className="text-xs text-slate-400">&bull;</span>
+            <span className="text-xs text-slate-500 font-medium">Official Public Notices</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
             <Bell className="w-7 h-7 text-emerald-700" />
-            Announcements
+            Announcements &amp; Advisories
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
-            Verified solid waste announcements, cleanup drives, and holiday schedules from Barangay Sabang Council.
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
+            Verified solid waste announcements, cleanup drives, and holiday collection timetables from Barangay Sabang Council.
           </p>
         </div>
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-[#FAFDFB] border border-emerald-900/10 rounded-xl hover:bg-emerald-50/60 transition-all shadow-soft-raised active:shadow-soft-pressed disabled:opacity-50 self-start sm:self-auto"
+          className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white/70 border border-slate-200 rounded-xl hover:bg-white shadow-neu-xs transition-all disabled:opacity-50 self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -130,41 +137,39 @@ export default function ResidentAnnouncementsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-          {/* Category Tabs */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-            {CATEGORY_TABS.map((tab) => {
-              const TabIcon = tab.icon;
-              const isActive = selectedCategory === tab.key;
-              return (
-                <button
-                  key={tab.key}
-                  onClick={() => setSelectedCategory(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                    isActive
-                      ? 'bg-civic-forest text-white shadow-soft-raised'
-                      : 'bg-[#FAFDFB] border border-emerald-900/10 text-slate-600 hover:bg-emerald-50/60 shadow-soft-raised active:shadow-soft-pressed'
-                  }`}
-                >
-                  <TabIcon className="w-3.5 h-3.5" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+      <div className="neu-card p-2.5 rounded-2xl border border-emerald-900/10 shadow-neu-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        {/* Category Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          {CATEGORY_TABS.map((tab) => {
+            const TabIcon = tab.icon;
+            const isActive = selectedCategory === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setSelectedCategory(tab.key)}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-civic-forest text-white shadow-neu-green'
+                    : 'text-slate-600 hover:text-civic-forest hover:bg-emerald-50/70'
+                }`}
+              >
+                <TabIcon className="w-3.5 h-3.5" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
 
-          {/* Search box */}
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search announcements..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 shadow-soft-inset rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
-            />
-          </div>
+        {/* Search box */}
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search announcements..."
+            className="w-full pl-9 pr-4 py-2 text-xs neu-input rounded-xl text-slate-800 focus:outline-none placeholder:text-slate-400"
+          />
         </div>
       </div>
 
@@ -252,7 +257,7 @@ export default function ResidentAnnouncementsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
             {regularItems.map((item) => {
               const config = CATEGORY_CONFIG[item.category];
               const IconComp = config.icon;
@@ -260,7 +265,7 @@ export default function ResidentAnnouncementsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-4 shadow-soft-raised hover:shadow-soft-raised-lg transition-all space-y-3 flex flex-col justify-between"
+                  className="neu-card border border-emerald-900/10 rounded-3xl p-6 shadow-neu-raised hover:shadow-neu-raised-hover transition-all space-y-3.5 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">

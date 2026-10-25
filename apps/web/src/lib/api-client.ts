@@ -1,6 +1,6 @@
 import { API_BASE_URL } from './config';
 import { HealthResponse } from '@/types/api';
-import { LoginCredentials, SessionUserResponse } from '@/types/auth';
+import { LoginCredentials, SessionUserResponse, RegisterPayload, User } from '@/types/auth';
 import {
   ReportCreatePayload,
   ReportStatusUpdatePayload,
@@ -14,6 +14,7 @@ import {
   AdvisoryItem,
   AdvisoryListResponse,
   AdvisoryCreatePayload,
+  ScheduleNotificationResponse,
 } from '@/types/schedules';
 
 export class ApiClientError extends Error {
@@ -111,6 +112,16 @@ export async function getHealth(): Promise<HealthResponse> {
 /**
  * Authenticate with credentials and initialize session.
  */
+/**
+ * Register a new resident user account.
+ */
+export async function registerResident(payload: RegisterPayload): Promise<User> {
+  return apiFetch<User>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function login(credentials: LoginCredentials): Promise<SessionUserResponse> {
   const data = await apiFetch<SessionUserResponse>('/api/v1/auth/login', {
     method: 'POST',
@@ -251,6 +262,17 @@ export interface AreaItem {
 export async function getScheduleAreas(): Promise<AreaItem[]> {
   return apiFetch<AreaItem[]>('/api/v1/schedules/areas');
 }
+export async function subscribeScheduleNotification(
+  scheduleId: number,
+  email?: string
+): Promise<ScheduleNotificationResponse> {
+  const endpoint = `/api/v1/schedules/${scheduleId}/notify`;
+  return apiFetch<ScheduleNotificationResponse>(endpoint, {
+    method: 'POST',
+    body: JSON.stringify({ email: email || undefined }),
+  });
+}
+
 
 
 import {
