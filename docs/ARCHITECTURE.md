@@ -160,9 +160,20 @@ The `require_permission()` factory returns a dependency that:
 
 ---
 
-## 6. Phase 2 — Database Schema
+## 6. Comprehensive Database Schema (Migrations 0001–0006)
 
-### Migration 0002: identity_and_sessions
+### Schema Evolution & Migration History
+
+| Migration | Scope | Entities Created |
+|---|---|---|
+| `0001_initial_areas` | Geographic Foundation | `areas` |
+| `0002_identity_and_sessions` | Identity & RBAC | `users`, `sessions`, `security_audit_logs` |
+| `0003_community_waste_reports` | Waste Operations | `reports`, `report_status_history` |
+| `0004_collection_schedules` | Collection Scheduling | `schedules`, `schedule_advisories` |
+| `0005_announcements` | Civic Communications | `announcements` |
+| `0006_gamification_and_points` | Civic Engagement | `initiatives`, `participation_claims`, `points_ledger` |
+
+### Core Entity Relationships (Migrations 0001–0006)
 
 ```mermaid
 erDiagram

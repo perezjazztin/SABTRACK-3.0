@@ -26,6 +26,12 @@
 | **CONF-12** | **RBAC Design** | Centralized RBAC via `ROLE_PERMISSIONS` dict in `security.py`. Four roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, `SYSTEM_MAINTAINER`. `SYSTEM_MAINTAINER` has least-privilege — no resident data or admin barangay functions. | Proponent Authorization, Phase 2 (October 15, 2026). |
 | **CONF-13** | **Public Registration** | Unrestricted public self-registration is NOT permitted in Phase 2. Account creation requires a controlled seeding or future admin-approved onboarding process. | Proponent Authorization, Phase 2 (October 15, 2026). |
 | **CONF-14** | **Session Cookie Security** | `SESSION_COOKIE_SECURE=False` for local HTTP dev only. Must be `True` in any HTTPS deployment. `SameSite=Lax` chosen for compatibility with redirect-based flows. | Architectural Decision, Phase 2 (October 15, 2026). |
+| **CONF-15** | **Immutable Status History** | Report status changes are never overwritten in-place without generating a corresponding `report_status_history` record capturing timestamps, previous/new status, and reviewer ID. | Proponent Authorization, Phase 3 (October 24, 2026). |
+| **CONF-16** | **Schedule & Advisory Engine** | Recurring weekly collection schedules link dynamically to `areas` table; emergency advisories support delay/cancellation notices with effective date filtering. | Proponent Authorization, Phase 3 (October 24, 2026). |
+| **CONF-17** | **Official Communications** | Announcements system restricted to staff/admin authors with categories (`GENERAL`, `URGENT`, `EVENT`), pinned flags, and public active filters. | Proponent Authorization, Phase 3 (October 25, 2026). |
+| **CONF-18** | **Points Ledger Discipline** | Points are tracked exclusively via an append-only `points_ledger` table (`EARNED`, `REVERSED`, `REDEEMED`). Resident claims require staff verification before points are credited. | Proponent Authorization, Phase 4 (October 25, 2026). |
+| **CONF-19** | **Mandated Analytics Procedure** | Enforces 6-step analytics procedure (Collect, Sanitize, Aggregate, Pattern Detection, Visual Indicators, Decision Support). Data is stripped of PII before aggregation per RA 10173. | Course Instructor Directive & Proponent Authorization (October 25, 2026). |
+| **CONF-20** | **Admin User Governance** | Admin console provides staff provisioning and user activation toggles; backend enforces safeguards preventing admins from deactivating their own accounts. | Proponent Authorization, Phase 3 (October 25, 2026). |
 
 ---
 
@@ -62,19 +68,32 @@
 | **Dev Seeding Script** | **COMPLETE** | `scripts/seed-users.py` + `seed-users.bat`; 4 demo accounts tagged `is_demo_data=True`. |
 | **Test Coverage** | **COMPLETE** | 14/14 Pytest (11 auth/RBAC + 3 health) + 2/2 Vitest; `npm run build` clean. |
 
-### Phase 3 — Core Waste Operations (PENDING APPROVAL)
+### Phase 3 — Core Waste Operations (COMPLETE — commits `8c47b7c`, `d6ec9eb`, `b38e62c`, `864b60f`)
 
-Proposed scope (subject to proponent authorization):
-- Resident waste violation / uncollected garbage report submission with photo attachment
-- Barangay staff report review, status transitions, and audit trail
-- Garbage collection schedule management and change advisory publishing
-- Announcement system for residents
-- User management for authorized admins
-- File upload handling with EXIF stripping
+| Component | Status | Details |
+|---|---|---|
+| **Waste Reporting Module** | **COMPLETE** | Citizen report submission with photo URL, geolocation, category classification; Alembic migration `0003_community_waste_reports`. |
+| **Immutable Status History** | **COMPLETE** | `report_status_history` table records status transitions (`SUBMITTED` -> `UNDER_REVIEW` -> `IN_PROGRESS` -> `RESOLVED` / `REJECTED`) with reviewer identity and remarks. |
+| **Collection Schedules** | **COMPLETE** | Weekly recurring timetable per purok/area; Alembic migration `0004_collection_schedules`. |
+| **Schedule Advisories** | **COMPLETE** | Delay, suspension, and special pickup emergency broadcast notices with effective date filters. |
+| **Barangay Announcements** | **COMPLETE** | Official communication feed for general news, events, and urgent advisories; Alembic migration `0005_announcements`. |
+| **User Governance** | **COMPLETE** | Admin user directory, staff account provisioning, and deactivation toggles with self-lockout prevention. |
+| **Portal Frontends** | **COMPLETE** | Full interactive Next.js pages for reports, schedules, announcements, and user administration. |
+
+### Phase 4 — Gamification, Business Analytics & Dashboards (COMPLETE — commits `8477453`, `864b60f`)
+
+| Component | Status | Details |
+|---|---|---|
+| **Gamification Module** | **COMPLETE** | Clean-up and segregation initiatives, resident claim submission, staff review queue; Alembic migration `0006_gamification_and_points`. |
+| **Points Ledger Discipline** | **COMPLETE** | Double-entry append-only `points_ledger` recording `EARNED`, `REVERSED`, and `REDEEMED` transactions. |
+| **6-Step Analytics Engine** | **COMPLETE** | Backend `AnalyticsService` executing: 1. Collect -> 2. Sanitize (RA 10173) -> 3. Aggregate -> 4. Pattern Detection -> 5. Visual Indicators -> 6. Decision Support. |
+| **Area Hotspot Grading** | **COMPLETE** | Algorithmic classification of waste hotspots into `NORMAL`, `ELEVATED`, and `CRITICAL` severity tiers. |
+| **Executive Dashboards** | **COMPLETE** | Live resident portal overview and comprehensive admin command center with KPI status cards, charts, and alert feeds. |
+| **Automated Testing Suite** | **COMPLETE** | 43/43 Pytest integration tests and 9/9 Vitest component tests passing; production build verified across 18 routes. |
 
 ---
 
-## 3. Pending Field Validation (Before Committing Phase 3 Domain Schemas)
+## 3. Field Validation Register (Operational & Policy Refinements)
 
 | ID | Area | Open Question | Current Working Assumption | Owner |
 |---|---|---|---|---|
