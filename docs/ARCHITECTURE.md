@@ -201,17 +201,17 @@ erDiagram
 
 ---
 
-## 7. Phase 2 — Frontend Navigation Structure
+## 7. Frontend Navigation Structure (Phase 4 Live State)
 
 ### Resident Portal (`/resident/*`)
 Protected by `ProtectedRoute` requiring `RESIDENT | BARANGAY_STAFF | BARANGAY_ADMIN` role.
 
 | Route | Page | Status |
 |---|---|---|
-| `/resident` | Dashboard | Placeholder (Phase 3) |
-| `/resident/schedules` | Collection Schedules | Placeholder (Phase 3) |
-| `/resident/reports` | My Reports | Placeholder (Phase 3) |
-| `/resident/points` | SAB-Points | Placeholder (Phase 4) |
+| `/resident` | Dashboard | **Live** — Quick stats, recent announcements, quick actions |
+| `/resident/schedules` | Collection Schedules | **Live** — Dynamic area timetables and delay advisories |
+| `/resident/reports` | My Reports | **Live** — Violation submissions & immutable history timeline |
+| `/resident/points` | SAB-Points | **Live** — Points balance, ledger & claim submission |
 | `/resident/announcements` | Announcements | Placeholder (Phase 3) |
 | `/resident/profile` | Profile | **Live** — shows user identity |
 
