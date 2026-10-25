@@ -21,8 +21,10 @@ flowchart TB
         Areas[Configurable Areas ✓ Phase 1]
         Schedules[Collection Schedules ✓ Phase 3]
         Reports[Community Reporting Queue ✓ Phase 3]
-        Points[SAB-Points Ledger — Phase 4]
-        Analytics[SQL Analytics Engine — Phase 4]
+        Points[SAB-Points Ledger ✓ Phase 4]
+        Analytics[SQL Analytics Engine ✓ Phase 4]
+        Announcements[Announcements ✓ Phase 3]
+        UserGov[User Governance ✓ Phase 3]
         Audit[Security & Audit Logs ✓ Phase 2]
     end
 
