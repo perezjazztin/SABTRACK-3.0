@@ -80,7 +80,7 @@ export default function AdminLayout({
     >
       <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] w-full bg-[#edf2f7]">
         {/* Full-Height Sticky Sidebar Flush to Left */}
-        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0 bg-[#edf2f7] border-r border-white/80 md:sticky md:top-16 md:h-[calc(100vh-4rem)] flex flex-col justify-between overflow-y-auto p-4 lg:p-5 shadow-[4px_0_14px_rgba(163,177,198,0.25)]">
+        <aside className="w-full md:w-64 lg:w-72 flex-shrink-0 bg-[#edf2f7] border-r border-white/80 md:sticky md:top-16 md:h-[calc(100vh-4rem)] flex flex-col justify-between overflow-y-auto p-4 lg:p-5 shadow-[6px_0_16px_rgba(163,177,198,0.35)]">
           <div className="space-y-6">
             {/* Administrative Sidebar Header */}
             <div className="neu-card p-3 rounded-2xl flex items-center justify-between shadow-neu-sm border border-white/80">
@@ -113,19 +113,19 @@ export default function AdminLayout({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center justify-between px-4 py-3 rounded-2xl text-xs transition-all duration-200',
+                      'group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors duration-150',
                       isActive
-                        ? 'bg-emerald-700 text-white shadow-neu-green font-bold border border-emerald-600/40'
+                        ? 'bg-emerald-700 text-white font-semibold'
                         : isPermitted
-                        ? 'neu-btn-secondary text-slate-700 hover:text-emerald-800 hover:shadow-neu-raised font-semibold'
-                        : 'neu-socket text-slate-400 opacity-60 cursor-not-allowed font-medium'
+                        ? 'text-slate-600 hover:text-emerald-800 hover:bg-slate-200/60'
+                        : 'text-slate-400 opacity-60 cursor-not-allowed'
                     )}
                   >
                     <div className="flex items-center space-x-3">
                       <Icon
                         className={cn(
-                          'w-4 h-4 flex-shrink-0',
-                          isActive ? 'text-emerald-300' : 'text-slate-400'
+                          'w-4 h-4 flex-shrink-0 transition-colors',
+                          isActive ? 'text-white' : 'text-slate-400 group-hover:text-emerald-700'
                         )}
                       />
                       <span>{item.label}</span>
