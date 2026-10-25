@@ -251,3 +251,34 @@ export interface AreaItem {
 export async function getScheduleAreas(): Promise<AreaItem[]> {
   return apiFetch<AreaItem[]>('/api/v1/schedules/areas');
 }
+
+
+import {
+  AnnouncementItem,
+  AnnouncementListResponse,
+  AnnouncementCreatePayload,
+} from '@/types/announcements';
+
+export async function getAnnouncements(category?: string): Promise<AnnouncementListResponse> {
+  const searchParams = new URLSearchParams();
+  if (category) searchParams.set('category', category);
+  const query = searchParams.toString();
+  return apiFetch<AnnouncementListResponse>(`/api/v1/announcements${query ? `?${query}` : ''}`);
+}
+
+export async function createAnnouncement(
+  payload: AnnouncementCreatePayload
+): Promise<AnnouncementItem> {
+  return apiFetch<AnnouncementItem>('/api/v1/announcements', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAnnouncement(
+  announcementId: number
+): Promise<{ message: string; id: number }> {
+  return apiFetch<{ message: string; id: number }>(`/api/v1/announcements/${announcementId}`, {
+    method: 'DELETE',
+  });
+}

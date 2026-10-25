@@ -20,6 +20,7 @@ from app.modules.areas.models import Area
 from app.modules.identity.models import User
 from app.modules.reports.models import Report, ReportStatusHistory, ReportCategory, ReportStatus
 from app.modules.schedules.models import Schedule, ScheduleAdvisory, DayOfWeek, WasteType, AdvisoryType
+from app.modules.announcements.models import Announcement, AnnouncementCategory
 
 # Development password configurable via environment variable
 DEV_PASSWORD = os.getenv("DEV_SEED_PASSWORD", "SabtrackDevPass2026!")
@@ -252,6 +253,47 @@ def seed_database() -> None:
 
             db.commit()
             print("  + Seeded 5 demonstration collection schedules and 1 advisory.")
+
+        # Seed announcements if none exist
+        existing_announcements = db.scalars(select(Announcement)).all()
+        if not existing_announcements:
+            admin_user = db.scalar(select(User).where(User.email == "admin.demo@sabtrack.local"))
+            staff_user = db.scalar(select(User).where(User.email == "staff.demo@sabtrack.local"))
+            author = admin_user or staff_user
+
+            if author:
+                demo_announcements = [
+                    Announcement(
+                        title="Barangay Sabang Community Riverbank Clean-Up Drive",
+                        content="Join your fellow residents this coming Saturday morning from 6:30 AM to 10:00 AM for our quarterly ecological river clean-up. Garbage bags, heavy-duty gloves, and refreshments will be provided at the Barangay Hall. Earn civic participation recognition!",
+                        category=AnnouncementCategory.CLEANUP_DRIVE,
+                        is_pinned=True,
+                        is_active=True,
+                        is_demo_data=True,
+                        author_id=author.id,
+                    ),
+                    Announcement(
+                        title="Strict Implementation of RA 9003 Waste Segregation at Source",
+                        content="Pursuant to Republic Act No. 9003 (Ecological Solid Waste Management Act) and local barangay ordinance, all households are mandated to segregate biodegradable and non-biodegradable waste. Mixed waste bags will not be collected by truck crews.",
+                        category=AnnouncementCategory.POLICY_UPDATE,
+                        is_pinned=False,
+                        is_active=True,
+                        is_demo_data=True,
+                        author_id=author.id,
+                    ),
+                    Announcement(
+                        title="All Saints' Day Weekend Waste Collection Timetable Shift",
+                        content="Please be advised that regular Sunday collection will be moved to Monday due to the upcoming national holiday weekend. Collection will resume normal hours on Tuesday morning.",
+                        category=AnnouncementCategory.HOLIDAY_SCHEDULE,
+                        is_pinned=False,
+                        is_active=True,
+                        is_demo_data=True,
+                        author_id=author.id,
+                    ),
+                ]
+                db.add_all(demo_announcements)
+                db.commit()
+                print("  + Seeded 3 demonstration announcements.")
 
         print("\n[SUCCESS] Seeding complete!")
         print(f"Default development password: '{DEV_PASSWORD}'")
