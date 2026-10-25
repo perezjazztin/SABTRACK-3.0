@@ -24,9 +24,9 @@ def list_users(
     is_active: Optional[bool] = Query(None, description="Filter by active status"),
     search: Optional[str] = Query(None, description="Search by name or email"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_permission(Permission.USERS_MANAGE)),
+    current_user: User = Depends(require_permission(Permission.USERS_READ)),
 ):
-    """List system users and personnel with filtering and search. Requires `users:manage`."""
+    """List system users and personnel with filtering and search. Requires `users:read` (Staff & Admin)."""
     query = db.query(User)
 
     if role is not None:

@@ -49,7 +49,8 @@ export const ADMIN_NAV = [
     label: 'Analytics & Insights',
     href: '/admin/analytics',
     icon: BarChart3,
-    minRole: 'BARANGAY_ADMIN',
+    minRole: 'BARANGAY_STAFF',
+    viewOnlyForStaff: true,
   },
   {
     label: 'Announcements',
@@ -61,7 +62,8 @@ export const ADMIN_NAV = [
     label: 'User Management',
     href: '/admin/users',
     icon: Users,
-    minRole: 'BARANGAY_ADMIN',
+    minRole: 'BARANGAY_STAFF',
+    viewOnlyForStaff: true,
   },
 ];
 

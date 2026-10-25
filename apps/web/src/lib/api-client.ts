@@ -1,3 +1,4 @@
+import { ChatQueryRequest, ChatQueryResponse, QuickPromptItem } from '@/types/chatbot';
 import { API_BASE_URL } from './config';
 import { HealthResponse } from '@/types/api';
 import { LoginCredentials, SessionUserResponse, RegisterPayload, User } from '@/types/auth';
@@ -461,4 +462,17 @@ export function resolveImageUrl(url: string | null | undefined): string {
     return `${API_BASE_URL}/api/v1${url}`;
   }
   return `${API_BASE_URL}/api/v1/${url}`;
+}
+
+export async function queryEcoBot(payload: ChatQueryRequest): Promise<ChatQueryResponse> {
+  return apiFetch<ChatQueryResponse>('/chatbot/query', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getEcoBotPrompts(): Promise<QuickPromptItem[]> {
+  return apiFetch<QuickPromptItem[]>('/chatbot/prompts', {
+    method: 'GET',
+  });
 }

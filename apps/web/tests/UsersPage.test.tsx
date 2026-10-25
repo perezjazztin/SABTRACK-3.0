@@ -59,12 +59,15 @@ describe('AdminUsersPage Component', () => {
       login: vi.fn(),
       logout: vi.fn(),
       hasPermission: vi.fn().mockReturnValue(true),
-      hasRole: vi.fn().mockImplementation((role) => role === 'BARANGAY_ADMIN'),
+      hasRole: (roles: any) => {
+        const list = Array.isArray(roles) ? roles : [roles];
+        return list.includes('BARANGAY_ADMIN');
+      },
       refreshSession: vi.fn(),
     });
   });
 
-  it('renders user directory and KPI statistics', async () => {
+  it('renders user directory and KPI statistics for Admin with provision button', async () => {
     vi.spyOn(apiClient, 'getUsers').mockResolvedValueOnce(mockUsersData);
 
     render(<AdminUsersPage />);
@@ -79,7 +82,7 @@ describe('AdminUsersPage Component', () => {
     });
   });
 
-  it('handles user status toggle and recognizes active/deactivated badges', async () => {
+  it('handles user status toggle and recognizes active/deactivated badges for Admin', async () => {
     vi.spyOn(apiClient, 'getUsers').mockResolvedValue(mockUsersData);
     const mockUpdateStatus = vi.spyOn(apiClient, 'updateUserStatus').mockResolvedValue({
       id: 1,
@@ -91,7 +94,6 @@ describe('AdminUsersPage Component', () => {
       created_at: new Date().toISOString(),
     });
 
-    // Mock confirm dialog
     vi.spyOn(window, 'confirm').mockReturnValue(true);
 
     render(<AdminUsersPage />);
@@ -105,5 +107,53 @@ describe('AdminUsersPage Component', () => {
     await waitFor(() => {
       expect(mockUpdateStatus).toHaveBeenCalledWith(1, true);
     });
+  });
+
+  it('renders View-Only mode for BARANGAY_STAFF: displays directory, hides provision button and status toggle actions', async () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 2,
+        email: 'staff.demo@sabtrack.local',
+        role: 'BARANGAY_STAFF',
+        full_name: 'Kagawad Staff Officer',
+        is_active: true,
+        created_at: new Date().toISOString(),
+      },
+      permissions: ['users:read', 'reports:review'],
+      loading: false,
+      error: null,
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+      hasPermission: vi.fn().mockReturnValue(true),
+      hasRole: (roles: any) => {
+        const list = Array.isArray(roles) ? roles : [roles];
+        return list.includes('BARANGAY_STAFF');
+      },
+      refreshSession: vi.fn(),
+    });
+
+    vi.spyOn(apiClient, 'getUsers').mockResolvedValue(mockUsersData);
+
+    render(<AdminUsersPage />);
+
+    // View-only banner must be shown
+    expect(screen.getByText('Staff View-Only Access Mode')).toBeInTheDocument();
+    expect(screen.getByText('Read-Only')).toBeInTheDocument();
+
+    // Provision button must NOT be present
+    expect(screen.queryByText('Provision Account')).not.toBeInTheDocument();
+
+    // User rows must be visible
+    await waitFor(() => {
+      expect(screen.getByText('Barangay Captain Admin')).toBeInTheDocument();
+      expect(screen.getByText('Citizen Resident')).toBeInTheDocument();
+    });
+
+    // Mutative toggle buttons (Deactivate/Reactivate) must NOT be present, replaced with "View Only" chips
+    expect(screen.queryByText('Reactivate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Deactivate')).not.toBeInTheDocument();
+    const viewOnlyChips = screen.getAllByText('View Only');
+    expect(viewOnlyChips.length).toBeGreaterThanOrEqual(1);
   });
 });

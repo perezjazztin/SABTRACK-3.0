@@ -35,6 +35,7 @@ class Permission(str, Enum):
     PARTICIPATION_REVIEW = "participation:review"
     ANALYTICS_READ = "analytics:read"
     USERS_MANAGE = "users:manage"
+    USERS_READ = "users:read"
     SYSTEM_DIAGNOSTICS = "system:diagnostics"
 
 
@@ -54,6 +55,8 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
         Permission.REPORTS_REVIEW,
         Permission.PARTICIPATION_REVIEW,
         Permission.ANNOUNCEMENTS_MANAGE,
+        Permission.ANALYTICS_READ,
+        Permission.USERS_READ,
     },
     UserRole.BARANGAY_ADMIN: {
         Permission.PROFILE_READ_SELF,
@@ -66,6 +69,7 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
         Permission.PARTICIPATION_REVIEW,
         Permission.ANALYTICS_READ,
         Permission.USERS_MANAGE,
+        Permission.USERS_READ,
     },
     UserRole.SYSTEM_MAINTAINER: {
         Permission.PROFILE_READ_SELF,

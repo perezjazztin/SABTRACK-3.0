@@ -151,9 +151,61 @@ def test_admin_cannot_deactivate_own_account(client: TestClient):
     assert res.status_code == 400
 
 
-def test_staff_resident_and_maintainer_denied_user_management(client: TestClient):
-    """Enforces least-privilege: Only BARANGAY_ADMIN can access user management."""
-    for role_email in ["staff@sabtrack.test", "resident@sabtrack.test", "maintainer@sabtrack.test"]:
+def test_staff_can_view_users_directory(client: TestClient):
+    """Verifies that barangay staff with USERS_READ can view user directory in view-only mode."""
+    csrf_token, session_cookie = _login(client, "staff@sabtrack.test")
+
+    res = client.get(
+        "/api/v1/users",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["total"] >= 1
+    assert "items" in data
+
+
+def test_staff_denied_user_mutations(client: TestClient):
+    """Enforces that staff cannot provision accounts, toggle active status, or change roles (users:manage required)."""
+    csrf_token, session_cookie = _login(client, "staff@sabtrack.test")
+
+    # Denied: Create user
+    res_create = client.post(
+        "/api/v1/users",
+        json={
+            "email": "unauthorized.staff@sabtrack.local",
+            "password": "Password123!",
+            "full_name": "Unauthorized User",
+            "role": "RESIDENT",
+        },
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res_create.status_code == 403
+
+    # Denied: Update status
+    res_status = client.patch(
+        "/api/v1/users/1/status",
+        json={"is_active": False},
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res_status.status_code == 403
+
+    # Denied: Update role
+    res_role = client.patch(
+        "/api/v1/users/1/role",
+        json={"role": "BARANGAY_ADMIN"},
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res_role.status_code == 403
+
+
+def test_resident_and_maintainer_denied_user_management(client: TestClient):
+    """Enforces least-privilege: RESIDENT and SYSTEM_MAINTAINER cannot read or manage users."""
+    for role_email in ["resident@sabtrack.test", "maintainer@sabtrack.test"]:
         csrf_token, session_cookie = _login(client, role_email)
 
         res = client.get(

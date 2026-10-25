@@ -17,7 +17,7 @@ describe('AdminLayout Component Role & View-Only Nav Access', () => {
     vi.clearAllMocks();
   });
 
-  it('renders Collection Schedules as permitted with "View Only" indicator for BARANGAY_STAFF', () => {
+  it('renders Collection Schedules, Analytics & Insights, and User Management as permitted with "View Only" indicator for BARANGAY_STAFF', () => {
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: {
         id: 'staff-1',
@@ -26,7 +26,7 @@ describe('AdminLayout Component Role & View-Only Nav Access', () => {
         role: 'BARANGAY_STAFF',
         is_active: true,
       },
-      permissions: ['reports:review', 'participation:review'],
+      permissions: ['reports:review', 'participation:review', 'analytics:read', 'users:read'],
       isAuthenticated: true,
       loading: false,
       isLoggingOut: false,
@@ -51,17 +51,22 @@ describe('AdminLayout Component Role & View-Only Nav Access', () => {
 
     // Verify Collection Schedules exists in ADMIN_NAV with minRole: BARANGAY_STAFF
     const schedulesNav = ADMIN_NAV.find((item) => item.href === '/admin/schedules');
-    expect(schedulesNav).toBeDefined();
     expect(schedulesNav?.minRole).toBe('BARANGAY_STAFF');
     expect((schedulesNav as any)?.viewOnlyForStaff).toBe(true);
 
-    // Verify "View Only" badge is rendered for staff
-    const viewOnlyBadges = screen.getAllByText('View Only');
-    expect(viewOnlyBadges.length).toBeGreaterThanOrEqual(1);
+    // Verify Analytics exists in ADMIN_NAV with minRole: BARANGAY_STAFF
+    const analyticsNav = ADMIN_NAV.find((item) => item.href === '/admin/analytics');
+    expect(analyticsNav?.minRole).toBe('BARANGAY_STAFF');
+    expect((analyticsNav as any)?.viewOnlyForStaff).toBe(true);
 
-    // Verify Admin-locked items like User Management display "Admin" lock badge
-    const adminLockBadges = screen.getAllByText('Admin');
-    expect(adminLockBadges.length).toBeGreaterThanOrEqual(1);
+    // Verify User Management exists in ADMIN_NAV with minRole: BARANGAY_STAFF
+    const usersNav = ADMIN_NAV.find((item) => item.href === '/admin/users');
+    expect(usersNav?.minRole).toBe('BARANGAY_STAFF');
+    expect((usersNav as any)?.viewOnlyForStaff).toBe(true);
+
+    // Verify "View Only" badges are rendered for staff
+    const viewOnlyBadges = screen.getAllByText('View Only');
+    expect(viewOnlyBadges.length).toBeGreaterThanOrEqual(3);
   });
 
   it('renders all administrative modules without "View Only" badge for BARANGAY_ADMIN', () => {
@@ -73,7 +78,7 @@ describe('AdminLayout Component Role & View-Only Nav Access', () => {
         role: 'BARANGAY_ADMIN',
         is_active: true,
       },
-      permissions: ['schedules:manage', 'analytics:read', 'users:manage'],
+      permissions: ['schedules:manage', 'analytics:read', 'users:manage', 'users:read'],
       isAuthenticated: true,
       loading: false,
       isLoggingOut: false,

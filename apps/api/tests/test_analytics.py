@@ -40,11 +40,28 @@ def test_admin_can_access_analytics_overview(client: TestClient):
     assert "community_engagement" in data
     assert "decision_insights" in data
     assert data["procedure_step"] == "Step 6: Visual Indicators & Decision Support"
+    assert "descriptive" in data
+    assert "predictive" in data
 
 
-def test_staff_resident_and_maintainer_denied_analytics(client: TestClient):
-    """Enforces least-privilege: STAFF, RESIDENT, and SYSTEM_MAINTAINER cannot read analytics."""
-    for role_email in ["staff@sabtrack.test", "resident@sabtrack.test", "maintainer@sabtrack.test"]:
+def test_staff_can_view_analytics_overview(client: TestClient):
+    """Verifies that barangay staff with ANALYTICS_READ can view aggregated analytics in view-only mode."""
+    csrf_token, session_cookie = _login(client, "staff@sabtrack.test")
+
+    res = client.get(
+        "/api/v1/analytics/overview",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert "total_reports" in data
+    assert "decision_insights" in data
+
+
+def test_resident_and_maintainer_denied_analytics(client: TestClient):
+    """Enforces least-privilege: RESIDENT and SYSTEM_MAINTAINER cannot read analytics."""
+    for role_email in ["resident@sabtrack.test", "maintainer@sabtrack.test"]:
         csrf_token, session_cookie = _login(client, role_email)
 
         res = client.get(
@@ -151,3 +168,45 @@ def test_analytics_metrics_calculation_and_hotspots(client: TestClient):
     assert len(insights) >= 2
     assert any("Critical Waste Hotspot" in ins["title"] for ins in insights)
     assert any("Dominant Complaint Category" in ins["title"] for ins in insights)
+
+
+def test_descriptive_and_predictive_analytics_results(client: TestClient):
+    """Specifically verifies descriptive historical breakdown and predictive forecasts."""
+    csrf_token, session_cookie = _login(client, "admin@sabtrack.test")
+
+    res = client.get(
+        "/api/v1/analytics/overview",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res.status_code == 200
+    data = res.json()
+
+    # 1. Verify Descriptive Analytics
+    descriptive = data["descriptive"]
+    assert "total_reports" in descriptive
+    assert "daily_operational_trend" in descriptive
+    assert len(descriptive["daily_operational_trend"]) == 7
+    for point in descriptive["daily_operational_trend"]:
+        assert "date" in point
+        assert "submitted_count" in point
+        assert "resolved_count" in point
+
+    # 2. Verify Predictive Analytics
+    predictive = data["predictive"]
+    assert predictive["forecast_horizon_days"] == 7
+    assert predictive["trend_direction"] in ["UPWARD", "DOWNWARD", "STABLE"]
+    assert isinstance(predictive["projected_weekly_reports"], (int, float))
+    assert isinstance(predictive["projected_truck_runs_needed"], int)
+    assert predictive["projected_truck_runs_needed"] >= 1
+    assert "area_risk_forecasts" in predictive
+    assert len(predictive["area_risk_forecasts"]) > 0
+
+    # Check risk forecast structure
+    for forecast in predictive["area_risk_forecasts"]:
+        assert "area_name" in forecast
+        assert "overflow_probability_pct" in forecast
+        assert 0.0 <= forecast["overflow_probability_pct"] <= 100.0
+        assert forecast["risk_level"] in ["HIGH_RISK", "MODERATE_RISK", "LOW_RISK"]
+        assert "proactive_dispatch_action" in forecast
+        assert len(forecast["proactive_dispatch_action"]) > 0
