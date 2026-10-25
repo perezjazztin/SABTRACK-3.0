@@ -319,6 +319,11 @@ export async function getMyPointsSummary(): Promise<ResidentPointsSummary> {
   return apiFetch<ResidentPointsSummary>('/api/v1/gamification/my-points');
 }
 
+/**
+ * Alias for getMyPointsSummary to support both naming conventions.
+ */
+export const getPointsSummary = getMyPointsSummary;
+
 export async function getInitiatives(): Promise<InitiativeItem[]> {
   return apiFetch<InitiativeItem[]>('/api/v1/gamification/initiatives');
 }
