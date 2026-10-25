@@ -1,4 +1,5 @@
 'use client';
+import { RealTimeClock } from '@/components/RealTimeClock';
 
 import { useRealtimeSync } from '@/lib/use-realtime-sync';
 
@@ -10,12 +11,10 @@ import {
   getAllClaims,
   getAdvisories,
   getSchedules,
-  getHealth,
 } from '@/lib/api-client';
 import { WasteReport, ReportStatus } from '@/types/reports';
 import { ClaimItem } from '@/types/gamification';
 import { AdvisoryItem, ScheduleItem } from '@/types/schedules';
-import { HealthResponse } from '@/types/api';
 import {
   ShieldAlert,
   FileCheck2,
@@ -27,11 +26,8 @@ import {
   CheckCircle2,
   MapPin,
   RefreshCw,
-  Activity,
   ChevronRight,
   Sparkles,
-  Server,
-  Database,
   Users,
 } from 'lucide-react';
 
@@ -78,25 +74,22 @@ export default function AdminOverviewPage() {
   const [claims, setClaims] = useState<ClaimItem[]>([]);
   const [advisories, setAdvisories] = useState<AdvisoryItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
-  const [health, setHealth] = useState<HealthResponse | null>(null);
 
   const loadAdminMetrics = useCallback(async () => {
     setLoading(true);
     try {
-      const [reportsRes, claimsRes, advisoriesRes, schedulesRes, healthRes] =
+      const [reportsRes, claimsRes, advisoriesRes, schedulesRes] =
         await Promise.allSettled([
           getAllReports(),
           getAllClaims(),
           getAdvisories(),
           getSchedules(),
-          getHealth(),
         ]);
 
       if (reportsRes.status === 'fulfilled') setReports(reportsRes.value.items || []);
       if (claimsRes.status === 'fulfilled') setClaims(claimsRes.value || []);
       if (advisoriesRes.status === 'fulfilled') setAdvisories(advisoriesRes.value.items || []);
       if (schedulesRes.status === 'fulfilled') setSchedules(schedulesRes.value.items || []);
-      if (healthRes.status === 'fulfilled') setHealth(healthRes.value);
     } finally {
       setLoading(false);
     }
@@ -130,6 +123,7 @@ export default function AdminOverviewPage() {
             <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">
               Role: {user?.role}
             </span>
+            <RealTimeClock className="text-[11px] py-0.5 px-2.5" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-civic-slate tracking-tight">
             Administrative Command Overview
@@ -384,50 +378,6 @@ export default function AdminOverviewPage() {
               ))}
             </div>
           )}
-        </div>
-      </div>
-
-      {/* System & Infrastructure Telemetry Footer */}
-      <div className="neu-card rounded-2xl border border-emerald-900/10 p-5 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center text-civic-forest flex-shrink-0 shadow-neu-xs">
-            <Activity className="w-5 h-5 text-emerald-700" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="text-xs font-bold text-slate-800">
-                Service Diagnostics:
-              </span>
-              <span className="inline-flex items-center space-x-1.5 text-[11px] font-bold text-emerald-700">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{health?.database === 'connected' ? 'PostgreSQL & API Healthy' : 'Degraded'}</span>
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              SABTRACK Core Engine v{health?.version || '3.0.0'} &bull; Environment: {health?.environment || 'development'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-2.5">
-          <Link
-            href="/admin/schedules"
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-neu-xs transition-colors"
-          >
-            Schedules
-          </Link>
-          <Link
-            href="/admin/announcements"
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-neu-xs transition-colors"
-          >
-            Announcements
-          </Link>
-          <Link
-            href="/"
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 shadow-neu-xs transition-colors"
-          >
-            Diagnostics
-          </Link>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRealtimeSync } from '@/lib/use-realtime-sync';
+import { RealTimeClock } from '@/components/RealTimeClock';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
@@ -142,13 +143,17 @@ export default function ResidentDashboardPage() {
       <div className="bg-gradient-to-r from-civic-forest via-emerald-800 to-teal-900 rounded-3xl text-white p-7 sm:p-9 shadow-neu-raised relative overflow-hidden">
         <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2 max-w-xl">
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-emerald-300 text-xs font-bold uppercase tracking-wider">
                 Barangay Sabang Resident Portal
               </span>
               <span className="bg-emerald-700/60 text-emerald-200 text-[10px] font-mono px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                 Verified Account
               </span>
+              <RealTimeClock
+                variant="banner"
+                className="bg-emerald-950/40 text-emerald-100 border border-emerald-500/30 text-[11px] py-0.5 px-2.5"
+              />
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
               Welcome back{user?.full_name && !user.full_name.toLowerCase().includes('demo') ? `, ${user.full_name.replace(/\s*\(fictional\)/i, '').trim()}` : ''}!
