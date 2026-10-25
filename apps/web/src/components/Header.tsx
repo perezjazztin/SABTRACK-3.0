@@ -24,7 +24,7 @@ export const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-50 bg-[#edf2f7]/95 backdrop-blur-md border-b border-white/80 shadow-neu-sm transition-all">
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
         {/* Brand Logo with tactile extruded icon */}
         <Link href="/" className="flex items-center space-x-3 group">
           <div className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-neu-green flex items-center justify-center group-hover:scale-105 transition-all">

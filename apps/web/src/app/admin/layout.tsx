@@ -75,7 +75,8 @@ export default function AdminLayout({
       requiredRole={['BARANGAY_STAFF', 'BARANGAY_ADMIN']}
       moduleName="Barangay Administrative Portal"
     >
-      <div className="flex flex-col md:flex-row gap-6">
+      <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex flex-col md:flex-row gap-6">
         {/* Administrative Sidebar */}
         <aside className="w-full md:w-64 flex-shrink-0">
           <div className="bg-white rounded-2xl border border-civic-border p-4 shadow-sm sticky top-20 space-y-4">
@@ -131,6 +132,7 @@ export default function AdminLayout({
 
         {/* Content Area */}
         <section className="flex-1 min-w-0">{children}</section>
+      </div>
       </div>
     </ProtectedRoute>
   );
