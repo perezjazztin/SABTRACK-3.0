@@ -204,3 +204,25 @@ def test_maintainer_least_privilege_boundary(client):
     # Denied: confidential report queue (Least privilege principle)
     res_rep = client.get("/api/v1/admin/reports-queue")
     assert res_rep.status_code == 403
+
+
+def test_resident_registration_endpoint_with_resident_id_num(client):
+    """Verifies that public resident self-registration succeeds and accepts Resident ID number."""
+    payload = {
+        "email": "new.citizen@sabtrack.test",
+        "password": "ValidResidentPass2026!",
+        "full_name": "Maria Santos",
+        "resident_id_num": "SAB-2026-0999",
+        "area_id": 1,
+    }
+    res = client.post("/api/v1/auth/register", json=payload)
+    assert res.status_code == 201
+    data = res.json()
+    assert data["email"] == "new.citizen@sabtrack.test"
+    assert data["full_name"] == "Maria Santos"
+    assert data["role"] == "RESIDENT"
+    assert data["is_active"] is True
+
+    # Duplicate registration should return 409 Conflict
+    res_dup = client.post("/api/v1/auth/register", json=payload)
+    assert res_dup.status_code == 409

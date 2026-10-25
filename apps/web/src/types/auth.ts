@@ -10,6 +10,7 @@ export interface User {
   full_name: string;
   role: UserRole;
   area_id?: number | null;
+  resident_id_num?: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -23,4 +24,12 @@ export interface SessionUserResponse {
 export interface LoginCredentials {
   email: string;
   password: string;
+}
+
+export interface RegisterPayload {
+  email: string;
+  password: string;
+  full_name: string;
+  area_id?: number | null;
+  resident_id_num?: string | null;
 }

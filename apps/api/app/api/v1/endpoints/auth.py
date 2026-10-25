@@ -27,11 +27,13 @@ from app.modules.identity.models import (
     SecurityAuditLog,
     LoginThrottling,
 )
+from app.core.security import UserRole
 from app.modules.identity.schemas import (
     LoginRequest,
     MessageResponse,
     SessionUserResponse,
     UserRead,
+    UserCreate,
 )
 
 router = APIRouter()
@@ -100,6 +102,49 @@ def _reset_login_attempts(db: Session, ip: str, email: str) -> None:
     if record:
         db.delete(record)
         db.commit()
+
+
+@router.post(
+    "/auth/register",
+    response_model=UserRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Register a new resident user account",
+)
+def register(
+    payload: UserCreate,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> UserRead:
+    clean_email = payload.email.lower().strip()
+    existing = db.query(User).filter(User.email == clean_email).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A user with this email address already exists.",
+        )
+
+    new_user = User(
+        email=clean_email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name.strip(),
+        role=UserRole.RESIDENT,
+        area_id=payload.area_id,
+        is_active=True,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    audit_entry = SecurityAuditLog(
+        actor_id=new_user.id,
+        event_type="RESIDENT_REGISTERED",
+        ip_address=get_client_ip(request),
+        details=f"Self-registered resident: {clean_email} (Resident ID: {payload.resident_id_num or 'N/A'})",
+    )
+    db.add(audit_entry)
+    db.commit()
+
+    return new_user
 
 
 @router.post(

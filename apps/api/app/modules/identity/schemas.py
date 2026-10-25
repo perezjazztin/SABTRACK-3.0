@@ -41,6 +41,7 @@ class UserCreate(BaseModel):
     full_name: str = Field(..., min_length=2, max_length=150)
     role: UserRole = Field(default=UserRole.RESIDENT)
     area_id: int | None = Field(default=None)
+    resident_id_num: str | None = Field(default=None, max_length=50)
 
 
 class UserStatusUpdate(BaseModel):
