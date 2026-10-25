@@ -112,22 +112,29 @@ export default function ResidentPointsPage() {
   const progressPercent = Math.min(100, Math.round((totalPoints / 200) * 100));
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+              Barangay Sabang Civic Rewards
+            </span>
+            <span className="text-xs text-slate-400">&bull;</span>
+            <span className="text-xs text-slate-500 font-medium">RA 9003 Incentive Program</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
             <Award className="w-7 h-7 text-emerald-700" />
             SAB-Points
           </h1>
-          <p className="text-sm text-slate-600 mt-1">
+          <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
             Earn civic points by participating in Barangay Sabang clean-ups and waste segregation programs.
           </p>
         </div>
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setShowClaimModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-soft-raised active:shadow-soft-pressed"
+            className="flex items-center gap-2 px-5 py-3 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
           >
             <Plus className="w-4 h-4" />
             Claim Participation
@@ -135,7 +142,7 @@ export default function ResidentPointsPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-2.5 text-slate-600 bg-[#FAFDFB] border border-emerald-900/10 rounded-xl hover:bg-emerald-50/60 transition-all shadow-soft-raised active:shadow-soft-pressed"
+            className="p-3 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -144,34 +151,34 @@ export default function ResidentPointsPage() {
       </div>
 
       {/* Points & Eco-Tier Banner */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-6">
         {/* Balance Card */}
-        <div className="bg-gradient-to-br from-civic-forest via-emerald-800 to-teal-950 text-white rounded-2xl p-5 shadow-soft-raised space-y-3 md:col-span-2">
+        <div className="bg-gradient-to-br from-civic-forest via-emerald-800 to-teal-950 text-white rounded-3xl p-7 shadow-neu-raised space-y-4 md:col-span-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-200 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-emerald-300" />
               Verified SAB-Points Balance
             </span>
-            <span className="text-xs bg-emerald-700/80 text-emerald-100 px-2.5 py-0.5 rounded-full font-medium border border-emerald-500/40">
+            <span className="text-xs bg-emerald-700/80 text-emerald-100 px-3 py-1 rounded-full font-bold border border-emerald-500/40">
               {tier}
             </span>
           </div>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-extrabold tracking-tight">
+            <span className="text-4xl sm:text-5xl font-black tracking-tight">
               {totalPoints}
             </span>
-            <span className="text-emerald-200 text-sm font-medium">pts</span>
+            <span className="text-emerald-200 text-sm font-semibold">pts</span>
           </div>
 
-          <div className="space-y-1 pt-1">
-            <div className="flex justify-between text-xs text-emerald-200">
+          <div className="space-y-1.5 pt-2">
+            <div className="flex justify-between text-xs text-emerald-200 font-medium">
               <span>Goal: Gold Barangay Champion (200 pts)</span>
-              <span>{progressPercent}%</span>
+              <span className="font-mono font-bold">{progressPercent}%</span>
             </div>
-            <div className="w-full bg-emerald-950/60 rounded-full h-2 overflow-hidden border border-emerald-700/40 shadow-soft-inset">
+            <div className="w-full bg-emerald-950/60 rounded-full h-2.5 overflow-hidden border border-emerald-700/40 shadow-neu-sunken-sm">
               <div
-                className="bg-emerald-400 h-2 rounded-full transition-all duration-500"
+                className="bg-emerald-400 h-2.5 rounded-full transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -179,19 +186,19 @@ export default function ResidentPointsPage() {
         </div>
 
         {/* Verification Stats Card */}
-        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-5 shadow-soft-raised space-y-3 flex flex-col justify-between">
+        <div className="neu-card border border-emerald-900/10 rounded-3xl p-6 sm:p-7 shadow-neu-raised space-y-4 flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Engagement Record
             </span>
-            <div className="text-2xl font-bold text-slate-900 mt-2">
+            <div className="text-3xl font-black text-slate-900 mt-2">
               {summary?.verified_activities_count || 0}
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-500 mt-1">
               Verified community clean-ups &amp; reports
             </p>
           </div>
-          <div className="text-xs text-emerald-800 font-semibold flex items-center gap-1 pt-2 border-t border-slate-100">
+          <div className="text-xs text-emerald-800 font-bold flex items-center gap-1.5 pt-3 border-t border-emerald-900/10">
             <ShieldCheck className="w-4 h-4 text-civic-emerald" />
             <span>Barangay Sabang Council Verified</span>
           </div>
@@ -199,7 +206,7 @@ export default function ResidentPointsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs">
+      <div className="neu-card p-2 rounded-2xl border border-emerald-900/10 shadow-neu-xs flex items-center gap-2 overflow-x-auto text-xs">
         {[
           { key: 'initiatives', label: 'Clean-Up Initiatives', icon: Sparkles },
           { key: 'claims', label: 'My Submitted Claims', icon: FileText },
@@ -208,10 +215,10 @@ export default function ResidentPointsPage() {
           <button
             key={key}
             onClick={() => setActiveTab(key as 'initiatives' | 'claims' | 'ledger')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold transition-all ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all ${
               activeTab === key
-                ? 'bg-civic-forest text-white shadow-soft-raised'
-                : 'bg-[#FAFDFB] text-slate-600 border border-emerald-900/10 hover:bg-emerald-50/60 shadow-soft-raised active:shadow-soft-pressed'
+                ? 'bg-civic-forest text-white shadow-neu-green'
+                : 'text-slate-600 hover:text-civic-forest hover:bg-emerald-50/70'
             }`}
           >
             <TabIcon className="w-4 h-4" />
@@ -274,19 +281,19 @@ export default function ResidentPointsPage() {
 
       {/* Tab 2: My Claims */}
       {activeTab === 'claims' && (
-        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl shadow-soft-raised overflow-hidden">
+        <div className="neu-card rounded-3xl border border-white/80 shadow-neu-raised overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-semibold uppercase border-b border-slate-200">
+              <thead className="bg-[#e4ecf3] text-slate-800 font-black uppercase tracking-wider text-[11px] border-b border-white/80 shadow-neu-xs">
                 <tr>
-                  <th className="px-4 py-3">Activity Claim</th>
-                  <th className="px-4 py-3">Points</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Submitted Date</th>
-                  <th className="px-4 py-3">Review Remarks</th>
+                  <th className="px-5 py-4">Activity Claim</th>
+                  <th className="px-5 py-4">Points</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4">Submitted Date</th>
+                  <th className="px-5 py-4">Review Remarks</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
                 {!summary?.recent_claims.length ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
@@ -333,27 +340,27 @@ export default function ResidentPointsPage() {
 
       {/* Tab 3: Immutable Ledger */}
       {activeTab === 'ledger' && (
-        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl shadow-soft-raised overflow-hidden">
-          <div className="px-5 py-3 border-b bg-slate-50/80 flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-700">
+        <div className="neu-card rounded-3xl border border-white/80 shadow-neu-raised overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/80 bg-[#e4ecf3] flex items-center justify-between shadow-neu-xs">
+            <span className="text-xs font-black uppercase tracking-wider text-slate-800">
               Double-Entry Transaction History
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="neu-chip px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-[#edf2f7]">
               Total Recorded: {summary?.ledger_history.length || 0} entries
             </span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-semibold uppercase border-b border-slate-200">
+              <thead className="bg-[#e4ecf3] text-slate-800 font-black uppercase tracking-wider text-[11px] border-b border-white/80 shadow-neu-xs">
                 <tr>
-                  <th className="px-4 py-3">Description</th>
-                  <th className="px-4 py-3">Type</th>
-                  <th className="px-4 py-3">Transaction Date</th>
-                  <th className="px-4 py-3 text-right">Points Impact</th>
+                  <th className="px-5 py-4">Description</th>
+                  <th className="px-5 py-4">Type</th>
+                  <th className="px-5 py-4">Transaction Date</th>
+                  <th className="px-5 py-4 text-right">Points Impact</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
                 {!summary?.ledger_history.length ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-slate-500">

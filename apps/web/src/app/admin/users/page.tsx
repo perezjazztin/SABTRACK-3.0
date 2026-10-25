@@ -171,19 +171,19 @@ export default function AdminUsersPage() {
       requiredRole="BARANGAY_ADMIN"
       moduleName="User & Access Management"
     >
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Executive Header */}
-        <div className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1">
+        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
             <div className="flex items-center space-x-2.5">
-              <div className="p-2 bg-purple-50 text-purple-700 rounded-xl">
+              <div className="p-2.5 bg-emerald-100 text-civic-forest rounded-xl shadow-neu-xs">
                 <Users className="w-5 h-5" />
               </div>
-              <h1 className="text-xl font-black text-civic-slate tracking-tight">
+              <h1 className="text-xl sm:text-2xl font-black text-civic-slate tracking-tight">
                 User &amp; Personnel Governance
               </h1>
             </div>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs sm:text-sm text-slate-500 font-medium">
               Least-Privilege Role Provisioning &bull; Deactivation Controls &bull; Barangay Sabang
             </p>
           </div>
@@ -191,7 +191,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover transition-colors shadow-sm"
+              className="inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover transition-colors shadow-neu-green"
             >
               <UserPlus className="w-4 h-4 mr-1.5" />
               Provision Account
@@ -199,7 +199,7 @@ export default function AdminUsersPage() {
             <button
               onClick={loadUsers}
               disabled={loading}
-              className="inline-flex items-center p-2 rounded-xl text-slate-600 border border-slate-200 bg-white hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+              className="inline-flex items-center p-2.5 rounded-xl text-slate-600 border border-slate-200 bg-white/70 hover:bg-white transition-colors shadow-neu-xs disabled:opacity-50"
               title="Refresh roster"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -208,16 +208,16 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Summary Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm space-y-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Total Accounts
             </span>
-            <div className="text-2xl font-black text-civic-slate">{totalCount}</div>
+            <div className="text-3xl font-black text-civic-slate">{totalCount}</div>
             <p className="text-[11px] text-slate-400">System identities on record</p>
           </div>
 
-          <div className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm space-y-1.5">
+          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Barangay Personnel
             </span>
@@ -290,19 +290,19 @@ export default function AdminUsersPage() {
         )}
 
         {/* User Roster Table */}
-        <div className="bg-white rounded-2xl border border-civic-border shadow-sm overflow-hidden">
+        <div className="neu-card rounded-3xl border border-white/80 shadow-neu-raised overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
+              <thead className="bg-[#e4ecf3] border-b border-white/80 text-slate-800 font-black uppercase tracking-wider text-[11px] shadow-neu-xs">
                 <tr>
-                  <th className="py-3.5 px-4">User</th>
-                  <th className="py-3.5 px-4">Role Assignment</th>
-                  <th className="py-3.5 px-4">Account Status</th>
-                  <th className="py-3.5 px-4">Created Date</th>
-                  <th className="py-3.5 px-4 text-right">Access Controls</th>
+                  <th className="py-4 px-5">User</th>
+                  <th className="py-4 px-5">Role Assignment</th>
+                  <th className="py-4 px-5">Account Status</th>
+                  <th className="py-4 px-5">Created Date</th>
+                  <th className="py-4 px-5 text-right">Access Controls</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-slate-400">

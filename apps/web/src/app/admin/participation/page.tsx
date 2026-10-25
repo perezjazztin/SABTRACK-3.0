@@ -136,22 +136,29 @@ export default function AdminParticipationPage() {
       requiredPermission="participation:review"
       moduleName="SAB-Points Verification & Cleanliness Initiatives"
     >
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+                Civic Engagement &amp; Rewards
+              </span>
+              <span className="text-xs text-slate-400">&bull;</span>
+              <span className="text-xs text-slate-500 font-medium">RA 9003 Compliance</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
               <Award className="w-7 h-7 text-emerald-700" />
               SAB-Points Verification &amp; Cleanliness Initiatives
             </h1>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
               Review resident participation claims, verify environmental proof, and award tamper-proof ledger points.
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setShowInitModal(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors shadow-sm"
+              className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
             >
               <Plus className="w-4 h-4" />
               New Initiative
@@ -159,7 +166,7 @@ export default function AdminParticipationPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className="p-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+              className="p-2.5 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -198,9 +205,9 @@ export default function AdminParticipationPage() {
         </div>
 
         {/* Claims Review Queue Table */}
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <h2 className="font-semibold text-slate-800 text-sm flex items-center gap-2">
+        <div className="neu-card rounded-3xl border border-white/80 shadow-neu-raised overflow-hidden">
+          <div className="px-6 py-4 border-b border-white/80 bg-[#e4ecf3] flex items-center justify-between shadow-neu-xs">
+            <h2 className="font-black text-slate-800 text-xs uppercase tracking-wider flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-700" />
               Resident Participation Claims Queue
             </h2>
@@ -208,17 +215,17 @@ export default function AdminParticipationPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 font-semibold uppercase border-b border-slate-200">
+              <thead className="bg-[#e4ecf3] text-slate-800 font-black uppercase tracking-wider text-[11px] border-b border-white/80 shadow-neu-xs">
                 <tr>
-                  <th className="px-4 py-3">Resident</th>
-                  <th className="px-4 py-3">Civic Action Title</th>
-                  <th className="px-4 py-3">Points Requested</th>
-                  <th className="px-4 py-3">Evidence</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
+                  <th className="px-5 py-4">Resident</th>
+                  <th className="px-5 py-4">Civic Action Title</th>
+                  <th className="px-5 py-4">Points Requested</th>
+                  <th className="px-5 py-4">Evidence</th>
+                  <th className="px-5 py-4">Status</th>
+                  <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
                 {claims.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
