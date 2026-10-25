@@ -7,7 +7,7 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.143-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black.svg)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791.svg)](https://www.postgresql.org/)
-[![Phase 2 Complete](https://img.shields.io/badge/Phase_2-Identity_%26_RBAC_%E2%9C%85-brightgreen.svg)](#phase-status)
+[![Phase 4 Complete](https://img.shields.io/badge/Phase_4-Analytics_%26_Gamification_%E2%9C%85-brightgreen.svg)](#phase-status)
 
 ---
 
@@ -61,9 +61,9 @@ flowchart LR
 |---|---|---|---|
 | **Phase 1** | Foundation — FastAPI, PostgreSQL, Next.js, Health Check, Design System | ✅ Complete | `b5831f4` |
 | **Phase 2** | Identity, RBAC, Sessions, CSRF, Portal Navigation Shells | ✅ Complete | `098632c` |
-| **Phase 3** | Core Waste Operations — Reports, Schedules, Announcements, File Uploads | 🔄 Pending Approval | — |
-| **Phase 4** | SAB-Points Ledger, Analytics Dashboard, AI Integration | ⏳ Future | — |
-| **Phase 5** | Production Deployment, Hardening, Accessibility | ⏳ Future | — |
+| **Phase 3** | Core Waste Operations — Reports, Schedules, Advisories, Announcements, User Management | ✅ Complete | `b38e62c`, `864b60f` |
+| **Phase 4** | SAB-Points Ledger, 6-Step Analytics Engine & Live Dashboards | ✅ Complete | `8477453`, `864b60f` |
+| **Phase 5** | Production Deployment, Multipart Storage Hardening, Defense Prep | ⏳ Pending | — |
 
 ---
 
@@ -119,7 +119,7 @@ Run the full automated test suite:
 .\scripts\run-tests.bat
 ```
 
-**Current test results (Phase 2):**
+**Current test results (Phase 4):**
 - ✅ Backend Pytest: **14/14** (3 health + 11 auth/RBAC)
 - ✅ Frontend Vitest: **2/2**
 - ✅ Next.js build: **Clean** (zero TypeScript errors, 16 routes)

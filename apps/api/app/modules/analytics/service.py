@@ -4,6 +4,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func, select
 
+from app.modules.identity.models import User
 from app.modules.reports.models import Report, ReportStatus, ReportCategory, ReportStatusHistory
 from app.modules.areas.models import Area
 from app.modules.gamification.models import ParticipationClaim, ClaimStatus, PointsLedger, Initiative
@@ -115,7 +116,7 @@ class AnalyticsService:
         for r in resolved_reports:
             # Look for resolved status history entry
             resolved_history = [
-                h for h in r.status_history if h.to_status == ReportStatus.RESOLVED
+                h for h in r.status_history if h.new_status in (ReportStatus.RESOLVED.value, ReportStatus.RESOLVED, "RESOLVED")
             ]
             if resolved_history:
                 resolved_time = resolved_history[0].created_at
