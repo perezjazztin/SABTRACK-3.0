@@ -36,7 +36,8 @@ export const ADMIN_NAV = [
     label: 'Collection Schedules',
     href: '/admin/schedules',
     icon: CalendarDays,
-    minRole: 'BARANGAY_ADMIN',
+    minRole: 'BARANGAY_STAFF',
+    viewOnlyForStaff: true,
   },
   {
     label: 'Community Participation',
@@ -100,7 +101,7 @@ export default function AdminLayout({
             </button>
             <div className="flex items-center space-x-1.5">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Admin:
+                {user?.role === 'BARANGAY_STAFF' ? 'Staff Console:' : 'Admin:'}
               </span>
               <span className="text-xs font-black text-slate-900">
                 {currentNav.label}
@@ -119,6 +120,7 @@ export default function AdminLayout({
                 const Icon = item.icon;
                 const requiresAdmin = item.minRole === 'BARANGAY_ADMIN';
                 const isPermitted = user?.role === 'BARANGAY_ADMIN' || !requiresAdmin;
+                const isViewOnly = user?.role === 'BARANGAY_STAFF' && (item as any).viewOnlyForStaff;
 
                 return (
                   <Link
@@ -144,6 +146,12 @@ export default function AdminLayout({
                       <span>{item.label}</span>
                     </div>
 
+                    {isViewOnly && !isActive && (
+                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded font-mono border border-slate-300/60">
+                        View Only
+                      </span>
+                    )}
+
                     {!isPermitted && (
                       <span className="inline-flex items-center text-[10px] text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded font-mono border border-rose-200/60">
                         <Lock className="w-2.5 h-2.5 mr-0.5" />
@@ -167,6 +175,7 @@ export default function AdminLayout({
                 const Icon = item.icon;
                 const requiresAdmin = item.minRole === 'BARANGAY_ADMIN';
                 const isPermitted = user?.role === 'BARANGAY_ADMIN' || !requiresAdmin;
+                const isViewOnly = user?.role === 'BARANGAY_STAFF' && (item as any).viewOnlyForStaff;
 
                 return (
                   <Link
@@ -190,6 +199,12 @@ export default function AdminLayout({
                       />
                       <span>{item.label}</span>
                     </div>
+
+                    {isViewOnly && !isActive && (
+                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded font-mono border border-slate-300/60">
+                        View Only
+                      </span>
+                    )}
 
                     {!isPermitted && (
                       <span className="inline-flex items-center text-[10px] text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded font-mono border border-rose-200/60">

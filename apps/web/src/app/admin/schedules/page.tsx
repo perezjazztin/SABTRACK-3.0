@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
 import {
   CalendarDays,
   Plus,
@@ -13,7 +14,9 @@ import {
   X,
   Send,
   Radio,
+  Eye,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   getSchedules,
@@ -52,6 +55,8 @@ const WASTE_TYPES: WasteType[] = [
 ];
 
 export default function AdminSchedulesPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'BARANGAY_ADMIN';
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [advisories, setAdvisories] = useState<AdvisoryItem[]>([]);
   const [areas, setAreas] = useState<AreaItem[]>([]);
@@ -82,9 +87,9 @@ export default function AdminSchedulesPage() {
     effective_date: '',
   });
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    if (!silent) setError(null);
     try {
       const [schedRes, advRes, areaList] = await Promise.all([
         getSchedules(),
@@ -98,16 +103,19 @@ export default function AdminSchedulesPage() {
         setSchedForm((prev) => ({ ...prev, area_id: areaList[0].id }));
       }
     } catch (err) {
-      setError('Failed to fetch schedule data.');
+      if (!silent) setError('Failed to fetch schedule data.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [schedForm.area_id]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Automatic real-time background synchronization (< 3s SLA)
+  useRealtimeSync(() => loadData(true), { entity: 'schedules' });
 
   // Handle Create Schedule
   const handleCreateSchedule = async (e: React.FormEvent) => {
@@ -167,8 +175,8 @@ export default function AdminSchedulesPage() {
 
   return (
     <ProtectedRoute
-      requiredPermission="schedules:manage"
-      moduleName="Collection Schedule Administration"
+      requiredRole={['BARANGAY_STAFF', 'BARANGAY_ADMIN']}
+      moduleName="Collection Schedules"
     >
       <div className="space-y-8">
         {/* Header */}
@@ -179,41 +187,67 @@ export default function AdminSchedulesPage() {
                 Logistics &amp; Routing
               </span>
               <span className="text-xs text-slate-400">&bull;</span>
-              <span className="text-xs text-slate-500 font-medium">Barangay Admin Authorization</span>
+              <span className="text-xs text-slate-500 font-medium">
+                {isAdmin ? 'Barangay Admin Authorization' : 'Staff View-Only Access'}
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 flex items-center gap-2.5">
               <CalendarDays className="w-7 h-7 text-emerald-700" />
               Collection Schedule Administration
             </h1>
             <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-              Configure weekly pickup timetables by purok and broadcast emergency route change advisories to residents.
+              {isAdmin
+                ? 'Configure weekly pickup timetables by purok and broadcast emergency route change advisories to residents.'
+                : 'Operational directory of weekly pickup timetables by purok and active emergency route change advisories.'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setShowAdvisoryModal(true)}
+                  className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-amber-900 bg-amber-100/80 hover:bg-amber-200/80 border border-amber-300 rounded-xl transition-all shadow-neu-xs"
+                >
+                  <Radio className="w-3.5 h-3.5 text-amber-700" />
+                  Broadcast Advisory
+                </button>
+                <button
+                  onClick={() => setShowScheduleModal(true)}
+                  className="flex items-center gap-1.5 px-4.5 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Collection Slot
+                </button>
+              </>
+            )}
             <button
-              onClick={() => setShowAdvisoryModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold text-amber-900 bg-amber-100/80 hover:bg-amber-200/80 border border-amber-300 rounded-xl transition-all shadow-neu-xs"
-            >
-              <Radio className="w-3.5 h-3.5 text-amber-700" />
-              Broadcast Advisory
-            </button>
-            <button
-              onClick={() => setShowScheduleModal(true)}
-              className="flex items-center gap-1.5 px-4.5 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
-            >
-              <Plus className="w-4 h-4" />
-              Add Collection Slot
-            </button>
-            <button
-              onClick={loadData}
+              onClick={() => loadData()}
               disabled={loading}
-              className="p-2.5 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
+              className="neu-button p-2.5 text-slate-600 rounded-xl transition-all shadow-neu-raised"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
         </div>
+
+        {/* Staff View-Only Banner */}
+        {!isAdmin && (
+          <div className="flex items-center gap-3 p-4 bg-blue-50/80 border border-blue-200/80 rounded-2xl text-blue-900 text-xs shadow-neu-xs">
+            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl flex-shrink-0">
+              <Eye className="w-4 h-4" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold">Staff View-Only Access Mode</p>
+              <p className="text-blue-700/90 text-[11px] mt-0.5">
+                You are viewing the operational collection timetable and route advisories. Adding new collection slots, broadcasting alerts, or deactivating entries requires Barangay Administrator authorization.
+              </p>
+            </div>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 text-[10px] font-mono font-semibold border border-blue-200">
+              Read-Only
+            </span>
+          </div>
+        )}
 
         {/* Active Delay Advisories */}
         {advisories.length > 0 && (
@@ -268,14 +302,14 @@ export default function AdminSchedulesPage() {
                   <th className="px-5 py-4">Waste Category</th>
                   <th className="px-5 py-4">Collection Hours</th>
                   <th className="px-5 py-4">Guidance / Notes</th>
-                  <th className="px-5 py-4 text-right">Actions</th>
+                  <th className="px-5 py-4 text-right">{isAdmin ? "Actions" : "Access"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
                 {schedules.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                      No active schedules found. Click "Add Collection Slot" to create one.
+                      {isAdmin ? "No active schedules found. Click \"Add Collection Slot\" to create one." : "No active schedules currently published."}
                     </td>
                   </tr>
                 ) : (
@@ -307,13 +341,19 @@ export default function AdminSchedulesPage() {
                         {item.notes || '—'}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleDeleteSchedule(item.id)}
-                          className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded transition-colors"
-                          title="Deactivate schedule"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isAdmin ? (
+                          <button
+                            onClick={() => handleDeleteSchedule(item.id)}
+                            className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded transition-colors"
+                            title="Deactivate schedule"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <span className="inline-flex items-center text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded font-mono border border-slate-200">
+                            View Only
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))
@@ -324,9 +364,9 @@ export default function AdminSchedulesPage() {
         </div>
 
         {/* Modal: Add Collection Slot */}
-        {showScheduleModal && (
+        {isAdmin && showScheduleModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div className="neu-modal rounded-3xl border border-emerald-900/10 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Add Collection Schedule Slot
@@ -349,7 +389,7 @@ export default function AdminSchedulesPage() {
                     onChange={(e) =>
                       setSchedForm({ ...schedForm, area_id: Number(e.target.value) })
                     }
-                    className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                    className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                     required
                   >
                     {areas.map((a) => (
@@ -373,7 +413,7 @@ export default function AdminSchedulesPage() {
                           day_of_week: e.target.value as DayOfWeek,
                         })
                       }
-                      className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                      className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                       required
                     >
                       {DAYS_OF_WEEK.map((d) => (
@@ -396,7 +436,7 @@ export default function AdminSchedulesPage() {
                           waste_type: e.target.value as WasteType,
                         })
                       }
-                      className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                      className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                       required
                     >
                       {WASTE_TYPES.map((w) => (
@@ -420,7 +460,7 @@ export default function AdminSchedulesPage() {
                         setSchedForm({ ...schedForm, start_time: e.target.value })
                       }
                       placeholder="06:00 AM"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                       required
                     />
                   </div>
@@ -435,7 +475,7 @@ export default function AdminSchedulesPage() {
                         setSchedForm({ ...schedForm, end_time: e.target.value })
                       }
                       placeholder="09:00 AM"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                       required
                     />
                   </div>
@@ -452,7 +492,7 @@ export default function AdminSchedulesPage() {
                       setSchedForm({ ...schedForm, notes: e.target.value })
                     }
                     placeholder="e.g. Curbside pickup only; green bags required"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   />
                 </div>
 
@@ -478,9 +518,9 @@ export default function AdminSchedulesPage() {
         )}
 
         {/* Modal: Broadcast Advisory */}
-        {showAdvisoryModal && (
+        {isAdmin && showAdvisoryModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div className="neu-modal rounded-3xl border border-emerald-900/10 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Broadcast Collection Advisory
@@ -506,7 +546,7 @@ export default function AdminSchedulesPage() {
                         area_id: e.target.value ? Number(e.target.value) : null,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                    className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   >
                     <option value="">All Barangay Sabang (Barangay-wide)</option>
                     {areas.map((a) => (
@@ -528,7 +568,7 @@ export default function AdminSchedulesPage() {
                       setAdvForm({ ...advForm, title: e.target.value })
                     }
                     placeholder="e.g. Truck 2 Mechanical Delay"
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                     required
                   />
                 </div>
@@ -546,7 +586,7 @@ export default function AdminSchedulesPage() {
                           advisory_type: e.target.value as AdvisoryType,
                         })
                       }
-                      className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                      className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                     >
                       <option value="DELAY">Collection Delay</option>
                       <option value="ROUTE_CHANGE">Route Modification</option>
@@ -566,7 +606,7 @@ export default function AdminSchedulesPage() {
                         setAdvForm({ ...advForm, effective_date: e.target.value })
                       }
                       placeholder="e.g. October 26, 2026"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                       required
                     />
                   </div>
@@ -583,7 +623,7 @@ export default function AdminSchedulesPage() {
                       setAdvForm({ ...advForm, message: e.target.value })
                     }
                     placeholder="Explain the reason for delay and expected arrival window..."
-                    className="w-full px-3 py-2 border rounded-lg"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                     required
                   />
                 </div>
