@@ -93,14 +93,16 @@ export const Header: React.FC = () => {
                 </Link>
               )}
 
-              {/* User Identity Chip: Privacy-preserving role indicator */}
-              <div className="hidden lg:flex items-center space-x-2 pl-2">
-                <div className="neu-chip px-3 py-1 rounded-xl text-right">
-                  <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
-                    {user.role.replace('_', ' ')}
+              {/* User Identity Chip: Privacy-preserving role indicator (omitted for residents to avoid redundancy with Resident Portal button) */}
+              {user.role !== 'RESIDENT' && (
+                <div className="hidden lg:flex items-center space-x-2 pl-2">
+                  <div className="neu-chip px-3 py-1 rounded-xl text-right">
+                    <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
+                      {user.role.replace('_', ' ')}
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Sign Out Button */}
               <button

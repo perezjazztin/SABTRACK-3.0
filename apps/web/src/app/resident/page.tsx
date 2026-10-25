@@ -147,11 +147,11 @@ export default function ResidentDashboardPage() {
                 Barangay Sabang Resident Portal
               </span>
               <span className="bg-emerald-700/60 text-emerald-200 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
-                Verified Resident
+                Verified Account
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Welcome back, {user?.full_name && !user.full_name.toLowerCase().includes('demo') ? user.full_name.replace(/\s*\(fictional\)/i, '').trim() : 'Resident'}!
+              Welcome back{user?.full_name && !user.full_name.toLowerCase().includes('demo') ? `, ${user.full_name.replace(/\s*\(fictional\)/i, '').trim()}` : ''}!
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
               Track collection trucks, report community waste concerns, learn sustainability principles, and earn civic SAB-Points for keeping Barangay Sabang clean.

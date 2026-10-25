@@ -34,7 +34,7 @@ describe('Header Component Navigation & Authentication States', () => {
     expect(screen.getByRole('link', { name: /REGISTER/i })).toBeInTheDocument();
   });
 
-  it('removes HOME, ABOUT, CONTACT US, and Demo Resident identity chip once logged in', () => {
+  it('removes HOME, ABOUT, CONTACT US, Demo Resident chip, and redundant RESIDENT badge once logged in', () => {
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: {
         id: 'res-1',
@@ -62,6 +62,9 @@ describe('Header Component Navigation & Authentication States', () => {
 
     // "Demo Resident (Fictional)" must NOT be displayed
     expect(screen.queryByText(/Demo Resident \(Fictional\)/i)).not.toBeInTheDocument();
+
+    // Redundant "RESIDENT" role chip must NOT be displayed alongside Resident Portal
+    expect(screen.queryByText(/^RESIDENT$/i)).not.toBeInTheDocument();
 
     // Portal link and Sign Out must be present
     expect(screen.getByRole('link', { name: /Resident Portal/i })).toBeInTheDocument();
