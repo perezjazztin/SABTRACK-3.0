@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
@@ -45,13 +45,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession();
   }, [refreshSession]);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     setLoading(true);
     setError(null);
     try {
       const data = await apiLogin(credentials);
       setUser(data.user);
       setPermissions(data.permissions || []);
+      return data.user;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);

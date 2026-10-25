@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { Lock, LogIn, AlertCircle, Sparkles, Shield, UserCheck, Wrench } from 'lucide-react';
@@ -48,15 +48,34 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // If already authenticated, redirect to appropriate role portal
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      if (['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role)) {
+        router.push('/admin');
+      } else if (user.role === 'RESIDENT') {
+        router.push('/resident');
+      } else {
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, user, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
-      await login({ email, password });
+      const authenticatedUser = await login({ email, password });
       // Redirect based on role
-      router.push('/resident');
+      if (['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(authenticatedUser.role)) {
+        router.push('/admin');
+      } else if (authenticatedUser.role === 'RESIDENT') {
+        router.push('/resident');
+      } else {
+        router.push('/');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Authentication failed';
       setErrorMessage(msg);

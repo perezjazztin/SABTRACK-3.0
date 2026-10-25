@@ -52,6 +52,10 @@ app.add_exception_handler(Exception, global_exception_handler)
 # Include versioned API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Top-level /health route alias for load balancers and system monitoring
+from app.api.v1.endpoints.health import get_health
+app.add_api_route("/health", get_health, methods=["GET"], tags=["Health"], include_in_schema=False)
+
 
 @app.get("/", tags=["Root"])
 def root():
