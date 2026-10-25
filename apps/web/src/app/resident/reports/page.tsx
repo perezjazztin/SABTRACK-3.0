@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   AlertCircle,
@@ -15,7 +17,8 @@ import {
   RefreshCw,
   Camera,
 } from 'lucide-react';
-import { createReport, getMyReports } from '@/lib/api-client';
+import { createReport, getMyReports, resolveImageUrl } from '@/lib/api-client';
+import { ImageUpload } from '@/components/ImageUpload';
 import { WasteReport, ReportCategory, ReportStatus } from '@/types/reports';
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
@@ -91,6 +94,9 @@ export default function ResidentReportsPage() {
     fetchReports();
   }, [fetchReports]);
 
+  // Automatic real-time background synchronization
+  useRealtimeSync(fetchReports, { entity: 'reports' });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -132,16 +138,19 @@ export default function ResidentReportsPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-civic-border">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-civic-slate">Community Waste Reports</h1>
-          <p className="text-sm text-slate-500">
-            Submit waste violations, uncollected garbage reports, and track their resolution by Barangay Sabang staff.
+          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <FileText className="w-7 h-7 text-emerald-700" />
+            My Reports
+          </h1>
+          <p className="text-sm text-slate-600 mt-1">
+            Submit community waste violations, uncollected garbage issues, and track verified resolution timelines in Barangay Sabang.
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center px-4 py-2 bg-civic-forest text-white rounded-xl text-sm font-semibold hover:bg-emerald-900 transition-colors shadow-sm"
+          className="inline-flex items-center px-4 py-2.5 bg-civic-forest text-white rounded-xl text-xs font-semibold hover:bg-civic-forestHover transition-all shadow-soft-raised active:shadow-soft-pressed"
         >
           {showForm ? 'Cancel' : <><Plus className="w-4 h-4 mr-1.5" /> Submit New Report</>}
         </button>
@@ -150,7 +159,7 @@ export default function ResidentReportsPage() {
       {/* Notifications */}
       {message && (
         <div
-          className={`p-4 rounded-xl text-sm border flex items-center justify-between ${
+          className={`p-4 rounded-2xl text-xs sm:text-sm border flex items-center justify-between shadow-soft-raised ${
             message.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-red-50 text-red-800 border-red-200'
@@ -170,7 +179,7 @@ export default function ResidentReportsPage() {
       {showForm && (
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm space-y-4"
+          className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-6 shadow-soft-raised space-y-4"
         >
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-base font-bold text-civic-slate flex items-center">
@@ -188,7 +197,7 @@ export default function ResidentReportsPage() {
               <select
                 value={category}
                 onChange={(e) => setCategory(e.target.value as ReportCategory)}
-                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-civic-forest"
                 required
               >
                 {Object.entries(CATEGORY_LABELS).map(([catKey, label]) => (
@@ -208,7 +217,7 @@ export default function ResidentReportsPage() {
                 value={locationText}
                 onChange={(e) => setLocationText(e.target.value)}
                 placeholder="e.g. Sitio Sampaguita, corner of Main Street"
-                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-civic-forest"
                 required
                 minLength={3}
               />
@@ -224,7 +233,7 @@ export default function ResidentReportsPage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Uncollected garbage bags piled on sidewalk"
-              className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+              className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-civic-forest"
               required
               minLength={5}
             />
@@ -239,7 +248,7 @@ export default function ResidentReportsPage() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe what waste is present, how long it has been there, and any hazards..."
               rows={3}
-              className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+              className="w-full text-xs sm:text-sm border border-slate-200 rounded-xl px-3 py-2 bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-civic-forest"
               required
               minLength={10}
             />
@@ -248,14 +257,11 @@ export default function ResidentReportsPage() {
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center">
               <Camera className="w-3.5 h-3.5 mr-1 text-slate-400" />
-              Optional Photo URL
+              Photo Evidence (EXIF Sanitized)
             </label>
-            <input
-              type="url"
+            <ImageUpload
               value={photoUrl}
-              onChange={(e) => setPhotoUrl(e.target.value)}
-              placeholder="https://example.com/waste-photo.jpg (Optional)"
-              className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+              onChange={(url: string) => setPhotoUrl(url)}
             />
           </div>
 
@@ -263,14 +269,14 @@ export default function ResidentReportsPage() {
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors"
+              className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors shadow-soft-raised"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="inline-flex items-center px-5 py-2 bg-civic-forest text-white rounded-xl text-xs font-semibold hover:bg-emerald-900 transition-colors disabled:opacity-50 shadow-sm"
+              className="inline-flex items-center px-5 py-2.5 bg-civic-forest text-white rounded-xl text-xs font-semibold hover:bg-civic-forestHover transition-all disabled:opacity-50 shadow-soft-raised active:shadow-soft-pressed"
             >
               {submitting ? (
                 <>Submitting...</>
@@ -297,10 +303,10 @@ export default function ResidentReportsPage() {
             <button
               key={sKey}
               onClick={() => setFilterStatus(sKey)}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center space-x-1.5 border ${
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center space-x-1.5 ${
                 isActive
-                  ? 'bg-civic-forest text-white border-civic-forest shadow-sm'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  ? 'bg-civic-forest text-white shadow-soft-raised'
+                  : 'bg-[#FAFDFB] text-slate-600 border border-emerald-900/10 hover:bg-emerald-50/60 shadow-soft-raised active:shadow-soft-pressed'
               }`}
             >
               <span>{sKey.replace('_', ' ')}</span>
@@ -318,12 +324,12 @@ export default function ResidentReportsPage() {
 
       {/* Reports List */}
       {loading ? (
-        <div className="p-12 text-center text-sm text-slate-400 bg-white rounded-2xl border border-civic-border">
+        <div className="p-12 text-center text-sm text-slate-400 bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 shadow-soft-raised">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-civic-forest" />
           Loading your submitted reports...
         </div>
       ) : filteredReports.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-300 space-y-3">
+        <div className="p-12 text-center bg-[#FAFDFB] rounded-2xl border border-dashed border-slate-300 space-y-3 shadow-soft-raised">
           <FileText className="w-8 h-8 mx-auto text-slate-300" />
           <h3 className="text-sm font-bold text-slate-700">No reports found</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -342,13 +348,13 @@ export default function ResidentReportsPage() {
             return (
               <div
                 key={report.id}
-                className="bg-white rounded-2xl border border-civic-border shadow-sm overflow-hidden"
+                className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 shadow-soft-raised overflow-hidden hover:shadow-soft-raised-lg transition-all"
               >
                 <div className="p-5 space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
                           {CATEGORY_LABELS[report.category] || report.category}
                         </span>
                         <span className="text-xs text-slate-400">
@@ -400,7 +406,7 @@ export default function ResidentReportsPage() {
                     </button>
                     {report.photo_url && (
                       <a
-                        href={report.photo_url}
+                        href={resolveImageUrl(report.photo_url)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center"
@@ -413,14 +419,14 @@ export default function ResidentReportsPage() {
 
                 {/* Immutable Status Timeline Drawer */}
                 {isExpanded && (
-                  <div className="bg-slate-50 border-t border-slate-200 p-5 space-y-3">
+                  <div className="bg-slate-50/80 border-t border-slate-200/80 p-5 space-y-3">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                       Immutable Status Transition History
                     </h4>
                     <div className="space-y-3 border-l-2 border-slate-200 ml-2 pl-4">
                       {report.status_history?.map((h, idx) => (
                         <div key={h.id || idx} className="relative text-xs space-y-0.5">
-                          <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-civic-forest border-2 border-white" />
+                          <div className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-civic-forest border-2 border-white shadow-soft-raised" />
                           <div className="flex items-center space-x-2">
                             <span className="font-bold text-slate-800">
                               {h.new_status}
@@ -433,7 +439,7 @@ export default function ResidentReportsPage() {
                             </span>
                           </div>
                           {h.remarks && (
-                            <p className="text-slate-600 bg-white p-2 rounded-lg border border-slate-200 mt-1">
+                            <p className="text-slate-600 bg-white p-2 rounded-xl border border-slate-200 mt-1 shadow-soft-raised">
                               &ldquo;{h.remarks}&rdquo;
                             </p>
                           )}

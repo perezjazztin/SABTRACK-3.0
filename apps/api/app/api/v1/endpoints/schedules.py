@@ -1,14 +1,15 @@
-from typing import Optional, List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import Permission
 from app.core.deps import get_current_user, require_permission, verify_csrf
+from app.core.security import Permission
+from app.core.websocket import ws_manager
 from app.modules.identity.models import User
 from app.modules.areas.models import Area
-from app.modules.schedules.models import DayOfWeek, WasteType, AdvisoryType
 from app.modules.schedules.schemas import (
     ScheduleCreate,
     ScheduleRead,
@@ -18,23 +19,27 @@ from app.modules.schedules.schemas import (
     AdvisoryListResponse,
 )
 from app.modules.schedules.service import (
-    get_schedules,
     create_schedule,
+    get_schedules,
     deactivate_schedule,
-    get_advisories,
     create_advisory,
+    get_advisories,
 )
 
 router = APIRouter()
 
 
-@router.get("", response_model=ScheduleListResponse, summary="List collection schedules")
+@router.get(
+    "",
+    response_model=ScheduleListResponse,
+    summary="List active collection schedules",
+)
 def list_schedules_endpoint(
-    area_id: Optional[int] = Query(None, description="Filter by area/purok ID"),
-    day_of_week: Optional[DayOfWeek] = Query(None, description="Filter by day of week"),
+    area_id: Optional[int] = Query(None, description="Filter by operational area/purok ID"),
+    day_of_week: Optional[int] = Query(None, ge=0, le=6, description="Filter by day (0=Monday..6=Sunday)"),
     db: Session = Depends(get_db),
 ):
-    """Retrieve active weekly garbage collection schedules organized by area and day."""
+    """Retrieve all recurring collection schedules, filterable by area or day."""
     items = get_schedules(db, area_id=area_id, day_of_week=day_of_week, active_only=True)
     return ScheduleListResponse(items=items, total=len(items))
 
@@ -53,7 +58,9 @@ def create_schedule_endpoint(
 ):
     """Create a new collection timetable slot for an area. Requires `schedules:manage` permission."""
     try:
-        return create_schedule(db, payload)
+        schedule = create_schedule(db, payload)
+        ws_manager.broadcast_sync({"type": "SCHEDULE_CREATED", "entity": "schedules"})
+        return schedule
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
@@ -76,10 +83,15 @@ def delete_schedule_endpoint(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Schedule with ID {schedule_id} not found.",
         )
+    ws_manager.broadcast_sync({"type": "SCHEDULE_DEACTIVATED", "entity": "schedules", "id": schedule_id})
     return {"message": "Schedule deactivated successfully", "id": schedule_id}
 
 
-@router.get("/advisories", response_model=AdvisoryListResponse, summary="List active collection advisories")
+@router.get(
+    "/advisories",
+    response_model=AdvisoryListResponse,
+    summary="List active collection delay/suspension advisories",
+)
 def list_advisories_endpoint(
     area_id: Optional[int] = Query(None, description="Filter by area ID"),
     db: Session = Depends(get_db),
@@ -103,7 +115,9 @@ def create_advisory_endpoint(
 ):
     """Publish a collection delay, route modification, or advisory notice."""
     try:
-        return create_advisory(db, payload, current_user.id)
+        advisory = create_advisory(db, payload, current_user.id)
+        ws_manager.broadcast_sync({"type": "ADVISORY_BROADCAST", "entity": "schedules", "id": advisory.id})
+        return advisory
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 

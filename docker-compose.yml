@@ -25,15 +25,24 @@ services:
       dockerfile: Dockerfile
     container_name: sabtrack-api
     restart: always
+    command: >
+      sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     environment:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+psycopg://postgres:postgres_dev_password@db:5432/sabtrack_dev
       CORS_ORIGINS: '["http://localhost:3000"]'
     ports:
       - "8000:8000"
+    volumes:
+      - api_uploads:/app/storage/uploads
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   web:
     build:
@@ -46,7 +55,9 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   postgres_data:
+  api_uploads:

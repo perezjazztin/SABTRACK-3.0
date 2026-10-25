@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Award,
@@ -17,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { resolveImageUrl } from '@/lib/api-client';
 import {
   getAllClaims,
   getInitiatives,
@@ -75,6 +78,9 @@ export default function AdminParticipationPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadData, { entity: 'claims' });
 
   // Open review modal
   const handleOpenReview = (claim: ClaimItem) => {
@@ -239,7 +245,7 @@ export default function AdminParticipationPage() {
                       <td className="px-4 py-3">
                         {claim.evidence_url ? (
                           <a
-                            href={claim.evidence_url}
+                            href={resolveImageUrl(claim.evidence_url)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 text-emerald-700 hover:underline"
@@ -323,7 +329,7 @@ export default function AdminParticipationPage() {
                   <div>
                     <span className="text-slate-500">Evidence Link: </span>
                     <a
-                      href={selectedClaim.evidence_url}
+                      href={resolveImageUrl(selectedClaim.evidence_url)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-emerald-700 underline break-all"

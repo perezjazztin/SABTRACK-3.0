@@ -141,17 +141,17 @@ export default function ResidentSchedulesPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Calendar className="w-7 h-7 text-emerald-700" />
-            Garbage Collection Schedules
+            Collection Schedules
           </h1>
           <p className="text-sm text-slate-600 mt-1">
-            Official pickup timetables and waste segregation guide for Barangay Sabang.
+            Official pickup timetables, truck routes, and waste segregation guide for Barangay Sabang.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={loadScheduleData}
             disabled={loading}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-[#FAFDFB] border border-emerald-900/10 rounded-xl hover:bg-emerald-50/60 transition-all shadow-soft-raised active:shadow-soft-pressed disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -160,7 +160,7 @@ export default function ResidentSchedulesPage() {
       </div>
 
       {/* Area / Purok Filter Bar */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-4 shadow-soft-raised flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-slate-700 font-medium">
           <MapPin className="w-5 h-5 text-emerald-700 shrink-0" />
           <span>Filter by Purok / Zone:</span>
@@ -171,7 +171,7 @@ export default function ResidentSchedulesPage() {
             onChange={(e) =>
               setSelectedAreaId(e.target.value ? Number(e.target.value) : null)
             }
-            className="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:bg-white"
+            className="w-full px-3 py-2 text-sm bg-white border border-slate-200 shadow-soft-inset rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
           >
             <option value="">All Barangay Areas</option>
             {areas.map((area) => (
@@ -189,7 +189,7 @@ export default function ResidentSchedulesPage() {
           {advisories.map((advisory) => (
             <div
               key={advisory.id}
-              className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-900 shadow-sm flex items-start gap-3"
+              className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 shadow-soft-raised flex items-start gap-3"
             >
               <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -197,7 +197,7 @@ export default function ResidentSchedulesPage() {
                   <h3 className="font-semibold text-amber-900 text-sm">
                     {advisory.title}
                   </h3>
-                  <span className="text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full font-medium">
+                  <span className="text-xs bg-amber-200 text-amber-800 px-2.5 py-0.5 rounded-full font-medium">
                     Effective: {advisory.effective_date}
                   </span>
                 </div>
@@ -216,7 +216,7 @@ export default function ResidentSchedulesPage() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm shadow-soft-raised">
           {error}
         </div>
       )}
@@ -230,15 +230,15 @@ export default function ResidentSchedulesPage() {
           return (
             <div
               key={day}
-              className={`border rounded-xl shadow-sm bg-white overflow-hidden flex flex-col ${
-                hasCollection ? 'border-slate-200' : 'border-slate-100 opacity-75'
+              className={`rounded-2xl shadow-soft-raised bg-[#FAFDFB] overflow-hidden flex flex-col transition-all hover:shadow-soft-raised-lg ${
+                hasCollection ? 'border border-emerald-900/10' : 'border border-slate-200/60 opacity-75'
               }`}
             >
               {/* Day Header */}
               <div
                 className={`px-4 py-3 flex items-center justify-between border-b ${
                   hasCollection
-                    ? 'bg-slate-50 border-slate-200'
+                    ? 'bg-emerald-50/50 border-emerald-900/10'
                     : 'bg-slate-50/50 border-slate-100'
                 }`}
               >
@@ -248,7 +248,7 @@ export default function ResidentSchedulesPage() {
                   </span>
                 </div>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                  className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
                     hasCollection
                       ? 'bg-emerald-100 text-emerald-800'
                       : 'bg-slate-200 text-slate-600'
@@ -268,7 +268,7 @@ export default function ResidentSchedulesPage() {
                     return (
                       <div
                         key={item.id}
-                        className={`p-3 rounded-lg bg-slate-50 border ${config.borderClass} space-y-2 text-xs`}
+                        className={`p-3 rounded-xl bg-white border border-emerald-900/5 shadow-soft-raised ${config.borderClass} space-y-2 text-xs`}
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span
@@ -292,7 +292,7 @@ export default function ResidentSchedulesPage() {
                         </div>
 
                         {item.notes && (
-                          <p className="text-[11px] text-slate-500 italic border-t border-slate-200/60 pt-1.5">
+                          <p className="text-[11px] text-slate-500 italic border-t border-slate-100 pt-1.5">
                             {item.notes}
                           </p>
                         )}
@@ -311,13 +311,13 @@ export default function ResidentSchedulesPage() {
       </div>
 
       {/* Segregation Rules Reference Card */}
-      <div className="bg-gradient-to-r from-emerald-50 to-slate-50 border border-emerald-200 rounded-xl p-5 shadow-sm">
+      <div className="bg-gradient-to-r from-emerald-50 via-[#FAFDFB] to-slate-50 border border-emerald-900/10 rounded-2xl p-5 shadow-soft-raised">
         <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2 mb-3">
           <Info className="w-4 h-4 text-emerald-700" />
           Barangay Sabang Waste Segregation Guidelines
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-          <div className="bg-white p-3 rounded-lg border border-emerald-200">
+          <div className="bg-white p-3.5 rounded-xl border border-emerald-200/80 shadow-soft-raised">
             <span className="font-semibold text-emerald-800 block mb-1">
               🌱 Biodegradable (Green Bag)
             </span>
@@ -325,7 +325,7 @@ export default function ResidentSchedulesPage() {
               Kitchen scraps, vegetable peelings, leftover food, dry leaves, garden cuttings.
             </p>
           </div>
-          <div className="bg-white p-3 rounded-lg border border-slate-200">
+          <div className="bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-soft-raised">
             <span className="font-semibold text-slate-800 block mb-1">
               🗑️ Non-Biodegradable (Black Bag)
             </span>
@@ -333,7 +333,7 @@ export default function ResidentSchedulesPage() {
               Sanitary napkins, disposable diapers, styrofoam, contaminated wrappers, soiled plastic.
             </p>
           </div>
-          <div className="bg-white p-3 rounded-lg border border-blue-200">
+          <div className="bg-white p-3.5 rounded-xl border border-blue-200/80 shadow-soft-raised">
             <span className="font-semibold text-blue-800 block mb-1">
               ♻️ Recyclable (White/Clear Bag)
             </span>

@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from typing import List
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _API_DIR = Path(__file__).resolve().parent.parent.parent
@@ -43,6 +43,22 @@ class Settings(BaseSettings):
     # Rate Limiting for Authentication
     LOGIN_MAX_ATTEMPTS: int = 5
     LOGIN_LOCKOUT_MINUTES: int = 15
+
+    # Storage settings
+    STORAGE_UPLOAD_DIR: Path = Field(
+        default=_API_DIR / "storage" / "uploads",
+        description="Protected local directory for uploaded files"
+    )
+    MAX_UPLOAD_SIZE_BYTES: int = Field(
+        default=5 * 1024 * 1024,  # 5 MB
+        description="Maximum allowed image upload size in bytes"
+    )
+
+    @model_validator(mode="after")
+    def adjust_secure_cookie(self) -> "Settings":
+        if self.ENVIRONMENT.lower() == "production" and not self.SESSION_COOKIE_SECURE:
+            self.SESSION_COOKIE_SECURE = True
+        return self
 
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE,

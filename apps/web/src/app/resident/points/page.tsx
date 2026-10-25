@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Award,
@@ -18,6 +20,7 @@ import {
   Camera,
   Layers,
 } from 'lucide-react';
+import { ImageUpload } from '@/components/ImageUpload';
 import {
   getMyPointsSummary,
   getInitiatives,
@@ -69,6 +72,9 @@ export default function ResidentPointsPage() {
     loadData();
   }, [loadData]);
 
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadData, { entity: 'claims' });
+
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -112,7 +118,7 @@ export default function ResidentPointsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Award className="w-7 h-7 text-emerald-700" />
-            SAB-Points Community Engagement
+            SAB-Points
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             Earn civic points by participating in Barangay Sabang clean-ups and waste segregation programs.
@@ -121,7 +127,7 @@ export default function ResidentPointsPage() {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => setShowClaimModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-soft-raised active:shadow-soft-pressed"
           >
             <Plus className="w-4 h-4" />
             Claim Participation
@@ -129,7 +135,7 @@ export default function ResidentPointsPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-2 text-slate-600 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm"
+            className="p-2.5 text-slate-600 bg-[#FAFDFB] border border-emerald-900/10 rounded-xl hover:bg-emerald-50/60 transition-all shadow-soft-raised active:shadow-soft-pressed"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -140,7 +146,7 @@ export default function ResidentPointsPage() {
       {/* Points & Eco-Tier Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Balance Card */}
-        <div className="bg-gradient-to-br from-emerald-800 to-emerald-950 text-white rounded-xl p-5 shadow-sm space-y-3 md:col-span-2">
+        <div className="bg-gradient-to-br from-civic-forest via-emerald-800 to-teal-950 text-white rounded-2xl p-5 shadow-soft-raised space-y-3 md:col-span-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-200 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4 text-emerald-300" />
@@ -163,7 +169,7 @@ export default function ResidentPointsPage() {
               <span>Goal: Gold Barangay Champion (200 pts)</span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="w-full bg-emerald-950/60 rounded-full h-2 overflow-hidden border border-emerald-700/40">
+            <div className="w-full bg-emerald-950/60 rounded-full h-2 overflow-hidden border border-emerald-700/40 shadow-soft-inset">
               <div
                 className="bg-emerald-400 h-2 rounded-full transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
@@ -173,7 +179,7 @@ export default function ResidentPointsPage() {
         </div>
 
         {/* Verification Stats Card */}
-        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-3 flex flex-col justify-between">
+        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-5 shadow-soft-raised space-y-3 flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Engagement Record
@@ -182,51 +188,36 @@ export default function ResidentPointsPage() {
               {summary?.verified_activities_count || 0}
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Verified community activities attended
+              Verified community clean-ups &amp; reports
             </p>
           </div>
-          <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-xs text-emerald-700 font-medium">
-            <ShieldCheck className="w-4 h-4" />
-            <span>Audited Double-Entry Ledger</span>
+          <div className="text-xs text-emerald-800 font-semibold flex items-center gap-1 pt-2 border-t border-slate-100">
+            <ShieldCheck className="w-4 h-4 text-civic-emerald" />
+            <span>Barangay Sabang Council Verified</span>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-slate-200 flex items-center gap-2">
-        <button
-          onClick={() => setActiveTab('initiatives')}
-          className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'initiatives'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Calendar className="w-4 h-4" />
-          Clean-Up Drives ({initiatives.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('claims')}
-          className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'claims'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Clock className="w-4 h-4" />
-          My Submitted Claims ({summary?.recent_claims.length || 0})
-        </button>
-        <button
-          onClick={() => setActiveTab('ledger')}
-          className={`pb-3 px-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
-            activeTab === 'ledger'
-              ? 'border-emerald-700 text-emerald-800'
-              : 'border-transparent text-slate-500 hover:text-slate-700'
-          }`}
-        >
-          <Layers className="w-4 h-4" />
-          Points Ledger Audit
-        </button>
+      {/* Navigation Tabs */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2 text-xs">
+        {[
+          { key: 'initiatives', label: 'Clean-Up Initiatives', icon: Sparkles },
+          { key: 'claims', label: 'My Submitted Claims', icon: FileText },
+          { key: 'ledger', label: 'Points Ledger Audit', icon: Layers },
+        ].map(({ key, label, icon: TabIcon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key as 'initiatives' | 'claims' | 'ledger')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-semibold transition-all ${
+              activeTab === key
+                ? 'bg-civic-forest text-white shadow-soft-raised'
+                : 'bg-[#FAFDFB] text-slate-600 border border-emerald-900/10 hover:bg-emerald-50/60 shadow-soft-raised active:shadow-soft-pressed'
+            }`}
+          >
+            <TabIcon className="w-4 h-4" />
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Tab 1: Clean-Up Initiatives */}
@@ -234,14 +225,14 @@ export default function ResidentPointsPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {initiatives.length === 0 ? (
-              <div className="col-span-2 p-8 text-center text-slate-500 bg-white border rounded-xl text-sm">
+              <div className="col-span-2 p-8 text-center text-slate-500 bg-[#FAFDFB] border border-dashed border-slate-300 rounded-2xl text-xs shadow-soft-raised">
                 No active initiatives scheduled at the moment.
               </div>
             ) : (
               initiatives.map((init) => (
                 <div
                   key={init.id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-slate-300 transition-colors flex flex-col justify-between space-y-3"
+                  className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -269,7 +260,7 @@ export default function ResidentPointsPage() {
 
                   <button
                     onClick={() => handleSelectInitiative(init)}
-                    className="w-full mt-2 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    className="w-full mt-2 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-all shadow-soft-raised flex items-center justify-center gap-1.5"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
                     Claim Points for this Activity
@@ -283,7 +274,7 @@ export default function ResidentPointsPage() {
 
       {/* Tab 2: My Claims */}
       {activeTab === 'claims' && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl shadow-soft-raised overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-700 font-semibold uppercase border-b border-slate-200">
@@ -342,8 +333,8 @@ export default function ResidentPointsPage() {
 
       {/* Tab 3: Immutable Ledger */}
       {activeTab === 'ledger' && (
-        <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-5 py-3 border-b bg-slate-50 flex items-center justify-between">
+        <div className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl shadow-soft-raised overflow-hidden">
+          <div className="px-5 py-3 border-b bg-slate-50/80 flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-700">
               Double-Entry Transaction History
             </span>
@@ -395,15 +386,15 @@ export default function ResidentPointsPage() {
 
       {/* Modal: Submit Claim */}
       {showClaimModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-soft-raised-lg border border-slate-200 max-w-md w-full p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-slate-900 text-base">
                 Claim SAB-Points for Civic Action
               </h3>
               <button
                 onClick={() => setShowClaimModal(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 p-1"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -425,7 +416,7 @@ export default function ResidentPointsPage() {
                       points_requested: selected ? selected.points_reward : 25,
                     });
                   }}
-                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                 >
                   <option value="">Independent Cleanliness Action (25 pts)</option>
                   {initiatives.map((i) => (
@@ -447,7 +438,7 @@ export default function ResidentPointsPage() {
                     setForm({ ...form, activity_title: e.target.value })
                   }
                   placeholder="e.g. Cleaned street gutter and segregated recyclables"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   required
                 />
               </div>
@@ -463,23 +454,19 @@ export default function ResidentPointsPage() {
                     setForm({ ...form, description: e.target.value })
                   }
                   placeholder="Detail your civic participation or segregation drop-off..."
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   required
                 />
               </div>
 
               <div>
-                <label className="block font-medium text-slate-700 mb-1">
-                  Photo Proof / Evidence URL (Optional)
+                <label className="block font-medium text-slate-700 mb-1 flex items-center">
+                  <Camera className="w-3.5 h-3.5 mr-1 text-slate-400" />
+                  Photo Proof / Evidence (EXIF Sanitized)
                 </label>
-                <input
-                  type="text"
+                <ImageUpload
                   value={form.evidence_url || ''}
-                  onChange={(e) =>
-                    setForm({ ...form, evidence_url: e.target.value })
-                  }
-                  placeholder="https://example.com/clean-up-photo.jpg"
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  onChange={(url: string) => setForm({ ...form, evidence_url: url })}
                 />
               </div>
 
@@ -487,14 +474,14 @@ export default function ResidentPointsPage() {
                 <button
                   type="button"
                   onClick={() => setShowClaimModal(false)}
-                  className="px-3.5 py-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                  className="px-3.5 py-2 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl font-semibold shadow-soft-raised"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="px-4 py-1.5 text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl font-semibold shadow-soft-raised active:shadow-soft-pressed disabled:opacity-50"
                 >
                   {submitting ? 'Submitting...' : 'Submit Claim'}
                 </button>

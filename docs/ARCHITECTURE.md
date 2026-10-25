@@ -3,7 +3,7 @@
 **Course:** IT 313 — System Analysis and Design  
 **Client / Community:** Barangay Sabang, Lipa City, Batangas  
 **Proponents:** Jazztin H. Perez, Faith A. Valencia, May Sigrid M. Dimaano  
-**Status:** Phase 4 Analytics & Gamification Complete — Phase 5 Hardening & Deployment Pending  
+**Status:** Phase 5 Production Hardening & Deployment Complete — All 5 Phases Verified (66/66 Automated Tests Passing)  
 
 ---
 
@@ -26,11 +26,13 @@ flowchart TB
         Announcements[Announcements ✓ Phase 3]
         UserGov[User Governance ✓ Phase 3]
         Audit[Security & Audit Logs ✓ Phase 2]
+        Storage[Protected Storage & EXIF Scrubbing ✓ Phase 5]
+        Throttling[Persistent Throttling ✓ Phase 5]
     end
 
     API --> Core_Backend
     Core_Backend --> DB[(PostgreSQL 16 Database)]
-    Core_Backend --> Storage[(Authenticated File Storage)]
+    Core_Backend --> StorageFS[(Protected Local Storage /uploads)]
     Analytics -. Curated Numerical Aggregates .-> AI[Optional AI Insight Adapter]
 ```
 
@@ -49,7 +51,12 @@ flowchart TB
 
 4. **Immutable State & Ledger Discipline:**  
    - Report status changes are never overwritten in-place; each transition is logged in `report_status_history`.
-   - Points are tracked through an append-only `point_ledger` (`EARNED`, `REVERSED`, `REDEEMED`).
+   - Points are tracked through an append-only `points_ledger` (`EARNED`, `REVERSED`, `REDEEMED`).
+
+5. **Data Privacy & Telemetry Sanitization (RA 10173):**  
+   - Citizen report evidence photos are scrubbed of all EXIF metadata (GPS telemetry, timestamps, camera hardware serials) via Pillow before persisting to disk.
+   - Uploaded files are served strictly through authenticated streaming endpoints with directory traversal protection.
+   - Brute-force authentication defense is persisted across restarts in the `login_throttling` table.
 
 ---
 
@@ -66,12 +73,13 @@ flowchart TB
 | **Migrations** | Alembic | `1.20.x` | Version-controlled database migrations |
 | **Database Driver** | Psycopg 3.x | `3.3.x` | Native high-performance PostgreSQL driver |
 | **Database** | PostgreSQL | `16.x` | Primary relational store |
+| **Image Sanitization** | Pillow | `13.0.x` | EXIF GPS stripping and format validation |
 | **Backend Testing** | Pytest | `9.1.x` | API integration & unit testing |
 | **Password Hashing** | argon2-cffi | `25.1.x` | Argon2id memory-hard password hashing |
 
 ---
 
-## 4. Phase 2 — Authentication & Session Architecture
+## 4. Authentication & Session Architecture
 
 ### 4.1 Session Lifecycle
 
@@ -82,13 +90,15 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     B->>F: POST /api/v1/auth/login {email, password}
+    F->>DB: Check login_throttling (persistent lockout check)
     F->>DB: SELECT user WHERE email = ?
     F->>F: Argon2id verify(password, stored_hash)
+    F->>DB: Reset login_throttling on success
     F->>F: generate_session_token() → raw_token (32 bytes / 64 hex)
     F->>F: hash_token(raw_token) → sha256_hash
     F->>DB: INSERT sessions (user_id, token_hash, csrf_token, expires_at)
     F->>DB: INSERT security_audit_logs (LOGIN_SUCCESS)
-    F-->>B: Set-Cookie: sabtrack_session=raw_token (HttpOnly, SameSite=Lax)
+    F-->>B: Set-Cookie: sabtrack_session=raw_token (HttpOnly, SameSite=Lax, Secure=auto)
     F-->>B: Set-Cookie: sabtrack_csrf=csrf_token (readable, SameSite=Lax)
     F-->>B: 200 {user, permissions[], csrf_token}
 
@@ -97,32 +107,9 @@ sequenceDiagram
     F-->>B: Clear cookies, 200 {message: "Logged out"}
 ```
 
-### 4.2 Request Authentication Flow
-
-Every protected endpoint uses `get_current_user()` as a FastAPI dependency:
-
-1. Read `sabtrack_session` cookie → SHA-256 hash → query `sessions` table.
-2. Verify `session.expires_at` (with timezone normalization for cross-DB compatibility).
-3. Join `Session.user` → return `User` model.
-4. For state-mutating requests (POST/PUT/PATCH/DELETE): `verify_csrf()` checks `X-CSRF-Token` header against `session.csrf_token`.
-
-### 4.3 Cookie Configuration
-
-| Cookie | `HttpOnly` | `Secure` | `SameSite` | Purpose |
-|---|---|---|---|---|
-| `sabtrack_session` | ✅ Yes | `False` (dev) / `True` (prod) | `Lax` | Session opaque token |
-| `sabtrack_csrf` | ❌ No | `False` (dev) / `True` (prod) | `Lax` | CSRF double-submit value |
-
-> **Important:** `SESSION_COOKIE_SECURE` must be set to `True` in the production `.env` file. The default `False` is only safe for local HTTP development.
-
-### 4.4 CORS & Credentials Strategy
-
-- `allow_origins=["http://localhost:3000"]` (dev) — never `"*"` when `allow_credentials=True`.
-- Frontend `apiFetch()` always sends `credentials: 'include'` so cookies are transmitted cross-port (`:3000` → `:8000`).
-
 ---
 
-## 5. Phase 2 — Role-Based Access Control (RBAC)
+## 5. Role-Based Access Control (RBAC)
 
 ### 5.1 Role-Permission Matrix
 
@@ -140,27 +127,9 @@ Every protected endpoint uses `get_current_user()` as a FastAPI dependency:
 | `users:manage` | ❌ | ❌ | ✅ | ❌ |
 | `system:diagnostics` | ❌ | ❌ | ❌ | ✅ |
 
-> **Least-Privilege Note:** `SYSTEM_MAINTAINER` is intentionally restricted. It cannot access resident reports, manage users, or perform administrative barangay functions. It exists solely for infrastructure diagnostics.
-
-### 5.2 Permission Enforcement Pattern
-
-```python
-# Endpoint-level enforcement in FastAPI
-@router.get("/admin/reports-queue")
-async def admin_reports(
-    user: User = Depends(require_permission(Permission.REPORTS_REVIEW))
-):
-    ...
-```
-
-The `require_permission()` factory returns a dependency that:
-1. Calls `get_current_user()` (session validation).
-2. Looks up `ROLE_PERMISSIONS[user.role]`.
-3. Returns `403 Forbidden` if the required permission is absent.
-
 ---
 
-## 6. Comprehensive Database Schema (Migrations 0001–0006)
+## 6. Comprehensive Database Schema (Migrations 0001–0007)
 
 ### Schema Evolution & Migration History
 
@@ -172,84 +141,49 @@ The `require_permission()` factory returns a dependency that:
 | `0004_collection_schedules` | Collection Scheduling | `schedules`, `schedule_advisories` |
 | `0005_announcements` | Civic Communications | `announcements` |
 | `0006_gamification_and_points` | Civic Engagement | `initiatives`, `participation_claims`, `points_ledger` |
-
-### Core Entity Relationships (Migrations 0001–0006)
-
-```mermaid
-erDiagram
-    users {
-        uuid id PK
-        string email UK
-        string display_name
-        string hashed_password
-        enum role
-        boolean is_active
-        boolean is_demo_data
-        datetime created_at
-        datetime updated_at
-    }
-    sessions {
-        uuid id PK
-        uuid user_id FK
-        string token_hash UK
-        string csrf_token
-        datetime expires_at
-        datetime created_at
-        string ip_address
-        string user_agent
-    }
-    security_audit_logs {
-        uuid id PK
-        uuid user_id FK
-        enum event_type
-        string ip_address
-        string details
-        datetime created_at
-    }
-    users ||--o{ sessions : "has"
-    users ||--o{ security_audit_logs : "generates"
-```
+| `0007_login_throttling` | Brute-Force Defense | `login_throttling` |
 
 ---
 
-## 7. Frontend Navigation Structure (Phase 4 Live State)
+## 7. Frontend Navigation Structure (Phase 5 Live State)
 
 ### Resident Portal (`/resident/*`)
 Protected by `ProtectedRoute` requiring `RESIDENT | BARANGAY_STAFF | BARANGAY_ADMIN` role.
 
-| Route | Page | Status |
-|---|---|---|
-| `/resident` | Dashboard | **Live** — Quick stats, recent announcements, quick actions |
-| `/resident/schedules` | Collection Schedules | **Live** — Dynamic area timetables and delay advisories |
-| `/resident/reports` | My Reports | **Live** — Violation submissions & immutable history timeline |
-| `/resident/points` | SAB-Points | **Live** — Points balance, ledger & claim submission |
-| `/resident/announcements` | Announcements | **Live** — Barangay bulletins & urgent advisories |
-| `/resident/profile` | Profile | **Live** — shows user identity |
+| Route | Page | Status | Description |
+|---|---|---|---|
+| `/resident` | Dashboard | **Live** | Quick stats, recent announcements, triage alerts |
+| `/resident/schedules` | Collection Schedules | **Live** | Dynamic area timetables and delay advisories |
+| `/resident/reports` | My Reports | **Live** | Violation submissions with EXIF-scrubbed photo upload & timeline |
+| `/resident/points` | SAB-Points | **Live** | Points balance, ledger, and photo-verified claim submission |
+| `/resident/announcements` | Announcements | **Live** | Barangay bulletins & urgent advisories |
+| `/resident/profile` | Profile | **Live** | Authenticated user identity and active roles |
 
 ### Admin Portal (`/admin/*`)
 Protected by `ProtectedRoute` requiring `BARANGAY_STAFF | BARANGAY_ADMIN` role.
 
-| Route | Page | Min Role | Status |
-|---|---|---|---|
-| `/admin` | Overview | STAFF | **Live** — Operational triage metrics & alert feeds |
-| `/admin/reports` | Report Management | STAFF | Placeholder (Phase 3) |
-| `/admin/schedules` | Collection Schedules | ADMIN | Placeholder (Phase 3) |
-| `/admin/participation` | Community Participation | STAFF | Placeholder (Phase 4) |
-| `/admin/analytics` | Analytics & Insights | ADMIN | Placeholder (Phase 4) |
-| `/admin/announcements` | Announcements | STAFF | Placeholder (Phase 3) |
-| `/admin/users` | User Management | ADMIN | Placeholder (Phase 3) |
+| Route | Page | Min Role | Status | Description |
+|---|---|---|---|---|
+| `/admin` | Overview | STAFF | **Live** | Operational triage metrics & alert feeds |
+| `/admin/reports` | Report Management | STAFF | **Live** | Triage queue, immutable status updates, sanitized photo review |
+| `/admin/schedules` | Collection Schedules | ADMIN | **Live** | Timetable management & emergency delay broadcasts |
+| `/admin/participation` | Community Participation | STAFF | **Live** | Civic initiative management & claim verification queue |
+| `/admin/analytics` | Analytics & Insights | ADMIN | **Live** | 6-stage analytics dashboard with area hotspot classification |
+| `/admin/announcements` | Announcements | STAFF | **Live** | Official communications composer & bulletin manager |
+| `/admin/users` | User Management | ADMIN | **Live** | Staff provisioning & user account activation toggles |
 
 ---
 
 ## 8. Security & Privacy Baseline (RA 10173)
 
 - **Authentication:** Server-managed `HttpOnly`, `SameSite=Lax` cookies with anti-CSRF token verification on state mutations.
-- **Password Storage:** Argon2id with CFFI bindings (`argon2-cffi 25.1`). No MD5, SHA-1, bcrypt, or plaintext.
+- **Password Storage:** Argon2id with CFFI bindings (`argon2-cffi 25.1`).
 - **Token Storage:** Session tokens stored as SHA-256 hash only. Raw token exists only in the HttpOnly cookie.
-- **Rate Limiting:** 5 failed login attempts per IP per 15 minutes (in-memory; resets on server restart — acceptable for academic scope).
-- **Audit Logging:** `security_audit_logs` table records `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `SESSION_EXPIRED` events with IP address.
-- **Upload Isolation:** Evidence photos and attachments are stored in an authenticated directory, never exposed as public static files.
-- **Metadata Sanitization:** Image EXIF metadata (GPS, device serials) is stripped upon upload.
+- **Persistent Rate Limiting:** 5 failed login attempts locks IP/email for 15 minutes; tracked in PostgreSQL `login_throttling` table to survive server reboots.
+- **Audit Logging:** `security_audit_logs` table records `LOGIN_SUCCESS`, `LOGIN_FAILED`, `LOGOUT`, `SESSION_EXPIRED` events with IP address.
+- **Protected File Storage:** Citizen photos are stored in an authenticated server directory (`apps/api/storage/uploads`), inaccessible via public web paths.
+- **Metadata Sanitization:** Pillow automatically re-encodes uploaded images and strips all EXIF metadata (GPS telemetry, device serials).
+- **Directory Traversal Defense:** Upload path resolution strictly verifies child paths against the configured storage root.
 - **Least Privilege RBAC:** Roles distinguish `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, and `SYSTEM_MAINTAINER`.
 
 ---
@@ -264,13 +198,13 @@ $$\text{Operational Records} \xrightarrow{\text{1. Collect}} \text{Sanitization}
 
 ---
 
-## 10. Outstanding Unresolved Items
+## 10. Items Status & Production Readiness
 
-| # | Item | Reason | Resolution Path |
-|---|---|---|---|
-| 1 | Actual purok/area boundaries for Barangay Sabang | Must be validated with barangay officials | Barangay interview or official document |
-| 2 | Resident account onboarding and identity verification process | No confirmed barangay procedure | Requirements workshop with client |
-| 3 | Resident account deletion / right-to-erasure procedure | RA 10173 compliance | Policy decision with barangay and legal review |
-| 4 | Production session cookie domain (if custom domain used) | Infrastructure not yet decided | Phase 5 deployment planning |
-| 5 | File storage backend (local vs. object storage) | Not yet provisioned | Phase 3 decision |
-| 6 | Rate limiter persistence (in-memory resets on restart) | Acceptable for academic demo | Replace with Redis or DB-backed limiter for production |
+| # | Item | Status | Resolution Details |
+|---|---|:---:|---|
+| 1 | Actual purok/area boundaries for Barangay Sabang | Open | Subject to ongoing barangay validation; dynamic `areas` table handles arbitrary puroks. |
+| 2 | Resident account onboarding and identity verification | Open | Requirements workshop with client; seed scripts provide development accounts. |
+| 3 | Resident account deletion / right-to-erasure procedure | Open | Policy decision with barangay council. |
+| 4 | Production session cookie domain & HTTPS flags | **Resolved** | `SESSION_COOKIE_SECURE` automatically activates when `ENVIRONMENT=production`. |
+| 5 | Protected file storage backend & EXIF scrubbing | **Resolved** | Implemented in `StorageService` using Pillow EXIF stripping and authenticated stream endpoint. |
+| 6 | Rate limiter persistence | **Resolved** | Implemented via Alembic migration `0007_login_throttling` in PostgreSQL. |

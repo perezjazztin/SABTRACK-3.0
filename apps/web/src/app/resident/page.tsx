@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -29,6 +31,8 @@ import {
   ShieldAlert,
   ChevronRight,
   RefreshCw,
+  BookOpen,
+  Video,
 } from 'lucide-react';
 
 const STATUS_BADGES: Record<
@@ -107,6 +111,9 @@ export default function ResidentDashboardPage() {
     loadDashboardData();
   }, [loadDashboardData]);
 
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadDashboardData, { entity: '*' });
+
   // Derived metrics
   const activeReports = reports.filter((r) =>
     ['SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS'].includes(r.status)
@@ -128,34 +135,33 @@ export default function ResidentDashboardPage() {
   ];
   const currentDayName = daysOfWeek[todayIndex];
   const todaysSchedule = schedules.find((s) => s.day_of_week === currentDayName && s.is_active);
-  const upcomingSchedules = schedules.filter((s) => s.is_active).slice(0, 2);
 
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-civic-forest to-emerald-800 rounded-2xl text-white p-6 sm:p-8 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
+      <div className="bg-gradient-to-r from-civic-forest via-emerald-800 to-teal-900 rounded-3xl text-white p-6 sm:p-8 shadow-soft-raised relative overflow-hidden">
+        <div className="relative z-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1.5 max-w-xl">
             <div className="flex items-center space-x-2">
               <span className="text-emerald-300 text-xs font-semibold uppercase tracking-wider">
                 Barangay Sabang Resident Portal
               </span>
-              <span className="bg-emerald-700/60 text-emerald-200 text-[10px] font-mono px-2 py-0.5 rounded">
+              <span className="bg-emerald-700/60 text-emerald-200 text-[10px] font-mono px-2 py-0.5 rounded-full border border-emerald-500/30">
                 Verified Resident
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              Welcome back, {user?.full_name || 'Resident'}!
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              Welcome back, {user?.full_name && !user.full_name.toLowerCase().includes('demo') ? user.full_name.replace(/\s*\(fictional\)/i, '').trim() : 'Resident'}!
             </h1>
-            <p className="text-xs sm:text-sm text-emerald-100/90 max-w-xl">
-              Track collection trucks, report community waste issues, and earn civic SAB-points for helping keep Barangay Sabang clean and sustainable.
+            <p className="text-xs sm:text-sm text-emerald-100/90 leading-relaxed">
+              Track collection trucks, report community waste concerns, learn sustainability principles, and earn civic SAB-Points for keeping Barangay Sabang clean.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5 flex-shrink-0">
             <button
               onClick={loadDashboardData}
               disabled={loading}
-              className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-colors border border-white/15"
+              className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all border border-white/15 shadow-soft-raised active:shadow-soft-pressed"
               title="Refresh dashboard metrics"
             >
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
@@ -163,27 +169,30 @@ export default function ResidentDashboardPage() {
             </button>
             <Link
               href="/resident/reports"
-              className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-white text-civic-forest hover:bg-emerald-50 transition-colors shadow-sm"
+              className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-semibold bg-white text-civic-forest hover:bg-emerald-50 transition-colors shadow-soft-raised"
             >
               <PlusCircle className="w-4 h-4 mr-1.5 text-civic-forest" />
               File Report
             </Link>
           </div>
         </div>
+
+        {/* Ambient glow decoration */}
+        <div className="absolute right-0 bottom-0 translate-x-12 translate-y-12 w-64 h-64 bg-emerald-400/10 rounded-full blur-3xl pointer-events-none" />
       </div>
 
-      {/* Quick Metric KPI Cards */}
+      {/* Quick Metric KPI Cards (Neumorphic Soft-UI) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* SAB-Points Balance */}
         <Link
           href="/resident/points"
-          className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm hover:border-civic-emerald hover:shadow-md transition-all group"
+          className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               SAB-Points
             </span>
-            <div className="p-2 bg-amber-50 rounded-xl text-amber-600 group-hover:scale-110 transition-transform">
+            <div className="p-2 bg-amber-50 rounded-xl text-amber-600 shadow-soft-pressed group-hover:scale-110 transition-transform">
               <Award className="w-5 h-5" />
             </div>
           </div>
@@ -201,16 +210,16 @@ export default function ResidentDashboardPage() {
           </div>
         </Link>
 
-        {/* Active Reports */}
+        {/* My Reports */}
         <Link
           href="/resident/reports"
-          className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm hover:border-civic-emerald hover:shadow-md transition-all group"
+          className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               My Active Reports
             </span>
-            <div className="p-2 bg-emerald-50 rounded-xl text-civic-forest group-hover:scale-110 transition-transform">
+            <div className="p-2 bg-emerald-50 rounded-xl text-civic-forest shadow-soft-pressed group-hover:scale-110 transition-transform">
               <FileText className="w-5 h-5" />
             </div>
           </div>
@@ -227,13 +236,13 @@ export default function ResidentDashboardPage() {
         {/* Next Collection Schedule */}
         <Link
           href="/resident/schedules"
-          className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm hover:border-civic-emerald hover:shadow-md transition-all group"
+          className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Today's Collection
+              Today&apos;s Collection
             </span>
-            <div className="p-2 bg-blue-50 rounded-xl text-blue-600 group-hover:scale-110 transition-transform">
+            <div className="p-2 bg-blue-50 rounded-xl text-blue-600 shadow-soft-pressed group-hover:scale-110 transition-transform">
               <Calendar className="w-5 h-5" />
             </div>
           </div>
@@ -247,16 +256,16 @@ export default function ResidentDashboardPage() {
           </div>
         </Link>
 
-        {/* Barangay Advisories */}
+        {/* Barangay Bulletins / Advisories */}
         <Link
           href="/resident/announcements"
-          className="bg-white rounded-2xl border border-civic-border p-5 shadow-sm hover:border-civic-emerald hover:shadow-md transition-all group"
+          className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all group"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Barangay Advisories
             </span>
-            <div className="p-2 bg-purple-50 rounded-xl text-purple-600 group-hover:scale-110 transition-transform">
+            <div className="p-2 bg-purple-50 rounded-xl text-purple-600 shadow-soft-pressed group-hover:scale-110 transition-transform">
               <Bell className="w-5 h-5" />
             </div>
           </div>
@@ -271,9 +280,40 @@ export default function ResidentDashboardPage() {
         </Link>
       </div>
 
+      {/* AwarenessHub Spotlight Card */}
+      <div className="bg-gradient-to-r from-emerald-50 via-[#FAFDFB] to-teal-50/60 rounded-3xl border border-emerald-900/10 p-6 shadow-soft-raised flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-start space-x-3.5">
+          <div className="p-3 bg-emerald-100 rounded-2xl text-civic-forest shadow-soft-pressed flex-shrink-0">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                Multimedia Education
+              </span>
+              <span className="text-xs text-slate-500">• UN SDGs 11 &amp; 12</span>
+            </div>
+            <h3 className="text-sm sm:text-base font-bold text-slate-900">
+              Explore the AwarenessHub: Solid Waste, Climate &amp; Video Guides
+            </h3>
+            <p className="text-xs text-slate-600 max-w-xl leading-relaxed">
+              Watch video tutorials on proper waste segregation, learn RA 9003 policies, and discover home composting practices tailored for Barangay Sabang residents.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/resident/awareness"
+          className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-civic-forest text-white shadow-soft-raised hover:bg-civic-forestHover transition-all whitespace-nowrap self-stretch md:self-center justify-center"
+        >
+          <Video className="w-4 h-4 mr-1.5" />
+          Open AwarenessHub
+          <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+        </Link>
+      </div>
+
       {/* Urgent Advisory Callout (if active) */}
       {activeAdvisories.length > 0 && (
-        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start space-x-3 shadow-sm">
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-start space-x-3 shadow-soft-raised">
           <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
             <div className="flex items-center space-x-2">
@@ -300,7 +340,7 @@ export default function ResidentDashboardPage() {
       {/* Main Split Section: Recent Reports vs Announcements */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Recent Reports */}
-        <div className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm space-y-4">
+        <div className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-6 shadow-soft-raised space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center space-x-2">
               <FileText className="w-4 h-4 text-civic-forest" />
@@ -319,7 +359,7 @@ export default function ResidentDashboardPage() {
 
           {recentReports.length === 0 ? (
             <div className="text-center py-8 space-y-3">
-              <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto">
+              <div className="w-10 h-10 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto shadow-soft-pressed">
                 <FileText className="w-5 h-5" />
               </div>
               <div className="space-y-1">
@@ -332,7 +372,7 @@ export default function ResidentDashboardPage() {
               </div>
               <Link
                 href="/resident/reports"
-                className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-civic-forest hover:bg-emerald-100 transition-colors"
+                className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-civic-forest hover:bg-emerald-100 transition-colors shadow-soft-raised"
               >
                 <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
                 Submit Your First Report
@@ -345,7 +385,7 @@ export default function ResidentDashboardPage() {
                 return (
                   <div
                     key={report.id}
-                    className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors space-y-2"
+                    className="p-3.5 rounded-xl border border-emerald-900/5 bg-white shadow-soft-raised hover:shadow-soft-raised-lg transition-all space-y-2"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-0.5">
@@ -381,7 +421,7 @@ export default function ResidentDashboardPage() {
         </div>
 
         {/* Right Column: Latest Announcements & Schedules */}
-        <div className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm space-y-4">
+        <div className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 p-6 shadow-soft-raised space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center space-x-2">
               <Bell className="w-4 h-4 text-civic-forest" />
@@ -408,7 +448,7 @@ export default function ResidentDashboardPage() {
               {recentAnnouncements.map((item) => (
                 <div
                   key={item.id}
-                  className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-colors space-y-1.5"
+                  className="p-3.5 rounded-xl border border-emerald-900/5 bg-white shadow-soft-raised hover:shadow-soft-raised-lg transition-all space-y-1.5"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-bold text-civic-forest bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">

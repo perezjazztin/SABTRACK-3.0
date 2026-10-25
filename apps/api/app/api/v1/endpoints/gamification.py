@@ -1,12 +1,13 @@
-from typing import Optional, List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import Permission
 from app.core.deps import get_current_user, require_permission, verify_csrf
+from app.core.security import Permission
+from app.core.websocket import ws_manager
 from app.modules.identity.models import User
-from app.modules.gamification.models import ClaimStatus
 from app.modules.gamification.schemas import (
     InitiativeCreate,
     InitiativeRead,
@@ -14,10 +15,11 @@ from app.modules.gamification.schemas import (
     ClaimRead,
     ClaimReviewPayload,
     ResidentPointsSummary,
+    ClaimStatus,
 )
 from app.modules.gamification.service import (
-    get_initiatives,
     create_initiative,
+    get_initiatives,
     submit_claim,
     get_claims,
     review_claim,
@@ -27,20 +29,26 @@ from app.modules.gamification.service import (
 router = APIRouter()
 
 
-@router.get("/my-points", response_model=ResidentPointsSummary, summary="Get resident points & ledger")
+@router.get(
+    "/my-points",
+    response_model=ResidentPointsSummary,
+    summary="Get resident points balance, history and rank",
+)
 def get_my_points_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Retrieve current resident's total points balance, tier, and transaction ledger."""
+    """Returns total points, active tier, and complete immutable transaction history."""
     return get_resident_points_summary(db, current_user.id)
 
 
-@router.get("/initiatives", response_model=List[InitiativeRead], summary="List community initiatives")
-def list_initiatives_endpoint(
-    db: Session = Depends(get_db),
-):
-    """Retrieve active clean-up drives, seminars, and ecological campaigns."""
+@router.get(
+    "/initiatives",
+    response_model=List[InitiativeRead],
+    summary="List active clean-up and recycling initiatives",
+)
+def list_initiatives_endpoint(db: Session = Depends(get_db)):
+    """Retrieve all open community initiatives residents can participate in."""
     return get_initiatives(db, active_only=True)
 
 
@@ -48,7 +56,7 @@ def list_initiatives_endpoint(
     "/initiatives",
     response_model=InitiativeRead,
     status_code=status.HTTP_201_CREATED,
-    summary="Create initiative (Staff / Admin)",
+    summary="Create civic initiative (Staff / Admin)",
     dependencies=[Depends(verify_csrf)],
 )
 def create_initiative_endpoint(
@@ -56,8 +64,10 @@ def create_initiative_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.PARTICIPATION_REVIEW)),
 ):
-    """Create a new point-eligible community activity."""
-    return create_initiative(db, payload)
+    """Publish a new civic initiative with SAB-Points reward value."""
+    initiative = create_initiative(db, payload)
+    ws_manager.broadcast_sync({"type": "INITIATIVE_CREATED", "entity": "initiatives", "id": initiative.id})
+    return initiative
 
 
 @router.post(
@@ -73,7 +83,9 @@ def submit_claim_endpoint(
     current_user: User = Depends(get_current_user),
 ):
     """Submit proof of participation in an initiative or verified waste segregation."""
-    return submit_claim(db, current_user.id, payload)
+    claim = submit_claim(db, current_user.id, payload)
+    ws_manager.broadcast_sync({"type": "CLAIM_SUBMITTED", "entity": "claims", "id": claim.id})
+    return claim
 
 
 @router.get("/claims/my", response_model=List[ClaimRead], summary="List my participation claims")
@@ -109,6 +121,14 @@ def review_claim_endpoint(
 ):
     """Approve or reject a participation claim. Approved claims automatically post to points_ledger."""
     try:
-        return review_claim(db, claim_id, current_user.id, payload)
+        claim = review_claim(db, claim_id, current_user.id, payload)
+        ws_manager.broadcast_sync({
+            "type": "CLAIM_REVIEWED",
+            "entity": "claims",
+            "id": claim.id,
+            "status": claim.status.value,
+            "resident_id": claim.resident_id,
+        })
+        return claim
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

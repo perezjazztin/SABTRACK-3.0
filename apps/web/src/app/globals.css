@@ -30,3 +30,25 @@ body {
   outline: 2px solid #198754;
   outline-offset: 2px;
 }
+
+
+/* Neumorphism (Soft UI) Utilities - ui-ux-pro-max standard */
+.shadow-soft-raised {
+  box-shadow: -4px -4px 12px rgba(255, 255, 255, 0.9), 4px 4px 14px rgba(15, 81, 50, 0.08);
+}
+
+.shadow-soft-raised-lg {
+  box-shadow: -6px -6px 18px rgba(255, 255, 255, 0.95), 6px 6px 20px rgba(15, 81, 50, 0.12);
+}
+
+.shadow-soft-pressed {
+  box-shadow: inset -2px -2px 6px rgba(255, 255, 255, 0.8), inset 2px 2px 6px rgba(15, 81, 50, 0.1);
+}
+
+.shadow-soft-inset {
+  box-shadow: inset -3px -3px 8px rgba(255, 255, 255, 0.7), inset 3px 3px 8px rgba(0, 0, 0, 0.06);
+}
+
+.bg-soft-canvas {
+  background-color: #f4f8f5;
+}

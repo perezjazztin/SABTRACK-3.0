@@ -21,6 +21,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     setup_logging()
     logger.info("Initializing %s v%s (%s)", settings.PROJECT_NAME, settings.VERSION, settings.ENVIRONMENT)
+    try:
+        settings.STORAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info("Storage uploads directory verified: %s", settings.STORAGE_UPLOAD_DIR)
+    except Exception as exc:
+        logger.error("Failed to initialize storage directory: %s", exc)
     yield
     logger.info("Shutting down %s", settings.PROJECT_NAME)
 

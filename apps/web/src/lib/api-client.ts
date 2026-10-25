@@ -381,3 +381,57 @@ export async function updateUserRole(userId: number, role: string): Promise<Admi
     body: JSON.stringify({ role }),
   });
 }
+
+
+export async function uploadEvidencePhoto(
+  file: File
+): Promise<{ file_url: string; filename: string }> {
+  const url = `${API_BASE_URL}/api/v1/uploads`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (activeCsrfToken) {
+    headers['X-CSRF-Token'] = activeCsrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { message: response.statusText };
+    }
+    const errorMessage =
+      errorData?.error?.message ||
+      errorData?.detail ||
+      `Upload failed with status ${response.status}`;
+    throw new ApiClientError(errorMessage, response.status, errorData);
+  }
+
+  return (await response.json()) as { file_url: string; filename: string };
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  if (url.startsWith('/api/v1')) {
+    return `${API_BASE_URL}${url}`;
+  }
+  if (url.startsWith('/')) {
+    return `${API_BASE_URL}/api/v1${url}`;
+  }
+  return `${API_BASE_URL}/api/v1/${url}`;
+}

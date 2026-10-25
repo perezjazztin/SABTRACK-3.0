@@ -21,7 +21,12 @@ from app.core.deps import (
     get_current_user,
     verify_csrf,
 )
-from app.modules.identity.models import Session as SessionModel, User, SecurityAuditLog
+from app.modules.identity.models import (
+    Session as SessionModel,
+    User,
+    SecurityAuditLog,
+    LoginThrottling,
+)
 from app.modules.identity.schemas import (
     LoginRequest,
     MessageResponse,
@@ -31,42 +36,70 @@ from app.modules.identity.schemas import (
 
 router = APIRouter()
 
-# In-memory login attempt throttling tracker
-# Key: (ip, email), Value: (attempt_count, last_attempt_time)
-_login_attempts: Dict[Tuple[str, str], Tuple[int, datetime]] = {}
 
-
-def _check_rate_limit(ip: str, email: str) -> None:
-    """Enforces login throttling to defend against brute-force attacks."""
-    key = (ip, email.lower().strip())
+def _check_rate_limit(db: Session, ip: str, email: str) -> None:
+    """Enforces login throttling to defend against brute-force attacks via persistent database records."""
+    key_email = email.lower().strip()
     now = datetime.now(timezone.utc)
-    if key in _login_attempts:
-        count, last_time = _login_attempts[key]
-        lockout_duration = timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
-        if count >= settings.LOGIN_MAX_ATTEMPTS:
-            if now - last_time < lockout_duration:
-                remaining_secs = int((lockout_duration - (now - last_time)).total_seconds())
-                logger.warning("Throttled login attempt for %s from IP %s", email, ip)
-                raise HTTPException(
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"Too many failed login attempts. Please wait {remaining_secs} seconds before retrying.",
-                )
-            else:
-                # Reset counter after lockout window passes
-                _login_attempts[key] = (0, now)
+    stmt = select(LoginThrottling).where(
+        LoginThrottling.ip_address == ip,
+        LoginThrottling.email == key_email,
+    )
+    record = db.scalar(stmt)
+    if record and record.locked_until:
+        locked_until = record.locked_until
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if now < locked_until:
+            remaining_secs = max(1, int((locked_until - now).total_seconds()))
+            logger.warning("Throttled login attempt for %s from IP %s", email, ip)
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"Too many failed login attempts. Please wait {remaining_secs} seconds before retrying.",
+            )
+        else:
+            # Lockout window passed, reset attempts
+            record.attempt_count = 0
+            record.locked_until = None
+            db.commit()
 
 
-def _record_login_failure(ip: str, email: str) -> None:
-    key = (ip, email.lower().strip())
+def _record_login_failure(db: Session, ip: str, email: str) -> None:
+    """Increments failed attempt count and sets lockout if threshold reached."""
+    key_email = email.lower().strip()
     now = datetime.now(timezone.utc)
-    count, _ = _login_attempts.get(key, (0, now))
-    _login_attempts[key] = (count + 1, now)
+    stmt = select(LoginThrottling).where(
+        LoginThrottling.ip_address == ip,
+        LoginThrottling.email == key_email,
+    )
+    record = db.scalar(stmt)
+    if not record:
+        record = LoginThrottling(
+            ip_address=ip,
+            email=key_email,
+            attempt_count=1,
+            last_attempt_at=now,
+        )
+        db.add(record)
+    else:
+        record.attempt_count += 1
+        record.last_attempt_at = now
+        if record.attempt_count >= settings.LOGIN_MAX_ATTEMPTS:
+            record.locked_until = now + timedelta(minutes=settings.LOGIN_LOCKOUT_MINUTES)
+    db.commit()
 
 
-def _reset_login_attempts(ip: str, email: str) -> None:
-    key = (ip, email.lower().strip())
-    if key in _login_attempts:
-        del _login_attempts[key]
+def _reset_login_attempts(db: Session, ip: str, email: str) -> None:
+    """Cleans up throttle records upon successful authentication."""
+    key_email = email.lower().strip()
+    stmt = select(LoginThrottling).where(
+        LoginThrottling.ip_address == ip,
+        LoginThrottling.email == key_email,
+    )
+    record = db.scalar(stmt)
+    if record:
+        db.delete(record)
+        db.commit()
 
 
 @router.post(
@@ -85,14 +118,14 @@ def login(
     clean_email = credentials.email.lower().strip()
 
     # Rate limiting check
-    _check_rate_limit(client_ip, clean_email)
+    _check_rate_limit(db, client_ip, clean_email)
 
     stmt = select(User).where(User.email == clean_email)
     user = db.scalar(stmt)
 
     # Generic authentication failure message prevents account enumeration
     if not user or not verify_password(credentials.password, user.hashed_password):
-        _record_login_failure(client_ip, clean_email)
+        _record_login_failure(db, client_ip, clean_email)
         
         audit_entry = SecurityAuditLog(
             actor_id=user.id if user else None,
@@ -115,7 +148,7 @@ def login(
         )
 
     # Reset failed attempts upon successful authentication
-    _reset_login_attempts(client_ip, clean_email)
+    _reset_login_attempts(db, client_ip, clean_email)
 
     # Generate session tokens
     raw_session_token = generate_session_token()
@@ -139,7 +172,7 @@ def login(
         actor_id=user.id,
         event_type="LOGIN_SUCCESS",
         ip_address=client_ip,
-        details=f"User {user.email} logged in successfully",
+        details=f"Session established via {user_agent}",
     )
     db.add(audit_entry)
     db.commit()
@@ -166,7 +199,7 @@ def login(
         path="/",
     )
 
-    permissions = [p.value for p in ROLE_PERMISSIONS.get(user.role, set())]
+    permissions = ROLE_PERMISSIONS.get(user.role.value, [])
 
     return SessionUserResponse(
         user=UserRead.model_validate(user),
@@ -178,23 +211,21 @@ def login(
 @router.post(
     "/auth/logout",
     response_model=MessageResponse,
-    summary="Terminate active session",
+    summary="Terminates active session and clears auth cookies",
 )
 def logout(
     request: Request,
     response: Response,
+    db: Session = Depends(get_db),
     session: SessionModel = Depends(get_current_session),
     _csrf: None = Depends(verify_csrf),
-    db: Session = Depends(get_db),
 ) -> MessageResponse:
-    client_ip = get_client_ip(request)
-
     # Log logout event
     audit_entry = SecurityAuditLog(
         actor_id=session.user_id,
         event_type="LOGOUT",
-        ip_address=client_ip,
-        details=f"User {session.user.email} logged out",
+        ip_address=get_client_ip(request),
+        details="User initiated logout",
     )
     db.add(audit_entry)
 
@@ -202,7 +233,7 @@ def logout(
     db.delete(session)
     db.commit()
 
-    # Clear authentication cookies
+    # Clear both cookies
     response.delete_cookie(key=settings.SESSION_COOKIE_NAME, path="/")
     response.delete_cookie(key=settings.CSRF_COOKIE_NAME, path="/")
 
@@ -212,16 +243,15 @@ def logout(
 @router.get(
     "/auth/me",
     response_model=SessionUserResponse,
-    summary="Inspect current authenticated session status",
+    summary="Retrieve current authenticated user context",
 )
 def get_current_user_profile(
+    current_user: User = Depends(get_current_user),
     session: SessionModel = Depends(get_current_session),
 ) -> SessionUserResponse:
-    user = session.user
-    permissions = [p.value for p in ROLE_PERMISSIONS.get(user.role, set())]
-
+    permissions = ROLE_PERMISSIONS.get(current_user.role.value, [])
     return SessionUserResponse(
-        user=UserRead.model_validate(user),
+        user=UserRead.model_validate(current_user),
         permissions=permissions,
         csrf_token=session.csrf_token,
     )

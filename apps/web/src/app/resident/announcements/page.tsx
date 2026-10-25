@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Bell,
@@ -88,6 +90,9 @@ export default function ResidentAnnouncementsPage() {
     loadData();
   }, [loadData]);
 
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadData, { entity: 'announcements' });
+
   // Client-side search filter
   const filtered = announcements.filter((item) => {
     if (!searchQuery.trim()) return true;
@@ -108,7 +113,7 @@ export default function ResidentAnnouncementsPage() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <Bell className="w-7 h-7 text-emerald-700" />
-            Official Barangay Advisories
+            Announcements
           </h1>
           <p className="text-sm text-slate-600 mt-1">
             Verified solid waste announcements, cleanup drives, and holiday schedules from Barangay Sabang Council.
@@ -117,9 +122,9 @@ export default function ResidentAnnouncementsPage() {
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors shadow-sm disabled:opacity-50 self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-[#FAFDFB] border border-emerald-900/10 rounded-xl hover:bg-emerald-50/60 transition-all shadow-soft-raised active:shadow-soft-pressed disabled:opacity-50 self-start sm:self-auto"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
@@ -136,10 +141,10 @@ export default function ResidentAnnouncementsPage() {
                 <button
                   key={tab.key}
                   onClick={() => setSelectedCategory(tab.key)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                     isActive
-                      ? 'bg-emerald-700 text-white shadow-sm'
-                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'bg-civic-forest text-white shadow-soft-raised'
+                      : 'bg-[#FAFDFB] border border-emerald-900/10 text-slate-600 hover:bg-emerald-50/60 shadow-soft-raised active:shadow-soft-pressed'
                   }`}
                 >
                   <TabIcon className="w-3.5 h-3.5" />
@@ -151,13 +156,13 @@ export default function ResidentAnnouncementsPage() {
 
           {/* Search box */}
           <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search announcements..."
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 shadow-soft-inset rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
             />
           </div>
         </div>
@@ -165,7 +170,7 @@ export default function ResidentAnnouncementsPage() {
 
       {/* Error state */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs shadow-soft-raised">
           {error}
         </div>
       )}
@@ -185,7 +190,7 @@ export default function ResidentAnnouncementsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-emerald-50/70 border-2 border-emerald-300 rounded-xl p-5 shadow-sm space-y-3 relative overflow-hidden"
+                  className="bg-emerald-50/70 border-2 border-emerald-300 rounded-2xl p-5 shadow-soft-raised space-y-3 relative overflow-hidden"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
@@ -239,7 +244,7 @@ export default function ResidentAnnouncementsPage() {
         )}
 
         {filtered.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-xl p-10 text-center text-slate-500 text-sm space-y-2">
+          <div className="bg-[#FAFDFB] border border-dashed border-slate-300 rounded-2xl p-10 text-center text-slate-500 text-sm space-y-2 shadow-soft-raised">
             <Bell className="w-8 h-8 text-slate-400 mx-auto" />
             <p className="font-semibold text-slate-700">No announcements found</p>
             <p className="text-xs text-slate-500">
@@ -255,7 +260,7 @@ export default function ResidentAnnouncementsPage() {
               return (
                 <div
                   key={item.id}
-                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:border-slate-300 transition-colors space-y-3 flex flex-col justify-between"
+                  className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-4 shadow-soft-raised hover:shadow-soft-raised-lg transition-all space-y-3 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">

@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   AlertCircle,
@@ -16,7 +18,7 @@ import {
   X,
   Camera,
 } from 'lucide-react';
-import { getAllReports, updateReportStatus } from '@/lib/api-client';
+import { getAllReports, updateReportStatus, resolveImageUrl } from '@/lib/api-client';
 import { WasteReport, ReportCategory, ReportStatus } from '@/types/reports';
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
@@ -93,6 +95,9 @@ export default function AdminReportsPage() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  // Automatic real-time background synchronization
+  useRealtimeSync(fetchReports, { entity: 'reports' });
 
   const openUpdateModal = (report: WasteReport) => {
     setEditingReport(report);
@@ -330,7 +335,7 @@ export default function AdminReportsPage() {
                     </button>
                     {report.photo_url && (
                       <a
-                        href={report.photo_url}
+                        href={resolveImageUrl(report.photo_url)}
                         target="_blank"
                         rel="noreferrer"
                         className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center"

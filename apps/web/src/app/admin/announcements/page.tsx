@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Megaphone,
@@ -68,6 +70,9 @@ export default function AdminAnnouncementsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadData, { entity: 'announcements' });
 
   // Handle Create
   const handleCreate = async (e: React.FormEvent) => {

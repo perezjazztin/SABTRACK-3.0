@@ -1,5 +1,7 @@
 'use client';
 
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
+
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -103,6 +105,9 @@ export default function AdminOverviewPage() {
   useEffect(() => {
     loadAdminMetrics();
   }, [loadAdminMetrics]);
+
+  // Automatic real-time background synchronization
+  useRealtimeSync(loadAdminMetrics, { entity: '*' });
 
   // Derived counts
   const pendingReports = reports.filter((r) => r.status === 'SUBMITTED');

@@ -20,7 +20,7 @@
    - **Phase 2 (Identity, RBAC, Sessions, Portal Navigation) — COMPLETE** (commit `098632c`)
    - **Phase 3 (Core Waste Operations) — COMPLETE** (commits `8c47b7c`, `d6ec9eb`, `b38e62c`, `864b60f`)
    - **Phase 4 (Gamification, Business Analytics, Dashboards) — COMPLETE** (commits `8477453`, `864b60f`)
-   - **Phase 5 (Production Hardening & Deployment) — PENDING**
+   - **Phase 5 (Production Hardening & Deployment) — COMPLETE** (commits `3b49b61`, `4b64f87`, `96a768e`, `ca22277`)
 
 3. **Database Rules:**
    - PostgreSQL is the mandatory primary development and production database.
@@ -52,36 +52,37 @@ SABTRACK/
 ├── apps/
 │   ├── api/                           # FastAPI Backend (Python 3.13)
 │   │   ├── app/
-│   │   │   ├── api/v1/endpoints/      # auth.py, health.py, reports.py, schedules.py, announcements.py, gamification.py, analytics.py, users.py
+│   │   │   ├── api/v1/endpoints/      # auth.py, health.py, reports.py, schedules.py, announcements.py, gamification.py, analytics.py, users.py, uploads.py
 │   │   │   ├── core/                  # config.py, deps.py, errors.py, security.py
 │   │   │   └── modules/
 │   │   │       ├── areas/             # Phase 1: Configurable geographic areas
-│   │   │       ├── identity/          # Phase 2: User, Session, SecurityAuditLog models
+│   │   │       ├── identity/          # Phase 2: User, Session, SecurityAuditLog, LoginThrottling models
 │   │   │       ├── reports/           # Phase 3: Community waste reports & status history
 │   │   │       ├── schedules/         # Phase 3: Collection schedules & advisories
 │   │   │       ├── announcements/     # Phase 3: Official barangay announcements
 │   │   │       ├── gamification/      # Phase 4: SAB-Points ledger & participation claims
-│   │   │       └── analytics/         # Phase 4: 6-step analytics procedure & hotspots
-│   │   ├── alembic/versions/          # 0001 (areas) to 0006 (gamification & points)
-│   │   ├── tests/                     # 43 passing Pytest integration tests across all modules
+│   │   │       ├── analytics/         # Phase 4: 6-step analytics procedure & hotspots
+│   │   │       └── storage/           # Phase 5: Pillow EXIF scrubbing & authenticated file streaming
+│   │   ├── alembic/versions/          # 0001 (areas) to 0007 (login_throttling)
+│   │   ├── tests/                     # 52 passing Pytest integration tests across all modules
 │   │   ├── requirements.txt
 │   │   └── .env.example
 │   └── web/                           # Next.js 16 / React 19 Frontend
 │       ├── src/
 │       │   ├── app/                   # App Router: /, /login, /resident/*, /admin/*
-│       │   ├── components/            # Header, Footer, ProtectedRoute, ModulePlaceholder, StatusCard
+│       │   ├── components/            # Header, Footer, ProtectedRoute, ImageUpload, ModulePlaceholder, StatusCard
 │       │   ├── lib/                   # api-client.ts, auth-context.tsx, utils.ts
-│       │   └── types/                 # auth.ts
-│       ├── tests/                     # Vitest component test suite
+│       │   └── types/                 # auth.ts, reports.ts, schedules.ts
+│       ├── tests/                     # 14 passing Vitest component tests
 │       ├── package.json
 │       └── .env.example
-├── docs/                              # Architecture, Decision Log, Setup Guide
+├── docs/                              # Architecture, Decision Log, Setup Guide, Superpowers Plans & Specs
 ├── scripts/                           # Windows development and test runners
 │   ├── dev.bat                        # Launch both services
 │   ├── run-api.bat / run-web.bat      # Individual service runners
 │   ├── run-tests.bat                  # Unified test suite
 │   └── seed-users.bat / seed-users.py # Dev-only demo account seeder
-├── docker-compose.yml                 # Future containerized deployment
+├── docker-compose.yml                 # Multi-container deployment with storage persistence
 └── README.md
 ```
 
