@@ -212,7 +212,7 @@ Protected by `ProtectedRoute` requiring `RESIDENT | BARANGAY_STAFF | BARANGAY_AD
 | `/resident/schedules` | Collection Schedules | **Live** — Dynamic area timetables and delay advisories |
 | `/resident/reports` | My Reports | **Live** — Violation submissions & immutable history timeline |
 | `/resident/points` | SAB-Points | **Live** — Points balance, ledger & claim submission |
-| `/resident/announcements` | Announcements | Placeholder (Phase 3) |
+| `/resident/announcements` | Announcements | **Live** — Barangay bulletins & urgent advisories |
 | `/resident/profile` | Profile | **Live** — shows user identity |
 
 ### Admin Portal (`/admin/*`)
@@ -220,7 +220,7 @@ Protected by `ProtectedRoute` requiring `BARANGAY_STAFF | BARANGAY_ADMIN` role.
 
 | Route | Page | Min Role | Status |
 |---|---|---|---|
-| `/admin` | Overview | STAFF | Placeholder (Phase 3) |
+| `/admin` | Overview | STAFF | **Live** — Operational triage metrics & alert feeds |
 | `/admin/reports` | Report Management | STAFF | Placeholder (Phase 3) |
 | `/admin/schedules` | Collection Schedules | ADMIN | Placeholder (Phase 3) |
 | `/admin/participation` | Community Participation | STAFF | Placeholder (Phase 4) |
