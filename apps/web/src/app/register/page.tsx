@@ -20,11 +20,6 @@ export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [residentIdNum, setResidentIdNum] = useState('');
-
-  const handleGenerateResidentId = () => {
-    const randomNum = Math.floor(1000 + Math.random() * 9000);
-    setResidentIdNum(`SAB-2026-${randomNum}`);
-  };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -143,21 +138,12 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label
-                htmlFor="residentIdNum"
-                className="block text-xs font-bold text-slate-700 uppercase tracking-wider"
-              >
-                Resident ID Number
-              </label>
-              <button
-                type="button"
-                onClick={handleGenerateResidentId}
-                className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 transition-colors cursor-pointer"
-              >
-                Auto-Generate ID
-              </button>
-            </div>
+            <label
+              htmlFor="residentIdNum"
+              className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5"
+            >
+              Resident ID Number
+            </label>
             <input
               id="residentIdNum"
               type="text"
@@ -168,7 +154,7 @@ export default function RegisterPage() {
               className="neu-input w-full px-4 py-2.5 rounded-xl text-xs text-slate-900 outline-none transition-all uppercase font-mono tracking-wide"
             />
             <p className="text-[10px] text-slate-500 mt-1">
-              Official Barangay Sabang Citizen ID number or click Auto-Generate.
+              Enter your official Barangay Sabang Resident ID number.
             </p>
           </div>
 

@@ -18,7 +18,7 @@ describe('RegisterPage Component with Resident ID Number', () => {
     localStorage.clear();
   });
 
-  it('renders all registration form fields including Resident ID Number', () => {
+  it('renders all registration form fields including Resident ID Number without Auto-Generate button', () => {
     render(<RegisterPage />);
 
     expect(screen.getByRole('heading', { name: /Register as a Resident/i })).toBeInTheDocument();
@@ -28,20 +28,21 @@ describe('RegisterPage Component with Resident ID Number', () => {
     expect(screen.getByLabelText(/Purok \/ Barangay Zone/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Confirm Password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Auto-Generate ID/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Create Resident Account/i })).toBeInTheDocument();
+
+    // Auto-Generate ID button must NOT be present as residents already have their own ID
+    expect(screen.queryByRole('button', { name: /Auto-Generate ID/i })).not.toBeInTheDocument();
   });
 
-  it('auto-generates a valid SAB-2026-XXXX Resident ID when Auto-Generate button is clicked', () => {
+  it('allows residents to manually enter their existing Barangay Resident ID number and capitalizes it', () => {
     render(<RegisterPage />);
 
     const residentIdInput = screen.getByLabelText(/Resident ID Number/i) as HTMLInputElement;
-    expect(residentIdInput.value).toBe('');
+    fireEvent.change(residentIdInput, {
+      target: { value: 'sab-2026-0912' },
+    });
 
-    const autoGenBtn = screen.getByRole('button', { name: /Auto-Generate ID/i });
-    fireEvent.click(autoGenBtn);
-
-    expect(residentIdInput.value).toMatch(/^SAB-2026-\d{4}$/);
+    expect(residentIdInput.value).toBe('SAB-2026-0912');
   });
 
   it('successfully submits registration with custom Resident ID number and stores in localStorage', async () => {
