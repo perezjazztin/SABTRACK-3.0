@@ -7,6 +7,8 @@ from app.api.v1.endpoints import (
     schedules,
     announcements,
     gamification,
+    analytics,
+    users,
 )
 
 # Ensure all models are registered with SQLAlchemy's mapper registry
@@ -27,3 +29,5 @@ api_router.include_router(reports.router, prefix="/reports", tags=["Community Wa
 api_router.include_router(schedules.router, prefix="/schedules", tags=["Garbage Collection Schedules"])
 api_router.include_router(announcements.router, prefix="/announcements", tags=["Official Announcements"])
 api_router.include_router(gamification.router, prefix="/gamification", tags=["SAB-Points Gamification"])
+api_router.include_router(analytics.router, prefix="/analytics", tags=["Formal Business Analytics"])
+api_router.include_router(users.router, prefix="/users", tags=["User & Personnel Management"])

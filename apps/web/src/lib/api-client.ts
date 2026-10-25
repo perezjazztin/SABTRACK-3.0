@@ -333,3 +333,51 @@ export async function reviewClaim(
     body: JSON.stringify(payload),
   });
 }
+
+
+import { AnalyticsOverviewResponse } from '@/types/analytics';
+
+export async function getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
+  return apiFetch<AnalyticsOverviewResponse>('/api/v1/analytics/overview');
+}
+
+
+import {
+  AdminUserItem,
+  UserListResponse,
+  UserCreatePayload,
+} from '@/types/users';
+
+export async function getUsers(params?: {
+  role?: string;
+  isActive?: boolean;
+  search?: string;
+}): Promise<UserListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.role) searchParams.set('role', params.role);
+  if (params?.isActive !== undefined) searchParams.set('is_active', params.isActive.toString());
+  if (params?.search) searchParams.set('search', params.search);
+  const query = searchParams.toString();
+  return apiFetch<UserListResponse>(`/api/v1/users${query ? `?${query}` : ''}`);
+}
+
+export async function createUser(payload: UserCreatePayload): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUserStatus(userId: number, isActive: boolean): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>(`/api/v1/users/${userId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
+export async function updateUserRole(userId: number, role: string): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>(`/api/v1/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
