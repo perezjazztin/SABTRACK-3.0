@@ -8,7 +8,7 @@
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black.svg)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791.svg)](https://www.postgresql.org/)
 [![Phase 5 Complete](https://img.shields.io/badge/Phase_5-Complete_%26_Verified_%E2%9C%85-brightgreen.svg)](#phase-status)
-[![Tests Passing](https://img.shields.io/badge/Tests-150%2F150_Passed-brightgreen.svg)](#6-running-automated-tests)
+[![Tests Passing](https://img.shields.io/badge/Tests-148%2F148_Passed-brightgreen.svg)](#6-running-automated-tests)
 
 ---
 
@@ -54,7 +54,7 @@ flowchart LR
 - **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, minimal green neumorphic design tokens (`#0F5132`, `#198754`, `#f4f8f5`).
 - **Backend:** Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, psycopg 3.x, WebSocket connection manager.
 - **Database:** PostgreSQL 16 (Primary development and production database).
-- **Security:** Argon2id password hashing, server-managed HttpOnly session cookies (SHA-256 tokens), double-submit CSRF tokens, strict 4-role RBAC boundaries.
+- **Security:** Argon2id password hashing, server-managed HttpOnly session cookies (SHA-256 tokens), double-submit CSRF tokens, strict 3-role RBAC boundaries (`RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`).
 - **Data Privacy (RA 10173):** Server-side EXIF GPS camera metadata scrubbing on all uploaded violation photos.
 - **Testing:** Pytest (Backend API & RBAC tests), Vitest (React component tests).
 
@@ -68,7 +68,7 @@ flowchart LR
 | **Phase 2** | Identity, RBAC, Sessions, CSRF, Portal Navigation Shells | ✅ Complete | `098632c` |
 | **Phase 3** | Core Waste Operations — Reports, Schedules, Announcements, File Storage, Email Alerts | ✅ Complete | `e523418` |
 | **Phase 4** | Gamification & Analytics — SAB-Points Ledger, Participation Claims, Analytics Engine | ✅ Complete | `ec06468` |
-| **Phase 5** | Hardening & UI/UX Polish — Minimal Green Redesign, EcoGabay AI Chatbot, 100% Tests, Build Verification | ✅ Complete | `c4e97a8` |
+| **Phase 5** | Hardening & UI/UX Polish — Minimal Green Redesign, EcoGabay AI Chatbot, 100% Tests, Build Verification | ✅ Complete | `28926f7` |
 
 ---
 
@@ -124,9 +124,10 @@ Run the full automated test suite:
 .\scripts\run-tests.bat
 ```
 
-**Current Verified Test Results (Phase 3):**
-- ✅ **Backend Pytest:** **71 / 71 passed (100%)** (Auth, RBAC, Schedules, Reports, Storage, Chatbot, Analytics, WebSockets)
-- ✅ **Frontend Vitest:** **79 / 79 passed across 20 test files (100%)**
+**Current Verified Test Results (Phase 5):**
+- ✅ **Backend Pytest:** **70 / 70 passed (100%)** (Auth, RBAC, Schedules, Reports, Storage, Chatbot, Analytics, WebSockets)
+- ✅ **Frontend Vitest:** **78 / 78 passed across 20 test files (100%)**
+- ✅ **Total Test Suite:** **148 / 148 passed (100%)**
 - ✅ **Next.js Production Build:** **Clean (18 routes prerendered, 0 TypeScript errors)**
 
 ---
