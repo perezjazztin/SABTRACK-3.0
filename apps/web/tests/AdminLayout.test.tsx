@@ -101,4 +101,37 @@ describe('AdminLayout Component Role & View-Only Nav Access', () => {
     // For full admin, "View Only" badge should NOT appear
     expect(screen.queryByText('View Only')).not.toBeInTheDocument();
   });
+
+  it('renders the minimal modern DashboardFooter at the bottom of the content area', () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'admin-1',
+        email: 'admin.demo@sabtrack.local',
+        full_name: 'Barangay Captain Admin',
+        role: 'BARANGAY_ADMIN',
+        is_active: true,
+      },
+      permissions: ['schedules:manage'],
+      isAuthenticated: true,
+      loading: false,
+      isLoggingOut: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      hasRole: () => true,
+      hasPermission: () => true,
+      refreshSession: vi.fn(),
+    });
+
+    render(
+      <AdminLayout>
+        <div>Content</div>
+      </AdminLayout>
+    );
+
+    expect(screen.getByTestId('dashboard-footer')).toBeInTheDocument();
+    expect(screen.getByText('SABTRACK')).toBeInTheDocument();
+    expect(screen.getByText('v3.0.0')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open Help & Support dialog/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Open Privacy Policy dialog/i })).toBeInTheDocument();
+  });
 });

@@ -1,8 +1,7 @@
 'use client';
 
-import { useRealtimeSync } from '@/lib/use-realtime-sync';
-
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
 import {
   AlertCircle,
   CheckCircle2,
@@ -76,8 +75,8 @@ export default function AdminReportsPage() {
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const fetchReports = useCallback(async () => {
-    setLoading(true);
+  const fetchReports = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await getAllReports({
         status: selectedStatus === 'ALL' ? undefined : selectedStatus,
@@ -86,9 +85,9 @@ export default function AdminReportsPage() {
       setReports(data.items);
     } catch (err: unknown) {
       const errMessage = err instanceof Error ? err.message : 'Failed to fetch reports';
-      setMessage({ type: 'error', text: errMessage });
+      if (!silent) setMessage({ type: 'error', text: errMessage });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [selectedStatus, selectedCategory]);
 
@@ -96,8 +95,8 @@ export default function AdminReportsPage() {
     fetchReports();
   }, [fetchReports]);
 
-  // Automatic real-time background synchronization
-  useRealtimeSync(fetchReports, { entity: 'reports' });
+  // Automatic real-time background synchronization (< 3s SLA)
+  useRealtimeSync(() => fetchReports(true), { entity: 'reports' });
 
   const openUpdateModal = (report: WasteReport) => {
     setEditingReport(report);
@@ -145,20 +144,27 @@ export default function AdminReportsPage() {
   const resolvedCount = reports.filter((r) => r.status === 'RESOLVED').length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-civic-border">
-        <div>
-          <h1 className="text-2xl font-bold text-civic-slate">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
+              Barangay Operations Command
+            </span>
+            <span className="text-xs text-slate-400">&bull;</span>
+            <span className="text-xs text-slate-500 font-medium">Incident Review &amp; Dispatch</span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-civic-slate tracking-tight">
             Barangay Waste Incident Queue
           </h1>
-          <p className="text-sm text-slate-500">
-            Review submitted citizen waste complaints, dispatch field personnel, and manage resolution records.
+          <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
+            Review submitted citizen waste complaints, dispatch field personnel, and manage resolution records with immutable audit tracking.
           </p>
         </div>
         <button
-          onClick={fetchReports}
-          className="inline-flex items-center px-3 py-2 bg-white border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors shadow-sm"
+          onClick={() => fetchReports()}
+          className="neu-button inline-flex items-center px-4 py-2.5 text-slate-700 rounded-xl text-xs font-bold shadow-neu-raised transition-all flex-shrink-0"
         >
           <RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Refresh Queue
         </button>
@@ -167,16 +173,16 @@ export default function AdminReportsPage() {
       {/* Notifications */}
       {message && (
         <div
-          className={`p-4 rounded-xl text-sm border flex items-center justify-between ${
+          className={`p-4.5 rounded-2xl text-sm border flex items-center justify-between shadow-neu-xs ${
             message.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-red-50 text-red-800 border-red-200'
           }`}
         >
-          <span>{message.text}</span>
+          <span className="font-medium">{message.text}</span>
           <button
             onClick={() => setMessage(null)}
-            className="text-xs font-bold underline ml-4"
+            className="text-xs font-bold underline ml-4 hover:opacity-80"
           >
             Dismiss
           </button>
@@ -184,38 +190,38 @@ export default function AdminReportsPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-civic-border shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 sm:gap-5">
+        <div className="neu-card p-5 rounded-2xl border border-slate-200/70 shadow-neu-raised">
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Total Reports</span>
-          <p className="text-2xl font-extrabold text-civic-slate mt-1">{totalCount}</p>
+          <p className="text-2xl sm:text-3xl font-black text-civic-slate mt-1">{totalCount}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-civic-border shadow-sm">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">New Submitted</span>
-          <p className="text-2xl font-extrabold text-slate-700 mt-1">{submittedCount}</p>
+        <div className="neu-card p-5 rounded-2xl border border-slate-200/70 shadow-neu-raised">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600">New Submitted</span>
+          <p className="text-2xl sm:text-3xl font-black text-rose-700 mt-1">{submittedCount}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-civic-border shadow-sm">
+        <div className="neu-card p-5 rounded-2xl border border-slate-200/70 shadow-neu-raised">
           <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600">Under Review</span>
-          <p className="text-2xl font-extrabold text-blue-700 mt-1">{reviewCount}</p>
+          <p className="text-2xl sm:text-3xl font-black text-blue-700 mt-1">{reviewCount}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-civic-border shadow-sm">
+        <div className="neu-card p-5 rounded-2xl border border-slate-200/70 shadow-neu-raised">
           <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600">In Progress</span>
-          <p className="text-2xl font-extrabold text-amber-700 mt-1">{inProgressCount}</p>
+          <p className="text-2xl sm:text-3xl font-black text-amber-700 mt-1">{inProgressCount}</p>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-civic-border shadow-sm">
+        <div className="neu-card p-5 rounded-2xl border border-slate-200/70 shadow-neu-raised">
           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Resolved</span>
-          <p className="text-2xl font-extrabold text-emerald-700 mt-1">{resolvedCount}</p>
+          <p className="text-2xl sm:text-3xl font-black text-emerald-700 mt-1">{resolvedCount}</p>
         </div>
       </div>
 
       {/* Filter Row */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-civic-border shadow-sm text-xs">
-        <div className="flex items-center space-x-2">
+      <div className="flex flex-wrap items-center justify-between gap-4 neu-card p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs text-xs">
+        <div className="flex items-center space-x-2.5">
           <SlidersHorizontal className="w-4 h-4 text-slate-400" />
-          <span className="font-semibold text-slate-700">Filter Status:</span>
+          <span className="font-bold text-slate-700">Filter Status:</span>
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="border border-slate-300 rounded-lg px-2.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-civic-forest"
+            className="neu-input rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none"
           >
             <option value="ALL">All Statuses</option>
             <option value="SUBMITTED">Submitted</option>
@@ -226,12 +232,12 @@ export default function AdminReportsPage() {
           </select>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="font-semibold text-slate-700">Filter Category:</span>
+        <div className="flex items-center space-x-2.5">
+          <span className="font-bold text-slate-700">Filter Category:</span>
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border border-slate-300 rounded-lg px-2.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-civic-forest"
+            className="neu-input rounded-xl px-3 py-1.5 text-xs text-slate-800 focus:outline-none"
           >
             <option value="ALL">All Categories</option>
             {Object.entries(CATEGORY_LABELS).map(([k, label]) => (
@@ -245,12 +251,12 @@ export default function AdminReportsPage() {
 
       {/* Reports Queue List */}
       {loading ? (
-        <div className="p-12 text-center text-sm text-slate-400 bg-white rounded-2xl border border-civic-border">
+        <div className="neu-card p-12 text-center text-sm text-slate-400 rounded-3xl border border-slate-200/70 shadow-neu-raised">
           <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-civic-forest" />
           Loading report queue...
         </div>
       ) : reports.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-300 space-y-3">
+        <div className="neu-card p-12 text-center rounded-3xl border border-dashed border-emerald-900/20 shadow-neu-raised space-y-3">
           <FileText className="w-8 h-8 mx-auto text-slate-300" />
           <h3 className="text-sm font-bold text-slate-700">No reports in queue</h3>
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
@@ -267,7 +273,7 @@ export default function AdminReportsPage() {
             return (
               <div
                 key={report.id}
-                className="bg-white rounded-2xl border border-civic-border shadow-sm overflow-hidden"
+                className="neu-card rounded-3xl border border-slate-200/70 shadow-neu-raised overflow-hidden"
               >
                 <div className="p-5 space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
@@ -368,7 +374,7 @@ export default function AdminReportsPage() {
                             </span>
                           </div>
                           {h.remarks && (
-                            <p className="text-slate-600 bg-white p-2 rounded-lg border border-slate-200 mt-1">
+                            <p className="text-slate-600 neu-socket p-2.5 rounded-xl border border-slate-200/70 mt-1">
                               &ldquo;{h.remarks}&rdquo;
                             </p>
                           )}
@@ -386,7 +392,7 @@ export default function AdminReportsPage() {
       {/* Status Update Modal */}
       {editingReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl border border-slate-200">
+          <div className="neu-modal rounded-3xl max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-neu-raised border border-slate-200/70">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="text-base font-bold text-civic-slate">
                 Update Report #{editingReport.id} Status
@@ -416,7 +422,7 @@ export default function AdminReportsPage() {
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value as ReportStatus)}
-                  className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                  className="neu-select w-full text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   required
                 >
                   <option value="UNDER_REVIEW">UNDER_REVIEW (Assigned for verification)</option>
@@ -435,7 +441,7 @@ export default function AdminReportsPage() {
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="e.g. Sanitation crew dispatched to Sitio Sampaguita. Garbage bags collected."
                   rows={2}
-                  className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                  className="neu-input w-full text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   required
                 />
               </div>
@@ -449,7 +455,7 @@ export default function AdminReportsPage() {
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="e.g. Assigned to Tanod Leader Santos. Fuel slip #482."
-                  className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                  className="neu-input w-full text-xs rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-civic-forest"
                 />
               </div>
 
@@ -457,14 +463,14 @@ export default function AdminReportsPage() {
                 <button
                   type="button"
                   onClick={() => setEditingReport(null)}
-                  className="px-4 py-2 border border-slate-300 text-slate-700 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors"
+                  className="neu-btn-secondary px-4 py-2 rounded-xl text-slate-700 text-xs font-bold transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={updating}
-                  className="inline-flex items-center px-5 py-2 bg-civic-forest text-white rounded-xl text-xs font-semibold hover:bg-emerald-900 transition-colors disabled:opacity-50 shadow-sm"
+                  className="neu-btn-primary inline-flex items-center px-5 py-2.5 text-white rounded-xl text-xs font-bold transition-all disabled:opacity-50 shadow-neu-green"
                 >
                   {updating ? 'Saving...' : 'Confirm Status Change'}
                 </button>

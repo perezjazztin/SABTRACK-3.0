@@ -161,3 +161,80 @@ def test_admin_can_broadcast_advisory(client: TestClient, test_area: Area):
     adv_res = client.get("/api/v1/schedules/advisories")
     assert adv_res.status_code == 200
     assert adv_res.json()["total"] >= 1
+
+
+def test_user_can_subscribe_schedule_email_notification(client: TestClient, test_area: Area):
+    csrf_token, session_cookie = _login(client, "admin@sabtrack.test")
+
+    # Create a schedule
+    create_res = client.post(
+        "/api/v1/schedules",
+        json={
+            "area_id": test_area.id,
+            "day_of_week": "THURSDAY",
+            "waste_type": "RECYCLABLE",
+            "start_time": "08:00 AM",
+            "end_time": "11:00 AM",
+            "notes": "Bring dry recyclables to collection gate",
+        },
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    schedule_id = create_res.json()["id"]
+
+    # Subscribe with explicit email
+    sub_res = client.post(
+        f"/api/v1/schedules/{schedule_id}/notify",
+        json={"email": "sabang.resident@example.com"},
+    )
+    assert sub_res.status_code == 200
+    data = sub_res.json()
+    assert data["schedule_id"] == schedule_id
+    assert data["recipient_email"] == "sabang.resident@example.com"
+    assert "Reminder notification registered" in data["message"]
+    assert data["day_of_week"] == "THURSDAY"
+    assert data["waste_type"] == "RECYCLABLE"
+
+
+def test_authenticated_resident_can_subscribe_using_session_email(client: TestClient, test_area: Area):
+    admin_csrf, admin_session = _login(client, "admin@sabtrack.test")
+
+    create_res = client.post(
+        "/api/v1/schedules",
+        json={
+            "area_id": test_area.id,
+            "day_of_week": "SATURDAY",
+            "waste_type": "SPECIAL_HAZARDOUS",
+            "start_time": "09:00 AM",
+            "end_time": "12:00 PM",
+        },
+        headers={"x-csrf-token": admin_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: admin_session},
+    )
+    schedule_id = create_res.json()["id"]
+
+    # Login as resident
+    _, resident_session = _login(client, "resident@sabtrack.test")
+
+    # Post with empty email, expecting fallback to session user email
+    sub_res = client.post(
+        f"/api/v1/schedules/{schedule_id}/notify",
+        json={},
+        cookies={settings.SESSION_COOKIE_NAME: resident_session},
+    )
+    assert sub_res.status_code == 200
+    assert sub_res.json()["recipient_email"] == "resident@sabtrack.test"
+
+
+def test_subscribe_missing_or_invalid_email_and_nonexistent_schedule(client: TestClient):
+    # 1. Missing email without session -> 400
+    bad_res = client.post("/api/v1/schedules/9999/notify", json={})
+    assert bad_res.status_code == 400
+
+    # 2. Invalid format -> 400
+    bad_email_res = client.post("/api/v1/schedules/9999/notify", json={"email": "not-an-email"})
+    assert bad_email_res.status_code == 400
+
+    # 3. Valid email but schedule doesn't exist -> 404
+    not_found_res = client.post("/api/v1/schedules/9999/notify", json={"email": "resident@example.com"})
+    assert not_found_res.status_code == 404

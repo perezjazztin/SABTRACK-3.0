@@ -112,7 +112,7 @@ describe('Header Component Navigation & Role Isolation', () => {
     expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
   });
 
-  it('when logged in as BARANGAY_STAFF: only shows Admin Console description and prevents portal switching', () => {
+  it('when logged in as BARANGAY_STAFF: only shows Staff Console description and prevents portal switching', () => {
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: {
         id: 'staff-1',
@@ -133,8 +133,9 @@ describe('Header Component Navigation & Role Isolation', () => {
 
     render(<Header />);
 
-    // Admin Console must be present
-    expect(screen.getByRole('link', { name: /Admin Console/i })).toBeInTheDocument();
+    // Staff Console must be present, NOT Admin Console
+    expect(screen.getByRole('link', { name: /Staff Console/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Admin Console/i })).not.toBeInTheDocument();
 
     // Must NOT be able to switch to Resident Portal
     expect(screen.queryByRole('link', { name: /Resident Portal/i })).not.toBeInTheDocument();
@@ -208,8 +209,7 @@ describe('Header Component Navigation & Role Isolation', () => {
     });
   });
 
-  it('does NOT render RealTimeClock on the landing page (/) but renders on portal routes', () => {
-    mockPathname = '/';
+  it('does NOT render RealTimeClock on landing (/), /login, and /register but renders on portal routes', () => {
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: null,
       isAuthenticated: false,
@@ -222,15 +222,27 @@ describe('Header Component Navigation & Role Isolation', () => {
       refreshSession: vi.fn(),
     });
 
-    const { unmount } = render(<Header />);
-    // Clock should NOT be present on landing page
+    // 1. Landing page (/)
+    mockPathname = '/';
+    const { unmount: unmountHome } = render(<Header />);
     expect(screen.queryByTestId('realtime-clock')).not.toBeInTheDocument();
-    unmount();
+    unmountHome();
 
-    // Now switch to portal route
+    // 2. Login page (/login)
+    mockPathname = '/login';
+    const { unmount: unmountLogin } = render(<Header />);
+    expect(screen.queryByTestId('realtime-clock')).not.toBeInTheDocument();
+    unmountLogin();
+
+    // 3. Register page (/register)
+    mockPathname = '/register';
+    const { unmount: unmountRegister } = render(<Header />);
+    expect(screen.queryByTestId('realtime-clock')).not.toBeInTheDocument();
+    unmountRegister();
+
+    // 4. Portal route (/resident)
     mockPathname = '/resident';
     render(<Header />);
-    // Clock should be present on portal page
     expect(screen.getByTestId('realtime-clock')).toBeInTheDocument();
   });
 });

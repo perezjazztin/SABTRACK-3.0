@@ -113,7 +113,7 @@ export default function AdminAnnouncementsPage() {
     >
       <div className="space-y-8">
         {/* Header */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -141,7 +141,7 @@ export default function AdminAnnouncementsPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className="p-2.5 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
+              className="neu-button p-2.5 text-slate-600 rounded-xl transition-all shadow-neu-raised"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -157,8 +157,8 @@ export default function AdminAnnouncementsPage() {
         )}
 
         {/* Announcements Directory Table */}
-        <div className="neu-card border border-emerald-900/10 rounded-3xl shadow-neu-raised overflow-hidden">
-          <div className="px-6 py-4.5 border-b border-emerald-900/10 bg-emerald-50/40 flex items-center justify-between">
+        <div className="neu-card border border-slate-200/70 rounded-3xl shadow-neu-raised overflow-hidden">
+          <div className="px-6 py-4.5 border-b border-slate-200/70 bg-emerald-50/40 flex items-center justify-between">
             <h2 className="font-bold text-slate-800 text-sm">
               Published Bulletins ({announcements.length})
             </h2>
@@ -176,7 +176,7 @@ export default function AdminAnnouncementsPage() {
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {announcements.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
@@ -236,7 +236,7 @@ export default function AdminAnnouncementsPage() {
         {/* Modal: Compose Announcement */}
         {showModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full p-5 space-y-4">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Compose Official Barangay Notice
@@ -276,7 +276,7 @@ export default function AdminAnnouncementsPage() {
                         category: e.target.value as AnnouncementCategory,
                       })
                     }
-                    className="w-full px-3 py-2 border rounded-lg bg-slate-50 focus:bg-white"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>

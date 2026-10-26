@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -52,6 +52,16 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = Field(
         default=5 * 1024 * 1024,  # 5 MB
         description="Maximum allowed image upload size in bytes"
+    )
+
+    # EcoBot & AI Settings (Google Gemini 1.5 Flash Search Grounding)
+    GEMINI_API_KEY: Optional[str] = Field(
+        default=None,
+        description="Google AI Studio Gemini API key for free web-grounded EcoBot search"
+    )
+    GEMINI_API_KEYS: Optional[str] = Field(
+        default=None,
+        description="Comma-separated list of Gemini API keys for zero-cost quota rotation"
     )
 
     @model_validator(mode="after")

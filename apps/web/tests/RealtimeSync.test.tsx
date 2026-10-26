@@ -106,4 +106,20 @@ describe('useRealtimeSync Hook', () => {
 
     expect(onSyncMock).toHaveBeenCalled();
   });
+
+  it('defaults to a refresh rate of less than 3 seconds (2000ms)', () => {
+    const onSyncMock = vi.fn();
+    renderHook(() => useRealtimeSync(onSyncMock));
+
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      configurable: true,
+    });
+
+    act(() => {
+      vi.advanceTimersByTime(2100);
+    });
+
+    expect(onSyncMock).toHaveBeenCalled();
+  });
 });

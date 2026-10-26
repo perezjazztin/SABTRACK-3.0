@@ -96,7 +96,7 @@ export const RealTimeClock: React.FC<RealTimeClockProps> = ({
       aria-label="Philippine Standard Time"
       data-testid="realtime-clock"
       className={cn(
-        'inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-700 bg-white/80 border border-slate-200/80 shadow-neu-xs transition-all',
+        'neu-socket inline-flex items-center space-x-2 px-3 py-1.5 rounded-xl text-xs font-mono text-slate-700 border border-emerald-900/10 shadow-neu-xs transition-all',
         className
       )}
     >

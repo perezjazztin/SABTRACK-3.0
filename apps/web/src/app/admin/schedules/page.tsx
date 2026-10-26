@@ -180,7 +180,7 @@ export default function AdminSchedulesPage() {
     >
       <div className="space-y-8">
         {/* Header */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -305,7 +305,7 @@ export default function AdminSchedulesPage() {
                   <th className="px-5 py-4 text-right">{isAdmin ? "Actions" : "Access"}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {schedules.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
@@ -366,7 +366,7 @@ export default function AdminSchedulesPage() {
         {/* Modal: Add Collection Slot */}
         {isAdmin && showScheduleModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="neu-modal rounded-3xl border border-emerald-900/10 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Add Collection Schedule Slot
@@ -520,7 +520,7 @@ export default function AdminSchedulesPage() {
         {/* Modal: Broadcast Advisory */}
         {isAdmin && showAdvisoryModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="neu-modal rounded-3xl border border-emerald-900/10 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Broadcast Collection Advisory

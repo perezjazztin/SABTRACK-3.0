@@ -21,48 +21,48 @@ export const StatusCard: React.FC<StatusCardProps> = ({
 }) => {
   const statusStyles = {
     online: {
-      border: 'border-emerald-200',
-      badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      border: 'border-emerald-200/80',
+      badgeBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       dotBg: 'bg-emerald-500',
-      iconBg: 'bg-emerald-100 text-emerald-700',
+      iconBg: 'bg-emerald-50 text-emerald-700',
     },
     degraded: {
-      border: 'border-amber-200',
-      badgeBg: 'bg-amber-50 text-amber-700 border-amber-200',
+      border: 'border-amber-200/80',
+      badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
       dotBg: 'bg-amber-500',
-      iconBg: 'bg-amber-100 text-amber-700',
+      iconBg: 'bg-amber-50 text-amber-700',
     },
     offline: {
-      border: 'border-rose-200',
-      badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+      border: 'border-rose-200/80',
+      badgeBg: 'bg-rose-50 text-rose-800 border-rose-200',
       dotBg: 'bg-rose-500',
-      iconBg: 'bg-rose-100 text-rose-700',
+      iconBg: 'bg-rose-50 text-rose-700',
     },
     neutral: {
-      border: 'border-slate-200',
+      border: 'border-slate-200/80',
       badgeBg: 'bg-slate-50 text-slate-700 border-slate-200',
       dotBg: 'bg-slate-400',
-      iconBg: 'bg-slate-100 text-slate-600',
+      iconBg: 'bg-slate-50 text-slate-600',
     },
   }[status];
 
   return (
     <div
       className={cn(
-        'bg-white rounded-xl border p-5 shadow-sm transition-all duration-200 hover:shadow-md',
+        'neu-card rounded-2xl border bg-white p-5 sm:p-6 shadow-neu-sm hover:shadow-neu-raised transition-all duration-200',
         statusStyles.border
       )}
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center space-x-3">
-          <div className={cn('p-2.5 rounded-lg', statusStyles.iconBg)}>
+          <div className={cn('p-2.5 rounded-xl shadow-neu-xs', statusStyles.iconBg)}>
             <Icon className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               {title}
             </h4>
-            <div className="text-lg font-bold text-civic-slate mt-0.5 flex items-center space-x-2">
+            <div className="text-lg font-black text-slate-900 mt-0.5 flex items-center space-x-2">
               <span>{value}</span>
             </div>
           </div>
@@ -70,7 +70,7 @@ export const StatusCard: React.FC<StatusCardProps> = ({
 
         <span
           className={cn(
-            'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border',
+            'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border shadow-neu-xs',
             statusStyles.badgeBg
           )}
         >
@@ -82,7 +82,7 @@ export const StatusCard: React.FC<StatusCardProps> = ({
       </div>
 
       {subtext && (
-        <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100">
+        <p className="text-xs text-slate-500 mt-3 pt-3 border-t border-slate-100 font-medium">
           {subtext}
         </p>
       )}

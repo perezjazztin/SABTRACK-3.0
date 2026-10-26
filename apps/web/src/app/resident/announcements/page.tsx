@@ -109,7 +109,7 @@ export default function ResidentAnnouncementsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -129,7 +129,7 @@ export default function ResidentAnnouncementsPage() {
         <button
           onClick={loadData}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 bg-white/70 border border-slate-200 rounded-xl hover:bg-white shadow-neu-xs transition-all disabled:opacity-50 self-start sm:self-auto"
+          className="neu-button flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 rounded-xl shadow-neu-raised transition-all disabled:opacity-50 self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh
@@ -137,7 +137,7 @@ export default function ResidentAnnouncementsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="neu-card p-2.5 rounded-2xl border border-emerald-900/10 shadow-neu-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="neu-card p-2.5 rounded-2xl border border-slate-200/70 shadow-neu-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         {/* Category Tabs */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           {CATEGORY_TABS.map((tab) => {
@@ -265,7 +265,7 @@ export default function ResidentAnnouncementsPage() {
               return (
                 <div
                   key={item.id}
-                  className="neu-card border border-emerald-900/10 rounded-3xl p-6 shadow-neu-raised hover:shadow-neu-raised-hover transition-all space-y-3.5 flex flex-col justify-between"
+                  className="neu-card border border-slate-200/70 rounded-3xl p-6 shadow-neu-raised hover:shadow-neu-raised-hover transition-all space-y-3.5 flex flex-col justify-between"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">

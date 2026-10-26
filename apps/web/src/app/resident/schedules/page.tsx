@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useRealtimeSync } from '@/lib/use-realtime-sync';
 import {
   Calendar,
   Clock,
@@ -142,9 +143,9 @@ export default function ResidentSchedulesPage() {
   }, []);
 
   // Fetch schedules & advisories
-  const loadScheduleData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const loadScheduleData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    if (!silent) setError(null);
     try {
       const [schedRes, advRes] = await Promise.all([
         getSchedules({ areaId: selectedAreaId || undefined }),
@@ -153,16 +154,19 @@ export default function ResidentSchedulesPage() {
       setSchedules(schedRes.items);
       setAdvisories(advRes.items);
     } catch (err) {
-      setError('Unable to load collection schedules. Please try again.');
+      if (!silent) setError('Unable to load collection schedules. Please try again.');
       console.error(err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [selectedAreaId]);
 
   useEffect(() => {
     loadScheduleData();
   }, [loadScheduleData]);
+
+  // Automatic real-time background synchronization (< 3s SLA)
+  useRealtimeSync(() => loadScheduleData(true), { entity: 'schedules' });
 
   // Filtered schedules for Table and Cards
   const filteredSchedules = schedules.filter((item) => {
@@ -249,7 +253,7 @@ export default function ResidentSchedulesPage() {
   return (
     <div className="space-y-8">
       {/* Page Header */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -273,7 +277,7 @@ export default function ResidentSchedulesPage() {
               onClick={() => setViewMode('table')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'table'
-                  ? 'bg-white text-emerald-800 shadow-neu-xs font-black'
+                  ? 'neu-card text-emerald-800 shadow-neu-xs font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
               title="Switch to Table View"
@@ -285,7 +289,7 @@ export default function ResidentSchedulesPage() {
               onClick={() => setViewMode('cards')}
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                 viewMode === 'cards'
-                  ? 'bg-white text-emerald-800 shadow-neu-xs font-black'
+                  ? 'neu-card text-emerald-800 shadow-neu-xs font-black'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
               title="Switch to Card Grid"
@@ -296,9 +300,9 @@ export default function ResidentSchedulesPage() {
           </div>
 
           <button
-            onClick={loadScheduleData}
+            onClick={() => loadScheduleData()}
             disabled={loading}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 bg-white/70 border border-slate-200 rounded-xl hover:bg-white shadow-neu-xs transition-all disabled:opacity-50"
+            className="neu-button flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-slate-700 rounded-xl shadow-neu-raised transition-all disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -307,7 +311,7 @@ export default function ResidentSchedulesPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="neu-card rounded-2xl border border-emerald-900/10 p-5 shadow-neu-xs space-y-4">
+      <div className="neu-card rounded-2xl border border-slate-200/70 p-5 shadow-neu-xs space-y-4">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
           {/* Search Box */}
           <div className="relative flex-1">
@@ -444,7 +448,7 @@ export default function ResidentSchedulesPage() {
                   <th scope="col" className="px-5 py-4 text-center">Email Reminder</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="px-5 py-12 text-center text-slate-500">
@@ -475,7 +479,7 @@ export default function ResidentSchedulesPage() {
                     return (
                       <tr
                         key={item.id}
-                        className="hover:bg-white/70 transition-colors"
+                        className="hover:bg-emerald-900/5 transition-colors"
                       >
                         {/* Day & Time Column */}
                         <td className="px-5 py-4 align-middle whitespace-nowrap">
@@ -560,7 +564,7 @@ export default function ResidentSchedulesPage() {
             return (
               <div
                 key={day}
-                className={`neu-card rounded-3xl border border-emerald-900/10 shadow-neu-raised overflow-hidden flex flex-col ${
+                className={`neu-card rounded-3xl border border-slate-200/70 shadow-neu-raised overflow-hidden flex flex-col ${
                   hasCollection ? '' : 'opacity-80'
                 }`}
               >
@@ -568,7 +572,7 @@ export default function ResidentSchedulesPage() {
                 <div
                   className={`px-5 py-4 flex items-center justify-between border-b ${
                     hasCollection
-                      ? 'bg-emerald-50/50 border-emerald-900/10'
+                      ? 'bg-emerald-50/50 border-slate-200/70'
                       : 'bg-slate-50/30 border-slate-200/50'
                   }`}
                 >
@@ -599,7 +603,7 @@ export default function ResidentSchedulesPage() {
                       return (
                         <div
                           key={item.id}
-                          className={`p-3.5 rounded-2xl bg-white/80 border ${config.borderClass} space-y-2 text-xs shadow-sm hover:shadow-md transition-all`}
+                          className={`neu-card p-3.5 rounded-2xl border ${config.borderClass} space-y-2 text-xs shadow-neu-raised hover:shadow-neu-raised-hover transition-all`}
                         >
                           <div className="flex items-center justify-between gap-1">
                             <span
@@ -671,7 +675,7 @@ export default function ResidentSchedulesPage() {
           Barangay Sabang Waste Segregation Guidelines
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-sm">
+          <div className="neu-card p-4 rounded-2xl border border-slate-200/70 shadow-neu-raised">
             <span className="font-bold text-emerald-800 block mb-1">
               🌱 Biodegradable (Green Bag)
             </span>
@@ -679,7 +683,7 @@ export default function ResidentSchedulesPage() {
               Kitchen scraps, vegetable peelings, leftover food, dry leaves, garden cuttings.
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <div className="neu-card p-4 rounded-2xl border border-slate-200/70 shadow-neu-raised">
             <span className="font-bold text-slate-800 block mb-1">
               🗑️ Non-Biodegradable (Black Bag)
             </span>
@@ -687,7 +691,7 @@ export default function ResidentSchedulesPage() {
               Sanitary napkins, disposable diapers, styrofoam, contaminated wrappers, soiled plastic.
             </p>
           </div>
-          <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-sm">
+          <div className="neu-card p-4 rounded-2xl border border-slate-200/70 shadow-neu-raised">
             <span className="font-bold text-blue-800 block mb-1">
               ♻️ Recyclable (White/Clear Bag)
             </span>
@@ -701,7 +705,7 @@ export default function ResidentSchedulesPage() {
       {/* NOTIFY ME MODAL DIALOG */}
       {notifyModalSchedule && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-7 space-y-5 border border-emerald-100 animate-in fade-in zoom-in-95 duration-150">
+          <div className="neu-modal rounded-3xl max-w-md w-full p-6 sm:p-7 space-y-5 border border-slate-200/70 shadow-neu-raised animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center gap-2.5">
@@ -727,7 +731,7 @@ export default function ResidentSchedulesPage() {
             </div>
 
             {/* Schedule Slot Summary */}
-            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2 text-xs">
+            <div className="neu-socket rounded-2xl p-4 border border-slate-200/70 space-y-2 text-xs">
               <div className="flex justify-between items-center">
                 <span className="text-slate-500">Day of Week:</span>
                 <span className="font-bold text-slate-800">

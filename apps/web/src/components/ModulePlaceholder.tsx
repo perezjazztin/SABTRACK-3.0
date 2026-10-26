@@ -23,7 +23,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
   return (
     <div className="space-y-6">
       {/* Module Title Banner */}
-      <div className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-8 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-start space-x-4">
           <div className="p-3 bg-emerald-50 text-civic-forest rounded-xl flex-shrink-0">
             <Icon className="w-7 h-7" />
@@ -59,7 +59,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
       </div>
 
       {/* Specification & Planned Deliverables Card */}
-      <div className="bg-white rounded-2xl border border-civic-border p-6 shadow-sm space-y-4">
+      <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-8 shadow-neu-raised space-y-4">
         <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center">
           <CheckCircle2 className="w-4 h-4 text-civic-emerald mr-2" />
           Planned Operational Scope &amp; Deliverables
@@ -73,7 +73,7 @@ export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
           {features.map((feature, idx) => (
             <div
               key={idx}
-              className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-start space-x-2.5 text-xs text-slate-700"
+              className="neu-socket p-3.5 rounded-2xl border border-emerald-900/5 flex items-start space-x-2.5 text-xs text-slate-700"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-civic-forest mt-1.5 flex-shrink-0" />
               <span>{feature}</span>

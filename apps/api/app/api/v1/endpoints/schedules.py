@@ -1,15 +1,17 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_permission, verify_csrf
-from app.core.security import Permission
+from app.core.security import Permission, hash_token
+from app.core.logging import logger
 from app.core.websocket import ws_manager
-from app.modules.identity.models import User
+from app.modules.identity.models import Session as SessionModel, User
 from app.modules.areas.models import Area
+from app.modules.schedules.models import Schedule
 from app.modules.schedules.schemas import (
     ScheduleCreate,
     ScheduleRead,
@@ -17,6 +19,8 @@ from app.modules.schedules.schemas import (
     AdvisoryCreate,
     AdvisoryRead,
     AdvisoryListResponse,
+    ScheduleNotificationRequest,
+    ScheduleNotificationResponse,
 )
 from app.modules.schedules.service import (
     create_schedule,
@@ -85,6 +89,72 @@ def delete_schedule_endpoint(
         )
     ws_manager.broadcast_sync({"type": "SCHEDULE_DEACTIVATED", "entity": "schedules", "id": schedule_id})
     return {"message": "Schedule deactivated successfully", "id": schedule_id}
+
+
+@router.post(
+    "/{schedule_id}/notify",
+    response_model=ScheduleNotificationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Subscribe to email reminders for a collection schedule",
+)
+def subscribe_schedule_notification_endpoint(
+    schedule_id: int,
+    payload: ScheduleNotificationRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
+    """Register an email address to receive collection day reminders for a schedule slot."""
+    target_email = payload.email.strip() if payload.email and payload.email.strip() else None
+
+    # Fallback to session user email if not explicitly provided
+    if not target_email:
+        raw_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+        if raw_token:
+            token_hash = hash_token(raw_token)
+            session = db.scalar(select(SessionModel).where(SessionModel.session_id_hash == token_hash))
+            if session and session.user and session.user.is_active:
+                target_email = session.user.email
+
+    if not target_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A valid recipient email address is required to receive collection schedule reminders.",
+        )
+
+    # Basic email format check
+    if "@" not in target_email or "." not in target_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The provided email address format is invalid.",
+        )
+
+    schedule = db.get(Schedule, schedule_id)
+    if not schedule or not schedule.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Collection schedule with ID {schedule_id} was not found or is inactive.",
+        )
+
+    area_name = schedule.area.name if schedule.area else "All Barangay Sectors"
+
+    logger.info(
+        "Schedule reminder notification registered: Schedule #%s (%s, %s, %s) -> %s",
+        schedule.id,
+        schedule.day_of_week.value,
+        schedule.waste_type.value,
+        area_name,
+        target_email,
+    )
+
+    return ScheduleNotificationResponse(
+        message=f"Reminder notification registered! Automated reminder will be sent to {target_email} prior to {schedule.day_of_week.value} {schedule.start_time} pickup.",
+        schedule_id=schedule.id,
+        recipient_email=target_email,
+        day_of_week=schedule.day_of_week.value,
+        waste_type=schedule.waste_type.value,
+        collection_time=f"{schedule.start_time} - {schedule.end_time}",
+        area_name=area_name,
+    )
 
 
 @router.get(

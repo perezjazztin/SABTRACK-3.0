@@ -138,7 +138,7 @@ export default function AdminParticipationPage() {
     >
       <div className="space-y-8">
         {/* Header */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
               <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -166,7 +166,7 @@ export default function AdminParticipationPage() {
             <button
               onClick={loadData}
               disabled={loading}
-              className="p-2.5 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
+              className="neu-button p-2.5 text-slate-600 rounded-xl transition-all shadow-neu-raised"
               title="Refresh"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -182,7 +182,7 @@ export default function AdminParticipationPage() {
         )}
 
         {/* Filter Bar */}
-        <div className="flex items-center justify-between gap-3 bg-white p-3 border rounded-xl shadow-sm">
+        <div className="neu-card rounded-2xl border border-slate-200/70 p-4 shadow-neu-raised flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
             <span>Filter Claims:</span>
             {['PENDING', 'APPROVED', 'REJECTED', 'ALL'].map((status) => (
@@ -225,7 +225,7 @@ export default function AdminParticipationPage() {
                   <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {claims.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
@@ -302,7 +302,7 @@ export default function AdminParticipationPage() {
         {/* Modal: Review Claim */}
         {selectedClaim && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Verify Participation Claim #{selectedClaim.id}
@@ -401,7 +401,7 @@ export default function AdminParticipationPage() {
         {/* Modal: Create Initiative */}
         {showInitModal && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-5 space-y-4">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
                   Create Clean-up Drive or Campaign

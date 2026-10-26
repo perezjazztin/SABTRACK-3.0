@@ -5,6 +5,10 @@ import ResidentSchedulesPage from '@/app/resident/schedules/page';
 import * as apiClient from '@/lib/api-client';
 import * as authContext from '@/lib/auth-context';
 
+vi.mock('@/lib/use-realtime-sync', () => ({
+  useRealtimeSync: vi.fn(),
+}));
+
 describe('ResidentSchedulesPage Component Table View & Email Notifications', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,6 +83,7 @@ describe('ResidentSchedulesPage Component Table View & Email Notifications', () 
     // Wait for table to load
     await waitFor(() => {
       expect(screen.getByRole('table')).toBeInTheDocument();
+      expect(screen.queryByText(/Loading collection timetable/i)).not.toBeInTheDocument();
     });
 
     const table = screen.getByRole('table');

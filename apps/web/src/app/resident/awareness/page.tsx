@@ -290,7 +290,7 @@ export default function AwarenessHubPage() {
       </section>
 
       {/* Filter and Search Bar */}
-      <section className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 shadow-soft-raised p-4 space-y-3">
+      <section className="bg-[#FAFDFB] rounded-2xl border border-slate-200/70 shadow-soft-raised p-4 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           {/* Topic Category Tabs */}
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Topic Categories">
@@ -327,7 +327,7 @@ export default function AwarenessHubPage() {
               placeholder="Search tutorials & guides..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl bg-white border border-slate-200 shadow-soft-inset focus:border-civic-emerald focus:outline-none text-slate-800 placeholder-slate-400"
+              className="neu-input w-full pl-9 pr-3 py-2 text-xs rounded-xl focus:border-civic-emerald focus:outline-none text-slate-800 placeholder-slate-400"
             />
           </div>
         </div>
@@ -335,7 +335,7 @@ export default function AwarenessHubPage() {
 
       {/* Featured Video Spotlight */}
       {(selectedCategory === 'ALL' || selectedCategory === 'VIDEOS') && !searchQuery && (
-        <section className="bg-[#FAFDFB] rounded-3xl border border-emerald-900/10 shadow-soft-raised p-6 space-y-4">
+        <section className="neu-card rounded-3xl border border-slate-200/70 shadow-neu-raised p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <div className="p-2 bg-emerald-100 rounded-xl text-civic-forest shadow-soft-pressed">
@@ -514,7 +514,7 @@ export default function AwarenessHubPage() {
             {filteredResources.map((item) => (
               <div
                 key={item.id}
-                className="bg-[#FAFDFB] rounded-2xl border border-emerald-900/10 shadow-soft-raised p-5 flex flex-col justify-between hover:shadow-soft-raised-lg transition-all duration-200"
+                className="bg-[#FAFDFB] rounded-2xl border border-slate-200/70 shadow-soft-raised p-5 flex flex-col justify-between hover:shadow-soft-raised-lg transition-all duration-200"
               >
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
@@ -566,7 +566,7 @@ export default function AwarenessHubPage() {
           aria-labelledby="modal-title"
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
         >
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-soft-raised-lg border border-slate-200 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+          <div className="neu-modal rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200/70 shadow-neu-raised space-y-5 my-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block', activeModalItem.badgeColor)}>

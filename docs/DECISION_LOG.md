@@ -1,40 +1,31 @@
-# SABTRACK 3.0 — Decision Log & Authorizations
+# SABTRACK 3.0 — Decision Log
 
-**Project:** SABTRACK 3.0  
-**Course:** IT 313 — System Analysis and Design  
+**Project:** IT 313 — System Analysis and Design, Batangas State University - The NEU  
 **Client:** Barangay Sabang, Lipa City, Batangas  
 **Proponents:** Jazztin H. Perez, Faith A. Valencia, May Sigrid M. Dimaano  
-**Status:** Phase 5 Hardening & Deployment Complete — All 5 Phases Verified (66/66 Automated Tests Passing)  
+**Date:** October 15, 2026  
+**Status:** Living Architectural and Requirements Decision Register  
 
 ---
 
-## 1. Confirmed Decisions (Phase-Gated Approvals)
+## 1. Confirmed Decisions (Officially Approved by Proponents & Faculty)
 
-| ID | Topic | Decision | Authorization / Date |
+| ID | Category | Decision | Rationale / Source |
 |---|---|---|---|
-| **CONF-01** | **Academic Topic Alignment** | Formal academic title confirmed: *"SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling, Community Violation Reporting, and Gamified Waste Management Engagement in Barangay Sabang"*. Primary SDG: SDG 11 (Target 11.6). | Approved Academic Topic Form, First Semester AY 2026–2027. |
-| **CONF-02** | **Primary Database Engine** | PostgreSQL is the primary database for development and production. No SQLite fallback in production. Hermetic in-memory SQLite (`StaticPool`) is used exclusively for unit/integration testing. | Proponent Authorization (October 15, 2026). |
-| **CONF-03** | **Architecture Model** | Modular Monolith selected over Microservices. Organized into internal Python modules (`app/modules/*`) sharing a single database. | Proponent Authorization (October 15, 2026). |
-| **CONF-04** | **Backend Framework** | FastAPI with Pydantic v2 and SQLAlchemy 2.0. Psycopg 3.x driver for native PostgreSQL performance. | Proponent Authorization (October 15, 2026). |
-| **CONF-05** | **Frontend Framework** | Next.js 16 (App Router) with TypeScript, Tailwind CSS, and shadcn/ui design tokens. Decoupled PWA consuming FastAPI REST endpoints. | Proponent Authorization (October 15, 2026). |
-| **CONF-06** | **Civic Visual Identity** | Civic Color Palette: Forest Green (`#0F5132`), Fresh Emerald (`#198754`), Slate (`#1E293B`), Light Background (`#F8FAFC`). High-contrast, clean municipal aesthetic. | Proponent Authorization (October 15, 2026). |
-| **CONF-07** | **Dynamic Geographies** | Geographic divisions (puroks, zones, collection routes) must remain dynamic and database-driven (`areas` table), not hardcoded in code or schema. | Proponent Authorization (October 15, 2026). |
-| **CONF-08** | **Synthetic Data Discipline** | All demonstration, mock, or seeded records must be explicitly tagged (`is_demo_data=True`). Real resident names or real citizen reports must never be fabricated. | Proponent Authorization (October 15, 2026). |
-| **CONF-09** | **Phase-Gated Development** | Implementation proceeds strictly phase-by-phase. No phase code generated without prior user authorization. Phase 1 through Phase 5 complete. | Proponent Authorization (October 15, 2026). |
-| **CONF-10** | **Session Architecture** | Server-side sessions stored in PostgreSQL `sessions` table. Raw 32-byte token transmitted via HttpOnly cookie; stored as SHA-256 hash. 7-day expiration. | Proponent Authorization, Phase 2 (October 15, 2026). |
-| **CONF-11** | **Password Hashing** | Argon2id via `argon2-cffi 25.1`. No bcrypt, MD5, SHA-1, or plaintext password storage. | Proponent Authorization, Phase 2 (October 15, 2026). |
+| **CONF-01** | **Academic Scope** | Core deliverables consist of a web-based Progressive Web App (PWA) with a **Resident Portal** and **Administrative Dashboard**. | Approved IT 313 Topic Form. |
+| **CONF-02** | **Core Modules** | The system must support digital garbage collection scheduling/announcements, waste violation/uncollected waste reporting with photos and geotags, and verified community participation (SAB-Points). | Approved IT 313 Topic Form. |
+| **CONF-03** | **Analytics** | The project must include a formalized, multi-step **Business Analytics Procedure** that aggregates operational records into indicators and recurring-pattern insights. | Explicit directive from Course Instructor. |
+| **CONF-04** | **AI Governance** | AI integration is strictly **optional and decision-support only**; it will never autonomously verify reports, penalize residents, or assign points. | Academic guardrails & Instructor guidance. |
+| **CONF-05** | **Official Title** | The official academic topic title remains: *"SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling, Community Violation Reporting, and Gamified Waste Management Engagement in Barangay Sabang"*. Any permanent title change requires formal written instructor reapproval. | Course Topic Approval Policy. |
+| **CONF-06** | **Target Area** | The system exclusively covers **Barangay Sabang, Lipa City**. Multi-barangay administration is not supported. | Approved Project Scope. |
+| **CONF-07** | **Database Strategy** | **PostgreSQL as Primary Database from Day 1.** SQLite is NOT used as an automatic fallback without explicit approval. Exception: `sqlite:///:memory:` in Pytest only for hermetic test isolation. | Proponent Authorization (October 15, 2026). |
+| **CONF-08** | **Project Workspace** | Permanent repository location established at `C:\Users\jazzt\Projects\SABTRACK`. | Proponent Authorization (October 15, 2026). |
+| **CONF-09** | **Geographic Schema** | No hardcoded purok count or names (e.g. not assuming exactly 7 puroks). Geographic divisions are stored in a configurable `areas` table; test data is explicitly tagged with `is_demo_data=True`. | Proponent Authorization (October 15, 2026). |
+| **CONF-10** | **Execution Policy** | Local Windows PowerShell script execution policy handled via non-invasive batch scripts and `cmd.exe /c npm ...` without modifying machine-wide settings. | Proponent Authorization (October 15, 2026). |
+| **CONF-11** | **Authentication Architecture** | Server-managed opaque session tokens with HttpOnly cookies, Argon2id password hashing, double-submit CSRF protection. No localStorage/sessionStorage tokens. | Proponent Authorization, Phase 2 (October 15, 2026). |
 | **CONF-12** | **RBAC Design** | Centralized RBAC via `ROLE_PERMISSIONS` dict in `security.py`. Four roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, `SYSTEM_MAINTAINER`. `SYSTEM_MAINTAINER` has least-privilege — no resident data or admin barangay functions. | Proponent Authorization, Phase 2 (October 15, 2026). |
 | **CONF-13** | **Public Registration** | Unrestricted public self-registration is NOT permitted in Phase 2. Account creation requires a controlled seeding or future admin-approved onboarding process. | Proponent Authorization, Phase 2 (October 15, 2026). |
 | **CONF-14** | **Session Cookie Security** | `SESSION_COOKIE_SECURE=False` for local HTTP dev only. Must be `True` in any HTTPS deployment. `SameSite=Lax` chosen for compatibility with redirect-based flows. | Architectural Decision, Phase 2 (October 15, 2026). |
-| **CONF-15** | **Immutable Status History** | Report status changes are never overwritten in-place without generating a corresponding `report_status_history` record capturing timestamps, previous/new status, and reviewer ID. | Proponent Authorization, Phase 3 (October 24, 2026). |
-| **CONF-16** | **Schedule & Advisory Engine** | Recurring weekly collection schedules link dynamically to `areas` table; emergency advisories support delay/cancellation notices with effective date filtering. | Proponent Authorization, Phase 3 (October 24, 2026). |
-| **CONF-17** | **Official Communications** | Announcements system restricted to staff/admin authors with categories (`GENERAL`, `URGENT`, `EVENT`), pinned flags, and public active filters. | Proponent Authorization, Phase 3 (October 25, 2026). |
-| **CONF-18** | **Points Ledger Discipline** | Points are tracked exclusively via an append-only `points_ledger` table (`EARNED`, `REVERSED`, `REDEEMED`). Resident claims require staff verification before points are credited. | Proponent Authorization, Phase 4 (October 25, 2026). |
-| **CONF-19** | **Mandated Analytics Procedure** | Enforces 6-step analytics procedure (Collect, Sanitize, Aggregate, Pattern Detection, Visual Indicators, Decision Support). Data is stripped of PII before aggregation per RA 10173. | Course Instructor Directive & Proponent Authorization (October 25, 2026). |
-| **CONF-20** | **Admin User Governance** | Admin console provides staff provisioning and user activation toggles; backend enforces safeguards preventing admins from deactivating their own accounts. | Proponent Authorization, Phase 3 (October 25, 2026). |
-| **CONF-21** | **Server-Side EXIF Scrubbing** | Evidence photos uploaded by citizens are processed with Pillow to permanently strip all EXIF GPS telemetry, timestamps, and camera metadata prior to disk storage under RA 10173. | Proponent Authorization, Phase 5 (October 25, 2026). |
-| **CONF-22** | **Persistent Login Throttling** | Throttling failed authentication attempts is recorded in PostgreSQL `login_throttling` table (5 failed attempts locks account/IP for 15 minutes) persisting across restarts. | Proponent Authorization, Phase 5 (October 25, 2026). |
-| **CONF-23** | **Zero-Dependency Team Distribution** | Local disk storage and PostgreSQL chosen over external Redis/S3 so group members (Faith, Jazztin, May Sigrid) can clone from GitHub and run immediately with zero cloud bills or secret leaks. | Proponent Authorization, Phase 5 (October 25, 2026). |
 
 ---
 
@@ -71,43 +62,19 @@
 | **Dev Seeding Script** | **COMPLETE** | `scripts/seed-users.py` + `seed-users.bat`; 4 demo accounts tagged `is_demo_data=True`. |
 | **Test Coverage** | **COMPLETE** | 14/14 Pytest (11 auth/RBAC + 3 health) + 2/2 Vitest; `npm run build` clean. |
 
-### Phase 3 — Core Waste Operations (COMPLETE — commits `8c47b7c`, `d6ec9eb`, `b38e62c`, `864b60f`)
+### Phase 3 — Core Waste Operations (PENDING APPROVAL)
 
-| Component | Status | Details |
-|---|---|---|
-| **Waste Reporting Module** | **COMPLETE** | Citizen report submission with photo URL, geolocation, category classification; Alembic migration `0003_community_waste_reports`. |
-| **Immutable Status History** | **COMPLETE** | `report_status_history` table records status transitions (`SUBMITTED` -> `UNDER_REVIEW` -> `IN_PROGRESS` -> `RESOLVED` / `REJECTED`) with reviewer identity and remarks. |
-| **Collection Schedules** | **COMPLETE** | Weekly recurring timetable per purok/area; Alembic migration `0004_collection_schedules`. |
-| **Schedule Advisories** | **COMPLETE** | Delay, suspension, and special pickup emergency broadcast notices with effective date filters. |
-| **Barangay Announcements** | **COMPLETE** | Official communication feed for general news, events, and urgent advisories; Alembic migration `0005_announcements`. |
-| **User Governance** | **COMPLETE** | Admin user directory, staff account provisioning, and deactivation toggles with self-lockout prevention. |
-| **Portal Frontends** | **COMPLETE** | Full interactive Next.js pages for reports, schedules, announcements, and user administration. |
-
-### Phase 4 — Gamification, Business Analytics & Dashboards (COMPLETE — commits `8477453`, `864b60f`)
-
-| Component | Status | Details |
-|---|---|---|
-| **Gamification Module** | **COMPLETE** | Clean-up and segregation initiatives, resident claim submission, staff review queue; Alembic migration `0006_gamification_and_points`. |
-| **Points Ledger Discipline** | **COMPLETE** | Double-entry append-only `points_ledger` recording `EARNED`, `REVERSED`, and `REDEEMED` transactions. |
-| **6-Step Analytics Engine** | **COMPLETE** | Backend `AnalyticsService` executing: 1. Collect -> 2. Sanitize (RA 10173) -> 3. Aggregate -> 4. Pattern Detection -> 5. Visual Indicators -> 6. Decision Support. |
-| **Area Hotspot Grading** | **COMPLETE** | Algorithmic classification of waste hotspots into `NORMAL`, `ELEVATED`, and `CRITICAL` severity tiers. |
-| **Executive Dashboards** | **COMPLETE** | Live resident portal overview and comprehensive admin command center with KPI status cards, charts, and alert feeds. |
-| **Automated Testing Suite** | **COMPLETE** | 43/43 Pytest integration tests and 9/9 Vitest component tests passing; production build verified across 18 routes. |
-
-### Phase 5 — Production Hardening, Multipart Storage & Deployment Readiness (COMPLETE — commits `3b49b61`, `4b64f87`, `96a768e`, `ca22277`)
-
-| Component | Status | Details |
-|---|---|---|
-| **Protected Storage Module** | **COMPLETE** | `app/modules/storage` service; Pillow re-encoding strips all EXIF GPS telemetry and camera metadata; UUID filename sanitization; traversal prevention. |
-| **Secure Upload API** | **COMPLETE** | `POST /api/v1/uploads` accepting JPEG/PNG/WebP up to 5MB with CSRF validation; `GET /api/v1/uploads/{filename}` authenticated streaming endpoint. |
-| **Persistent Rate Limiting** | **COMPLETE** | Alembic migration `0007_login_throttling`; 5-attempt threshold with 15-minute lockout persisted to PostgreSQL across service restarts. |
-| **Frontend Image Upload UX** | **COMPLETE** | Next.js `<ImageUpload />` component with camera capture, drag-and-drop, client-side size check (5MB), and authenticated preview in Resident Reports and Points claims. |
-| **Docker Compose Orchestration** | **COMPLETE** | Multi-container compose configuration with `api_uploads` volume persistence, automatic database migration startup, and API healthchecks. |
-| **Full Automated Verification** | **COMPLETE** | 52/52 Pytest backend tests and 14/14 Vitest frontend tests passing (66/66 total automated tests); clean Next.js 16 build across 18 routes. |
+Proposed scope (subject to proponent authorization):
+- Resident waste violation / uncollected garbage report submission with photo attachment
+- Barangay staff report review, status transitions, and audit trail
+- Garbage collection schedule management and change advisory publishing
+- Announcement system for residents
+- User management for authorized admins
+- File upload handling with EXIF stripping
 
 ---
 
-## 3. Field Validation Register (Operational & Policy Refinements)
+## 3. Pending Field Validation (Before Committing Phase 3 Domain Schemas)
 
 | ID | Area | Open Question | Current Working Assumption | Owner |
 |---|---|---|---|---|
@@ -115,8 +82,33 @@
 | **VAL-02** | **Collection Unit** | What is the geographic unit for collection? (Purok 1–N, named streets, or arterial routes?) | Configurable `areas` table seeded with demo zones. | Field Team |
 | **VAL-03** | **Actual Pickups** | Does Barangay Sabang monitor or verify actual truck collection completion, or only schedule publishing? | Only schedule publishing and delay notices are active; actual collection event tracking is unverified. | Field Team |
 | **VAL-04** | **Report Verification** | Who processes submitted reports at Barangay Hall? (Barangay Secretary, Environmental Officer, or Tanod?) | Generic "Barangay Reviewer" role until titles are validated. | Field Team |
-| **VAL-05** | **Anonymity & Privacy** | Are anonymous violation reports permitted? What is the official evidence retention and privacy disclosure under RA 10173? | Submissions require an authenticated resident account; complainant identity is shielded; EXIF telemetry is stripped upon upload. | Proponents |
+| **VAL-05** | **Anonymity & Privacy** | Are anonymous violation reports permitted? What is the official evidence retention and privacy disclosure under RA 10173? | Submissions require an authenticated resident account; complainant identity is shielded from public view. | Proponents |
 | **VAL-06** | **SAB-Points Rules** | Does an official barangay incentive or redemption program exist, or is SAB-Points purely an academic demonstration? | Points ledger is tracked academically; real-world prize fulfillment is explicitly out of scope. | Proponents |
 | **VAL-07** | **Analytics Utility** | Which specific indicators would Barangay Officials actually look at during regular sessions? | Weekly report volume, uncollected waste hotspots, and median resolution times. | Proponents / Field Team |
 | **VAL-08** | **Resident Onboarding** | How are resident accounts created and verified? (Self-registration, barangay-issued credentials, or national ID linkage?) | Not yet determined; unrestricted self-registration is deferred per Phase 2 authorization. | Proponents / Client |
 | **VAL-09** | **Account Deletion** | What is the RA 10173 compliant procedure for resident account deletion and data erasure? | Not yet determined; must be resolved before public deployment. | Proponents / Legal |
+
+---
+
+## 4. Known Technical Limitations (Phase 2)
+
+| ID | Limitation | Impact | Resolution Path |
+|---|---|---|---|
+| **LIM-01** | In-memory login rate limiter resets on server restart | Rate limit bypass possible if server is restarted during lockout | Replace with Redis or DB-backed limiter before production |
+| **LIM-02** | `SESSION_COOKIE_SECURE=False` in development | Session cookie transmitted over HTTP (safe for localhost only) | Must set `True` in production `.env` behind HTTPS |
+| **LIM-03** | No account deactivation for expired demo accounts | Demo seeding must be re-run idempotently | Add `is_active` toggle UI in Phase 3 user management |
+| **LIM-04** | No multi-device session management UI | Users cannot see or revoke other active sessions | Future enhancement |
+
+---
+
+## 5. Explicitly Out of Scope (Non-Goals)
+
+| ID | Item | Why Excluded |
+|---|---|---|
+| **OOS-01** | **Physical Truck GPS Tracking** | Requires specialized in-vehicle IoT hardware, continuous telemetry, and hauler cooperation beyond student scope. |
+| **OOS-02** | **Physical Waste Operations** | Software cannot manage physical garbage trucks, landfills, or sorting equipment. |
+| **OOS-03** | **Financial Transactions & Prize Procurement** | System does not handle cash, e-wallets, inventory purchasing, or logistics fulfillment for rewards. |
+| **OOS-04** | **Autonomous AI Actions** | AI will not penalize residents, auto-resolve cases, or independently issue points. |
+| **OOS-05** | **Multi-Barangay / City-Wide Scope** | Confined strictly to Barangay Sabang to maintain feasibility and high local fidelity. |
+| **OOS-06** | **Custom Deep Learning / Model Training** | Unnecessary resource sink; pretrained or API-based adapters with aggregate data fulfill academic objectives safely. |
+| **OOS-07** | **Public Self-Registration (Phase 2)** | Deferred pending resolution of resident identity verification requirements with the barangay. |

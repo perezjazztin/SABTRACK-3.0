@@ -175,7 +175,7 @@ export default function AdminUsersPage() {
     >
       <div className="space-y-8">
         {/* Executive Header */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center space-x-2.5">
               <div className="p-2.5 bg-emerald-100 text-civic-forest rounded-xl shadow-neu-xs">
@@ -233,7 +233,7 @@ export default function AdminUsersPage() {
 
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
-          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
+          <div className="neu-card rounded-3xl border border-slate-200/70 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Total Accounts
             </span>
@@ -241,7 +241,7 @@ export default function AdminUsersPage() {
             <p className="text-[11px] text-slate-400">System identities on record</p>
           </div>
 
-          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
+          <div className="neu-card rounded-3xl border border-slate-200/70 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Barangay Personnel
             </span>
@@ -249,7 +249,7 @@ export default function AdminUsersPage() {
             <p className="text-[11px] text-slate-400">Staff review &amp; Admin council</p>
           </div>
 
-          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
+          <div className="neu-card rounded-3xl border border-slate-200/70 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Community Residents
             </span>
@@ -257,7 +257,7 @@ export default function AdminUsersPage() {
             <p className="text-[11px] text-slate-400">Verified reporting citizens</p>
           </div>
 
-          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 shadow-neu-raised space-y-2">
+          <div className="neu-card rounded-3xl border border-slate-200/70 p-6 shadow-neu-raised space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
               Deactivated Access
             </span>
@@ -267,7 +267,7 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-5 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-5 shadow-neu-raised flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="relative flex-1 max-w-md">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -326,7 +326,7 @@ export default function AdminUsersPage() {
                   <th className="py-4 px-5 text-right">Access Controls</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {loading ? (
                   <tr>
                     <td colSpan={5} className="py-12 text-center text-slate-400">
@@ -432,7 +432,7 @@ export default function AdminUsersPage() {
         {/* Account Provisioning Modal */}
         {isAdmin && isCreateOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4">
-            <div className="neu-card rounded-3xl border border-emerald-900/10 shadow-neu-raised max-w-md w-full p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
+            <div className="neu-card rounded-3xl border border-slate-200/70 shadow-neu-raised max-w-md w-full p-6 sm:p-7 space-y-5 animate-in fade-in duration-200">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center space-x-2">
                   <UserPlus className="w-5 h-5 text-civic-forest" />

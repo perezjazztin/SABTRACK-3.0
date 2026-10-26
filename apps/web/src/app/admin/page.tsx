@@ -1,8 +1,6 @@
 'use client';
-import { RealTimeClock } from '@/components/RealTimeClock';
 
 import { useRealtimeSync } from '@/lib/use-realtime-sync';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
@@ -16,19 +14,14 @@ import { WasteReport, ReportStatus } from '@/types/reports';
 import { ClaimItem } from '@/types/gamification';
 import { AdvisoryItem, ScheduleItem } from '@/types/schedules';
 import {
-  ShieldAlert,
   FileCheck2,
   CalendarDays,
   Award,
   AlertTriangle,
   Clock,
-  ArrowRight,
-  CheckCircle2,
   MapPin,
   RefreshCw,
   ChevronRight,
-  Sparkles,
-  Users,
 } from 'lucide-react';
 
 const REPORT_STATUS_BADGES: Record<
@@ -75,8 +68,8 @@ export default function AdminOverviewPage() {
   const [advisories, setAdvisories] = useState<AdvisoryItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
 
-  const loadAdminMetrics = useCallback(async () => {
-    setLoading(true);
+  const loadAdminMetrics = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [reportsRes, claimsRes, advisoriesRes, schedulesRes] =
         await Promise.allSettled([
@@ -91,7 +84,7 @@ export default function AdminOverviewPage() {
       if (advisoriesRes.status === 'fulfilled') setAdvisories(advisoriesRes.value.items || []);
       if (schedulesRes.status === 'fulfilled') setSchedules(schedulesRes.value.items || []);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
@@ -99,8 +92,8 @@ export default function AdminOverviewPage() {
     loadAdminMetrics();
   }, [loadAdminMetrics]);
 
-  // Automatic real-time background synchronization
-  useRealtimeSync(loadAdminMetrics, { entity: '*' });
+  // Automatic background synchronization (< 3s SLA)
+  useRealtimeSync(() => loadAdminMetrics(true), { entity: '*' });
 
   // Derived counts
   const pendingReports = reports.filter((r) => r.status === 'SUBMITTED');
@@ -111,40 +104,39 @@ export default function AdminOverviewPage() {
   const activeAdvisories = advisories.filter((a) => a.is_active);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Executive Command Header */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-        <div className="space-y-2">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-6 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+        <div className="space-y-1.5">
           <div className="flex items-center space-x-2">
-            <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
-              Barangay Sabang Governance
+            <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200/60">
+              {user?.role === 'BARANGAY_STAFF' ? 'Barangay Sabang Staff Portal' : 'Barangay Sabang Governance'}
             </span>
-            <span className="text-xs text-slate-400">&bull;</span>
-            <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded">
+            <span className="text-xs text-slate-300">&bull;</span>
+            <span className="text-xs font-mono font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
               Role: {user?.role}
             </span>
-            <RealTimeClock className="text-[11px] py-0.5 px-2.5" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-civic-slate tracking-tight">
-            Administrative Command Overview
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            {user?.role === 'BARANGAY_STAFF' ? 'Staff Console Overview' : 'Administrative Command Overview'}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-2xl leading-relaxed">
-            Real-time status of resident waste complaints, pending clean-up point verifications, active collection routes, and service telemetry.
+            Status of resident waste complaints, pending clean-up point verifications, active collection routes, and service telemetry.
           </p>
         </div>
 
         <div className="flex items-center space-x-3 self-start sm:self-auto flex-shrink-0">
           <button
-            onClick={loadAdminMetrics}
+            onClick={() => loadAdminMetrics()}
             disabled={loading}
-            className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold bg-white/70 hover:bg-white text-slate-700 transition-all border border-slate-200 shadow-neu-xs active:shadow-neu-green-pressed"
+            className="neu-btn-secondary inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh Data
           </button>
           <Link
             href="/admin/reports"
-            className="inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-bold bg-civic-forest text-white hover:bg-civic-forestHover transition-colors shadow-neu-green"
+            className="neu-btn-primary inline-flex items-center px-5 py-2.5 rounded-xl text-xs font-bold text-white transition-colors shadow-neu-green"
           >
             <FileCheck2 className="w-4 h-4 mr-1.5" />
             Triage Queue
@@ -153,22 +145,22 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* 4 Executive KPI Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
         {/* Pending Reports (Urgent Triage) */}
         <Link
           href="/admin/reports"
-          className="neu-card p-6 rounded-3xl border border-emerald-900/10 shadow-neu-raised hover:shadow-neu-raised-hover transition-all group flex flex-col justify-between"
+          className="neu-card-interactive p-5 sm:p-6 rounded-3xl border border-slate-200/70 shadow-neu-raised hover:border-rose-400 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Pending Reports
             </span>
-            <div className="neu-socket p-3 rounded-2xl text-rose-600 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <AlertTriangle className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-civic-slate">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
               {pendingReports.length}
             </div>
             <div className="flex items-center space-x-1.5 mt-1.5">
@@ -183,18 +175,18 @@ export default function AdminOverviewPage() {
         {/* Active Investigation / In Progress */}
         <Link
           href="/admin/reports"
-          className="neu-card p-6 rounded-3xl border border-emerald-900/10 shadow-neu-raised hover:shadow-neu-raised-hover transition-all group flex flex-col justify-between"
+          className="neu-card-interactive p-5 sm:p-6 rounded-3xl border border-slate-200/70 shadow-neu-raised hover:border-blue-400 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Under Investigation
             </span>
-            <div className="neu-socket p-3 rounded-2xl text-blue-600 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <FileCheck2 className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-civic-slate">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
               {inProgressReports.length}
             </div>
             <p className="text-xs text-slate-500 mt-1.5">
@@ -206,18 +198,18 @@ export default function AdminOverviewPage() {
         {/* Community Claims Awaiting Verification */}
         <Link
           href="/admin/participation"
-          className="neu-card p-6 rounded-3xl border border-emerald-900/10 shadow-neu-raised hover:shadow-neu-raised-hover transition-all group flex flex-col justify-between"
+          className="neu-card-interactive p-5 sm:p-6 rounded-3xl border border-slate-200/70 shadow-neu-raised hover:border-amber-400 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Unverified Claims
             </span>
-            <div className="neu-socket p-3 rounded-2xl text-amber-600 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <Award className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-civic-slate">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
               {pendingClaims.length}
             </div>
             <p className="text-xs text-amber-700 font-bold mt-1.5">
@@ -229,18 +221,18 @@ export default function AdminOverviewPage() {
         {/* Active Schedule Delays / Advisories */}
         <Link
           href="/admin/schedules"
-          className="neu-card p-6 rounded-3xl border border-emerald-900/10 shadow-neu-raised hover:shadow-neu-raised-hover transition-all group flex flex-col justify-between"
+          className="neu-card-interactive p-5 sm:p-6 rounded-3xl border border-slate-200/70 shadow-neu-raised hover:border-purple-400 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Active Advisories
             </span>
-            <div className="neu-socket p-3 rounded-2xl text-purple-600 group-hover:scale-105 transition-transform flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-105 transition-transform">
               <CalendarDays className="w-5 h-5" />
             </div>
           </div>
           <div className="mt-4">
-            <div className="text-2xl font-black text-civic-slate">
+            <div className="text-2xl sm:text-3xl font-black text-slate-900">
               {activeAdvisories.length}
             </div>
             <p className="text-xs text-slate-500 mt-1.5">
@@ -251,21 +243,21 @@ export default function AdminOverviewPage() {
       </div>
 
       {/* Main Operational Split Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column: Priority Reports Queue Preview */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-7 shadow-neu-raised space-y-5">
-          <div className="flex items-center justify-between border-b border-emerald-900/10 pb-4">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-6 sm:p-8 shadow-neu-raised space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center text-civic-forest">
+              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
                 <FileCheck2 className="w-4 h-4" />
               </div>
-              <h2 className="text-sm font-bold text-civic-slate">
+              <h2 className="text-sm font-bold text-slate-900">
                 Immediate Review Queue
               </h2>
             </div>
             <Link
               href="/admin/reports"
-              className="text-xs font-bold text-civic-forest hover:text-civic-forestHover flex items-center"
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center transition-colors"
             >
               Open Full Queue ({reports.length})
               <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
@@ -277,7 +269,7 @@ export default function AdminOverviewPage() {
               No waste reports filed yet.
             </div>
           ) : (
-            <div className="space-y-3.5">
+            <div className="space-y-3">
               {reports.slice(0, 4).map((report) => {
                 const badge =
                   REPORT_STATUS_BADGES[report.status] ||
@@ -285,30 +277,30 @@ export default function AdminOverviewPage() {
                 return (
                   <div
                     key={report.id}
-                    className="p-4 rounded-2xl border border-emerald-900/5 bg-white shadow-neu-xs hover:shadow-neu-sm transition-all space-y-2.5"
+                    className="neu-socket p-3.5 sm:p-4 rounded-2xl border border-emerald-900/5 hover:border-emerald-900/15 transition-all space-y-2"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-0.5">
+                      <div className="space-y-0.5 min-w-0">
                         <span className="text-[10px] font-mono font-bold text-slate-400">
                           REP-{report.id.toString().padStart(4, '0')} &bull; {report.category.replace('_', ' ')}
                         </span>
-                        <h3 className="text-xs font-bold text-slate-800 line-clamp-1">
+                        <h3 className="text-xs font-bold text-slate-800 truncate">
                           {report.title}
                         </h3>
                       </div>
                       <span
-                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${badge.bg} ${badge.text} ${badge.border}`}
+                        className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border flex-shrink-0 ${badge.bg} ${badge.text} ${badge.border}`}
                       >
                         {badge.label}
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/50">
                       <div className="flex items-center space-x-1.5 truncate max-w-[220px]">
                         <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                         <span className="truncate">{report.location_text}</span>
                       </div>
-                      <div className="flex items-center space-x-1.5">
+                      <div className="flex items-center space-x-1.5 flex-shrink-0">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>{new Date(report.created_at).toLocaleDateString()}</span>
                       </div>
@@ -321,19 +313,19 @@ export default function AdminOverviewPage() {
         </div>
 
         {/* Right Column: Community Claims Verification Preview */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-7 shadow-neu-raised space-y-5">
-          <div className="flex items-center justify-between border-b border-emerald-900/10 pb-4">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-6 sm:p-8 shadow-neu-raised space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div className="flex items-center space-x-2.5">
-              <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700">
+              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center font-bold">
                 <Award className="w-4 h-4 text-amber-600" />
               </div>
-              <h2 className="text-sm font-bold text-civic-slate">
+              <h2 className="text-sm font-bold text-slate-900">
                 SAB-Points Claims to Verify
               </h2>
             </div>
             <Link
               href="/admin/participation"
-              className="text-xs font-bold text-civic-forest hover:text-civic-forestHover flex items-center"
+              className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center transition-colors"
             >
               Verify All ({claims.length})
               <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
@@ -345,11 +337,11 @@ export default function AdminOverviewPage() {
               No participation claims submitted yet.
             </div>
           ) : (
-            <div className="space-y-3.5">
+            <div className="space-y-3">
               {claims.slice(0, 4).map((claim) => (
                 <div
                   key={claim.id}
-                  className="p-4 rounded-2xl border border-emerald-900/5 bg-white shadow-neu-xs hover:shadow-neu-sm transition-all space-y-2"
+                  className="neu-socket p-3.5 sm:p-4 rounded-2xl border border-emerald-900/5 hover:border-emerald-900/15 transition-all space-y-2"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
@@ -367,12 +359,12 @@ export default function AdminOverviewPage() {
                       {claim.status}
                     </span>
                   </div>
-                  <h3 className="text-xs font-bold text-slate-800 line-clamp-1">
+                  <h3 className="text-xs font-bold text-slate-800 truncate">
                     {claim.activity_title}
                   </h3>
-                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-                    <span className="font-medium">Resident: {claim.resident_name}</span>
-                    <span>{new Date(claim.created_at).toLocaleDateString()}</span>
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-200/50">
+                    <span className="font-medium truncate">Resident: {claim.resident_name}</span>
+                    <span className="flex-shrink-0">{new Date(claim.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
               ))}

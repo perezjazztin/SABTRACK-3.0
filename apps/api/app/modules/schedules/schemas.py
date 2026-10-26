@@ -63,3 +63,17 @@ class ScheduleListResponse(BaseModel):
 class AdvisoryListResponse(BaseModel):
     items: List[AdvisoryRead]
     total: int
+
+
+class ScheduleNotificationRequest(BaseModel):
+    email: Optional[str] = Field(None, max_length=255, description="Recipient email address for reminders")
+
+
+class ScheduleNotificationResponse(BaseModel):
+    message: str
+    schedule_id: int
+    recipient_email: str
+    day_of_week: str
+    waste_type: str
+    collection_time: str
+    area_name: Optional[str] = None

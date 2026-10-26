@@ -74,3 +74,17 @@ export interface AdvisoryCreatePayload {
   advisory_type: AdvisoryType;
   effective_date: string;
 }
+
+export interface ScheduleNotificationPayload {
+  email?: string;
+}
+
+export interface ScheduleNotificationResponse {
+  message: string;
+  schedule_id: number;
+  recipient_email: string;
+  day_of_week: string;
+  waste_type: string;
+  collection_time: string;
+  area_name?: string | null;
+}

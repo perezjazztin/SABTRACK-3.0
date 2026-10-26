@@ -465,14 +465,14 @@ export function resolveImageUrl(url: string | null | undefined): string {
 }
 
 export async function queryEcoBot(payload: ChatQueryRequest): Promise<ChatQueryResponse> {
-  return apiFetch<ChatQueryResponse>('/chatbot/query', {
+  return apiFetch<ChatQueryResponse>('/api/v1/chatbot/query', {
     method: 'POST',
     body: JSON.stringify(payload),
   });
 }
 
 export async function getEcoBotPrompts(): Promise<QuickPromptItem[]> {
-  return apiFetch<QuickPromptItem[]>('/chatbot/prompts', {
+  return apiFetch<QuickPromptItem[]>('/api/v1/chatbot/prompts', {
     method: 'GET',
   });
 }

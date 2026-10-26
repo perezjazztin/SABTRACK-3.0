@@ -27,8 +27,15 @@ export const Header: React.FC = () => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutStep, setSignOutStep] = useState<'closing' | 'done'>('closing');
   const router = useRouter();
-  const pathname = usePathname();
-  const isLandingPage = pathname === '/' || pathname === '' || pathname === '/#home' || pathname === '/#about' || pathname === '/#contact';
+  const pathname = usePathname() || '';
+  const isTimeHidden =
+    pathname === '/' ||
+    pathname === '' ||
+    pathname.startsWith('/#') ||
+    pathname === '/login' ||
+    pathname.startsWith('/login') ||
+    pathname === '/register' ||
+    pathname.startsWith('/register');
 
   const handleLogout = async () => {
     setIsSigningOut(true);
@@ -70,9 +77,9 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 bg-[#edf2f7]/95 backdrop-blur-md border-b border-white/80 shadow-neu-sm transition-all">
+      <header className="sticky top-0 z-50 bg-[#f4f8f5]/90 backdrop-blur-md border-b border-slate-200/60 shadow-neu-xs transition-all">
         {/* Main Navigation Bar */}
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between">
           {/* Brand Logo with tactile extruded icon */}
           <Link href="/" className="flex items-center space-x-3 group">
             <div className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-neu-green flex items-center justify-center group-hover:scale-105 transition-all">
@@ -119,7 +126,7 @@ export const Header: React.FC = () => {
 
           {/* Right Action Controls: Real-Time Clock (hidden on landing page), REGISTER & LOGIN (or Portals if logged in) */}
           <div className="hidden md:flex items-center space-x-3">
-            {!isLandingPage && <RealTimeClock />}
+            {!isTimeHidden && <RealTimeClock />}
 
             {isAuthenticated && user ? (
               <div className="flex items-center space-x-2 sm:space-x-3">
@@ -134,14 +141,14 @@ export const Header: React.FC = () => {
                   </Link>
                 )}
 
-                {/* Strict Role Isolation: STAFF and ADMIN navigate exclusively to Admin Console */}
+                {/* Strict Role Isolation: STAFF navigates to Staff Console, ADMIN to Admin Console */}
                 {['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
                   <Link
                     href="/admin"
                     className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700"
                   >
                     <ShieldAlert className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
-                    <span>Admin Console</span>
+                    <span>{user.role === 'BARANGAY_STAFF' ? 'Staff Console' : 'Admin Console'}</span>
                   </Link>
                 )}
 
@@ -209,8 +216,8 @@ export const Header: React.FC = () => {
 
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200/60 bg-[#edf2f7] px-4 pt-3 pb-5 space-y-2.5 shadow-neu-raised">
-            {!isLandingPage && (
+          <div className="md:hidden border-t border-slate-200/60 bg-white px-4 pt-3 pb-5 space-y-2.5 shadow-neu-raised">
+            {!isTimeHidden && (
               <div className="pb-1 flex justify-center">
                 <RealTimeClock className="w-full justify-center" />
               </div>
@@ -264,7 +271,7 @@ export const Header: React.FC = () => {
                       className="neu-btn-secondary flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-800"
                     >
                       <ShieldAlert className="w-4 h-4 text-slate-600" />
-                      <span>Admin Console</span>
+                      <span>{user.role === 'BARANGAY_STAFF' ? 'Staff Console' : 'Admin Console'}</span>
                     </Link>
                   )}
                   {user.role === 'SYSTEM_MAINTAINER' && (

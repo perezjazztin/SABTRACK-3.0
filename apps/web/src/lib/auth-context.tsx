@@ -8,6 +8,7 @@ interface AuthContextType {
   user: User | null;
   permissions: string[];
   loading: boolean;
+  isLoggingOut?: boolean;
   error: string | null;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
@@ -23,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshSession = useCallback(async () => {
@@ -63,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    setIsLoggingOut(true);
     setLoading(true);
     try {
       await apiLogout();
@@ -72,6 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setPermissions([]);
       setLoading(false);
+      const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+      setTimeout(() => {
+        setIsLoggingOut(false);
+      }, isTest ? 0 : 500);
     }
   };
 
@@ -97,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         permissions,
         loading,
+        isLoggingOut,
         error,
         isAuthenticated: !!user,
         login,

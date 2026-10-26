@@ -161,10 +161,10 @@ export default function ResidentProfilePage() {
       )}
 
       {/* Main Profile Header Card */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-9 shadow-neu-raised">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-9 shadow-neu-raised">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center space-x-5">
-            <div className="neu-socket w-20 h-20 rounded-3xl flex items-center justify-center font-black text-3xl text-civic-forest shadow-neu-sunken flex-shrink-0 border border-emerald-900/10">
+            <div className="neu-socket w-20 h-20 rounded-3xl flex items-center justify-center font-black text-3xl text-civic-forest shadow-neu-sunken flex-shrink-0 border border-slate-200/70">
               {user?.full_name?.charAt(0) || 'R'}
             </div>
             <div className="space-y-1.5 min-w-0">
@@ -181,7 +181,7 @@ export default function ResidentProfilePage() {
                 {user?.email} &bull; Official Barangay Sabang Citizen Portal
               </p>
               <div className="flex flex-wrap items-center gap-2 pt-1 text-xs">
-                <span className="font-mono px-2.5 py-0.5 rounded-lg bg-emerald-900/5 text-civic-forest font-bold border border-emerald-900/10">
+                <span className="font-mono px-2.5 py-0.5 rounded-lg bg-emerald-900/5 text-civic-forest font-bold border border-slate-200/70">
                   ID: {residentId}
                 </span>
                 <span className="text-slate-500 font-medium flex items-center gap-1">
@@ -219,7 +219,7 @@ export default function ResidentProfilePage() {
 
       {/* KPI Stats Row: Eco Karma, Reports, Compliance, Purok Rank */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-emerald-900/10">
+        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-slate-200/70">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Eco-Karma Balance
@@ -240,7 +240,7 @@ export default function ResidentProfilePage() {
           </p>
         </div>
 
-        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-emerald-900/10">
+        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-slate-200/70">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Reports Track Record
@@ -260,7 +260,7 @@ export default function ResidentProfilePage() {
           </p>
         </div>
 
-        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-emerald-900/10">
+        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-slate-200/70">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Segregation Rate
@@ -280,7 +280,7 @@ export default function ResidentProfilePage() {
           </p>
         </div>
 
-        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-emerald-900/10">
+        <div className="neu-card p-5 sm:p-6 rounded-3xl shadow-neu-raised space-y-2 border border-slate-200/70">
           <div className="flex items-center justify-between">
             <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">
               Civic Standing
@@ -303,7 +303,7 @@ export default function ResidentProfilePage() {
       {/* Two Column Grid for Detailed Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Card 1: Household & Residency Demographics */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised space-y-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center gap-2">
               <Home className="w-4 h-4 text-civic-forest" />
@@ -313,7 +313,7 @@ export default function ResidentProfilePage() {
           </div>
 
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <MapPin className="w-4 h-4" />
               </div>
@@ -328,7 +328,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Users className="w-4 h-4" />
               </div>
@@ -345,7 +345,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Layers className="w-4 h-4" />
               </div>
@@ -362,7 +362,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Clock className="w-4 h-4" />
               </div>
@@ -382,7 +382,7 @@ export default function ResidentProfilePage() {
         </div>
 
         {/* Card 2: Contact Information & Alert Channels */}
-        <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised space-y-6">
+        <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center gap-2">
               <Phone className="w-4 h-4 text-civic-forest" />
@@ -394,7 +394,7 @@ export default function ResidentProfilePage() {
           </div>
 
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Mail className="w-4 h-4" />
               </div>
@@ -410,7 +410,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Phone className="w-4 h-4" />
               </div>
@@ -425,7 +425,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-civic-forest flex-shrink-0">
                 <Bell className="w-4 h-4" />
               </div>
@@ -447,7 +447,7 @@ export default function ResidentProfilePage() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs flex items-start space-x-3.5">
+            <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-start space-x-3.5">
               <div className="neu-socket p-2.5 rounded-xl text-red-500 flex-shrink-0">
                 <HeartHandshake className="w-4 h-4" />
               </div>
@@ -468,7 +468,7 @@ export default function ResidentProfilePage() {
       </div>
 
       {/* Civic Badges & Ecological Achievements */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised space-y-6">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center gap-2">
@@ -485,7 +485,7 @@ export default function ResidentProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-          <div className="p-4.5 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4.5 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="neu-socket w-10 h-10 rounded-xl flex items-center justify-center text-amber-500">
               <Sparkles className="w-5 h-5" />
             </div>
@@ -500,7 +500,7 @@ export default function ResidentProfilePage() {
             </span>
           </div>
 
-          <div className="p-4.5 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4.5 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="neu-socket w-10 h-10 rounded-xl flex items-center justify-center text-blue-500">
               <ShieldCheck className="w-5 h-5" />
             </div>
@@ -515,7 +515,7 @@ export default function ResidentProfilePage() {
             </span>
           </div>
 
-          <div className="p-4.5 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4.5 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="neu-socket w-10 h-10 rounded-xl flex items-center justify-center text-emerald-600">
               <Layers className="w-5 h-5" />
             </div>
@@ -530,7 +530,7 @@ export default function ResidentProfilePage() {
             </span>
           </div>
 
-          <div className="p-4.5 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4.5 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="neu-socket w-10 h-10 rounded-xl flex items-center justify-center text-teal-600">
               <HeartHandshake className="w-5 h-5" />
             </div>
@@ -548,7 +548,7 @@ export default function ResidentProfilePage() {
       </div>
 
       {/* Security, Data Privacy & Legal Compliance (RA 10173 & RA 9003) */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised space-y-6">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised space-y-6">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center gap-2">
             <Lock className="w-4 h-4 text-civic-forest" />
@@ -561,7 +561,7 @@ export default function ResidentProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5 text-xs">
-          <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="flex items-center space-x-2 text-civic-forest font-bold text-xs">
               <ShieldCheck className="w-4 h-4 text-civic-emerald" />
               <span>RA 10173 Compliance</span>
@@ -571,7 +571,7 @@ export default function ResidentProfilePage() {
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="flex items-center space-x-2 text-civic-forest font-bold text-xs">
               <Lock className="w-4 h-4 text-civic-emerald" />
               <span>EXIF GPS Sanitization</span>
@@ -581,7 +581,7 @@ export default function ResidentProfilePage() {
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-white/70 border border-emerald-900/5 shadow-neu-xs space-y-2">
+          <div className="neu-surface p-4 rounded-2xl border border-slate-200/70 shadow-neu-xs space-y-2">
             <div className="flex items-center space-x-2 text-civic-forest font-bold text-xs">
               <CheckCircle2 className="w-4 h-4 text-civic-emerald" />
               <span>Session &amp; CSRF Defense</span>
@@ -592,7 +592,7 @@ export default function ResidentProfilePage() {
           </div>
         </div>
 
-        <div className="pt-2 border-t border-emerald-900/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500">
+        <div className="pt-2 border-t border-slate-200/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-slate-500">
           <p>
             Need to request data modification or account deletion? Contact the Barangay Sabang Data Protection Officer at{' '}
             <span className="font-semibold text-civic-forest">dpo@sabang-lipa.gov.ph</span>.
@@ -606,8 +606,8 @@ export default function ResidentProfilePage() {
       {/* Edit Profile & Preferences Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fadeIn">
-          <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-8 max-w-lg w-full shadow-neu-raised space-y-6">
-            <div className="flex items-center justify-between border-b border-emerald-900/10 pb-4">
+          <div className="neu-card rounded-3xl border border-slate-200/70 p-6 sm:p-8 max-w-lg w-full shadow-neu-raised space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200/70 pb-4">
               <div className="flex items-center space-x-3">
                 <div className="neu-socket p-2.5 rounded-2xl text-civic-forest">
                   <Edit3 className="w-5 h-5" />
@@ -697,7 +697,7 @@ export default function ResidentProfilePage() {
               </div>
 
               {/* Notification Toggles */}
-              <div className="pt-2 border-t border-emerald-900/10 space-y-3">
+              <div className="pt-2 border-t border-slate-200/70 space-y-3">
                 <span className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
                   Notification Channels
                 </span>
@@ -734,7 +734,7 @@ export default function ResidentProfilePage() {
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-emerald-900/10">
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200/70">
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}

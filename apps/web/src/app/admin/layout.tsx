@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DashboardFooter } from '@/components/DashboardFooter';
 
 export const ADMIN_NAV = [
   {
@@ -84,9 +85,9 @@ export default function AdminLayout({
       requiredRole={['BARANGAY_STAFF', 'BARANGAY_ADMIN']}
       moduleName="Barangay Administrative Portal"
     >
-      <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] w-full bg-[#edf2f7]">
+      <div className="flex flex-col md:flex-row flex-1 min-h-[calc(100vh-4rem)] w-full bg-[#f4f8f5]">
         {/* Mobile Header Bar with Three Horizontal Lines (Visible only when minimized / mobile screens) */}
-        <div className="md:hidden sticky top-16 z-30 bg-[#edf2f7] border-b border-white/80 px-4 py-3 flex items-center justify-between shadow-neu-xs">
+        <div className="md:hidden sticky top-16 z-30 bg-white border-b border-slate-200/70 px-4 py-3 flex items-center justify-between shadow-neu-xs">
           <div className="flex items-center space-x-3">
             <button
               type="button"
@@ -110,12 +111,11 @@ export default function AdminLayout({
               </span>
             </div>
           </div>
-
         </div>
 
         {/* Mobile Drawer (Collapsed by default, opens via the three horizontal lines) */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#edf2f7] border-b border-white/80 p-4 space-y-3 shadow-neu-raised animate-fadeIn">
+          <div className="md:hidden bg-white border-b border-slate-200/70 p-4 space-y-3 shadow-neu-sm animate-fadeIn">
             <nav className="space-y-1.5" aria-label="Mobile Administrative Portal Navigation">
               {ADMIN_NAV.map((item) => {
                 const isActive = pathname === item.href;
@@ -132,9 +132,9 @@ export default function AdminLayout({
                     className={cn(
                       'group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors duration-150',
                       isActive
-                        ? 'bg-emerald-700 text-white font-semibold shadow-soft-raised'
+                        ? 'bg-civic-forest text-white font-bold shadow-neu-xs'
                         : isPermitted
-                        ? 'text-slate-600 hover:text-emerald-800 hover:bg-slate-200/60'
+                        ? 'text-slate-600 hover:text-civic-forest hover:bg-emerald-50/60'
                         : 'text-slate-400 opacity-60 cursor-not-allowed'
                     )}
                   >
@@ -149,7 +149,7 @@ export default function AdminLayout({
                     </div>
 
                     {isViewOnly && !isActive && (
-                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded font-mono border border-slate-300/60">
+                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-mono border border-slate-200">
                         View Only
                       </span>
                     )}
@@ -168,7 +168,7 @@ export default function AdminLayout({
         )}
 
         {/* Full-Height Sticky Sidebar Flush to Left for Desktop (Hidden on mobile) */}
-        <aside className="hidden md:flex md:w-64 lg:w-72 flex-shrink-0 bg-[#edf2f7] border-r border-white/80 md:sticky md:top-16 md:h-[calc(100vh-4rem)] flex-col justify-between overflow-y-auto p-4 lg:p-5 shadow-[6px_0_16px_rgba(163,177,198,0.35)]">
+        <aside className="hidden md:flex md:w-64 lg:w-72 flex-shrink-0 bg-white border-r border-slate-200/70 md:sticky md:top-16 md:h-[calc(100vh-4rem)] flex-col justify-between overflow-y-auto p-4 lg:p-5 shadow-neu-xs">
           <div className="space-y-4">
             {/* Navigation Menu */}
             <nav className="space-y-1.5" aria-label="Administrative Portal Navigation">
@@ -186,9 +186,9 @@ export default function AdminLayout({
                     className={cn(
                       'group flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-colors duration-150',
                       isActive
-                        ? 'bg-emerald-700 text-white font-semibold'
+                        ? 'bg-civic-forest text-white font-bold shadow-neu-xs'
                         : isPermitted
-                        ? 'text-slate-600 hover:text-emerald-800 hover:bg-slate-200/60'
+                        ? 'text-slate-600 hover:text-civic-forest hover:bg-emerald-50/60'
                         : 'text-slate-400 opacity-60 cursor-not-allowed'
                     )}
                   >
@@ -203,7 +203,7 @@ export default function AdminLayout({
                     </div>
 
                     {isViewOnly && !isActive && (
-                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded font-mono border border-slate-300/60">
+                      <span className="inline-flex items-center text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded font-mono border border-slate-200">
                         View Only
                       </span>
                     )}
@@ -221,7 +221,7 @@ export default function AdminLayout({
           </div>
 
           {/* Sidebar Footer Attribution */}
-          <div className="pt-4 border-t border-slate-300/60 mt-6 text-center">
+          <div className="pt-4 border-t border-slate-200/60 mt-6 text-center">
             <p className="text-[10px] text-slate-400 font-mono">
               SABTRACK v3.0 &bull; Barangay Sabang
             </p>
@@ -229,10 +229,11 @@ export default function AdminLayout({
         </aside>
 
         {/* Main Content Area */}
-        <section className="flex-1 min-w-0 bg-[#edf2f7] overflow-y-auto">
-          <div className="max-w-7xl mx-auto p-6 sm:p-8 lg:p-10">
+        <section className="flex-1 min-w-0 bg-[#f4f8f5] overflow-y-auto flex flex-col justify-between">
+          <div className="max-w-7xl mx-auto p-6 sm:p-8 lg:p-10 w-full flex-1">
             {children}
           </div>
+          <DashboardFooter />
         </section>
       </div>
     </ProtectedRoute>

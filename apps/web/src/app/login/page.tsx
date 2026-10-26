@@ -4,38 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Lock, LogIn, AlertCircle, Sparkles, Shield, UserCheck, Wrench, UserPlus } from 'lucide-react';
-
-const DEMO_PRESETS = [
-  {
-    label: 'Resident',
-    email: 'resident.demo@sabtrack.local',
-    password: 'SabtrackDevPass2026!',
-    role: 'RESIDENT',
-    icon: UserCheck,
-  },
-  {
-    label: 'Staff Reviewer',
-    email: 'staff.demo@sabtrack.local',
-    password: 'SabtrackDevPass2026!',
-    role: 'BARANGAY_STAFF',
-    icon: Shield,
-  },
-  {
-    label: 'Barangay Admin',
-    email: 'admin.demo@sabtrack.local',
-    password: 'SabtrackDevPass2026!',
-    role: 'BARANGAY_ADMIN',
-    icon: Shield,
-  },
-  {
-    label: 'Maintainer',
-    email: 'maintainer.demo@sabtrack.local',
-    password: 'SabtrackDevPass2026!',
-    role: 'SYSTEM_MAINTAINER',
-    icon: Wrench,
-  },
-];
+import { Lock, LogIn, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -78,12 +47,6 @@ export default function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleSelectPreset = (preset: typeof DEMO_PRESETS[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setErrorMessage(null);
   };
 
   return (
@@ -169,40 +132,6 @@ export default function LoginPage() {
           >
             Create an account
           </Link>
-        </div>
-      </div>
-
-      {/* Development Quick Role Switcher */}
-      <div className="neu-card rounded-2xl p-5 space-y-3">
-        <div className="flex items-center space-x-2 text-xs font-bold text-slate-800">
-          <Sparkles className="w-4 h-4 text-emerald-600" />
-          <span>Evaluation Demo Accounts</span>
-        </div>
-        <p className="text-[11px] text-slate-500 leading-relaxed">
-          Click any role below to pre-populate credentials for RBAC verification.
-        </p>
-
-        <div className="grid grid-cols-2 gap-2.5 pt-1">
-          {DEMO_PRESETS.map((preset) => (
-            <button
-              key={preset.role}
-              type="button"
-              onClick={() => handleSelectPreset(preset)}
-              className="neu-card-interactive flex items-center space-x-2 p-2.5 rounded-xl text-left group"
-            >
-              <div className="neu-socket p-1.5 rounded-lg text-slate-600 group-hover:text-emerald-700">
-                <preset.icon className="w-3.5 h-3.5" />
-              </div>
-              <div className="overflow-hidden">
-                <div className="text-xs font-bold text-slate-800 truncate">
-                  {preset.label}
-                </div>
-                <div className="text-[10px] text-slate-400 font-mono truncate">
-                  {preset.role}
-                </div>
-              </div>
-            </button>
-          ))}
         </div>
       </div>
     </div>

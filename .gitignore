@@ -44,10 +44,17 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 *.db
-apps/api/storage/uploads/*
-!apps/api/storage/uploads/.gitkeep
+uploads/
+storage/
 *.log
 
 # IDE Files
 .vscode/
 .idea/
+
+.superpowers/
+
+# Microsoft Office Temporary & Local Documents
+*.docx
+*.xlsx
+*.pptx

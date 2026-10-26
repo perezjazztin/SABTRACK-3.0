@@ -114,7 +114,7 @@ export default function ResidentPointsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="neu-card rounded-3xl border border-emerald-900/10 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="neu-card rounded-3xl border border-slate-200/70 p-7 sm:p-8 shadow-neu-raised flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
         <div className="space-y-2">
           <div className="flex items-center space-x-2">
             <span className="text-[11px] font-bold text-civic-forest uppercase tracking-wider bg-emerald-100/70 px-2.5 py-0.5 rounded-full border border-emerald-200/50">
@@ -142,7 +142,7 @@ export default function ResidentPointsPage() {
           <button
             onClick={loadData}
             disabled={loading}
-            className="p-3 text-slate-600 bg-white/70 border border-slate-200 rounded-xl hover:bg-white transition-all shadow-neu-xs"
+            className="neu-button p-3 text-slate-600 rounded-xl transition-all shadow-neu-raised"
             title="Refresh"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -186,7 +186,7 @@ export default function ResidentPointsPage() {
         </div>
 
         {/* Verification Stats Card */}
-        <div className="neu-card border border-emerald-900/10 rounded-3xl p-6 sm:p-7 shadow-neu-raised space-y-4 flex flex-col justify-between">
+        <div className="neu-card border border-slate-200/70 rounded-3xl p-6 sm:p-7 shadow-neu-raised space-y-4 flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
               Engagement Record
@@ -198,7 +198,7 @@ export default function ResidentPointsPage() {
               Verified community clean-ups &amp; reports
             </p>
           </div>
-          <div className="text-xs text-emerald-800 font-bold flex items-center gap-1.5 pt-3 border-t border-emerald-900/10">
+          <div className="text-xs text-emerald-800 font-bold flex items-center gap-1.5 pt-3 border-t border-slate-200/70">
             <ShieldCheck className="w-4 h-4 text-civic-emerald" />
             <span>Barangay Sabang Council Verified</span>
           </div>
@@ -206,7 +206,7 @@ export default function ResidentPointsPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="neu-card p-2 rounded-2xl border border-emerald-900/10 shadow-neu-xs flex items-center gap-2 overflow-x-auto text-xs">
+      <div className="neu-card p-2 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-center gap-2 overflow-x-auto text-xs">
         {[
           { key: 'initiatives', label: 'Clean-Up Initiatives', icon: Sparkles },
           { key: 'claims', label: 'My Submitted Claims', icon: FileText },
@@ -239,7 +239,7 @@ export default function ResidentPointsPage() {
               initiatives.map((init) => (
                 <div
                   key={init.id}
-                  className="bg-[#FAFDFB] border border-emerald-900/10 rounded-2xl p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all flex flex-col justify-between space-y-3"
+                  className="bg-[#FAFDFB] border border-slate-200/70 rounded-2xl p-5 shadow-soft-raised hover:shadow-soft-raised-lg transition-all flex flex-col justify-between space-y-3"
                 >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
@@ -293,7 +293,7 @@ export default function ResidentPointsPage() {
                   <th className="px-5 py-4">Review Remarks</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {!summary?.recent_claims.length ? (
                   <tr>
                     <td colSpan={5} className="px-4 py-8 text-center text-slate-500">
@@ -345,7 +345,7 @@ export default function ResidentPointsPage() {
             <span className="text-xs font-black uppercase tracking-wider text-slate-800">
               Double-Entry Transaction History
             </span>
-            <span className="neu-chip px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-[#edf2f7]">
+            <span className="neu-chip px-3 py-1 rounded-xl text-xs font-bold text-slate-600 bg-white">
               Total Recorded: {summary?.ledger_history.length || 0} entries
             </span>
           </div>
@@ -360,7 +360,7 @@ export default function ResidentPointsPage() {
                   <th className="px-5 py-4 text-right">Points Impact</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/60 bg-[#edf2f7]/50">
+              <tbody className="divide-y divide-slate-200/60 bg-white">
                 {!summary?.ledger_history.length ? (
                   <tr>
                     <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
@@ -394,7 +394,7 @@ export default function ResidentPointsPage() {
       {/* Modal: Submit Claim */}
       {showClaimModal && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-soft-raised-lg border border-slate-200 max-w-md w-full p-6 space-y-4">
+          <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-slate-900 text-base">
                 Claim SAB-Points for Civic Action
@@ -423,7 +423,7 @@ export default function ResidentPointsPage() {
                       points_requested: selected ? selected.points_reward : 25,
                     });
                   }}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+                  className="neu-select w-full px-3.5 py-2.5 rounded-xl focus:ring-2 focus:ring-emerald-600 focus:outline-none"
                 >
                   <option value="">Independent Cleanliness Action (25 pts)</option>
                   {initiatives.map((i) => (
@@ -445,7 +445,7 @@ export default function ResidentPointsPage() {
                     setForm({ ...form, activity_title: e.target.value })
                   }
                   placeholder="e.g. Cleaned street gutter and segregated recyclables"
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   required
                 />
               </div>
@@ -461,7 +461,7 @@ export default function ResidentPointsPage() {
                     setForm({ ...form, description: e.target.value })
                   }
                   placeholder="Detail your civic participation or segregation drop-off..."
-                  className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white shadow-soft-inset focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                  className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600"
                   required
                 />
               </div>

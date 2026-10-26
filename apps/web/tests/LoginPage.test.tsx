@@ -134,4 +134,23 @@ describe('LoginPage Role-Based Redirection', () => {
       expect(mockPush).toHaveBeenCalledWith('/resident');
     });
   });
+
+  it('does not render Evaluation Demo Accounts preset box', () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: null,
+      permissions: [],
+      loading: false,
+      error: null,
+      isAuthenticated: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      hasPermission: vi.fn(),
+      hasRole: vi.fn(),
+      refreshSession: vi.fn(),
+    });
+
+    render(<LoginPage />);
+
+    expect(screen.queryByText(/Evaluation Demo Accounts/i)).not.toBeInTheDocument();
+  });
 });

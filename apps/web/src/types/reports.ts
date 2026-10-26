@@ -52,7 +52,7 @@ export interface ReportCreatePayload {
   area_id?: number | null;
   latitude?: number | null;
   longitude?: number | null;
-  photo_url?: string | null;
+  photo_url: string;
 }
 
 export interface ReportStatusUpdatePayload {
