@@ -144,38 +144,6 @@ describe('Header Component Navigation & Role Isolation', () => {
     expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
   });
 
-  it('when logged in as SYSTEM_MAINTAINER: only shows System Maintainer description, no portal switching', () => {
-    vi.spyOn(authContext, 'useAuth').mockReturnValue({
-      user: {
-        id: 'maint-1',
-        email: 'maintainer.demo@sabtrack.local',
-        full_name: 'Maintainer Demo',
-        role: 'SYSTEM_MAINTAINER',
-        is_active: true,
-      },
-      isAuthenticated: true,
-      loading: false,
-      login: vi.fn(),
-      register: vi.fn(),
-      logout: vi.fn(),
-      hasRole: vi.fn(),
-      hasPermission: vi.fn(),
-      refreshSession: vi.fn(),
-    });
-
-    render(<Header />);
-
-    // System Maintainer badge must be present
-    expect(screen.getByText(/System Maintainer/i)).toBeInTheDocument();
-
-    // Must NOT see Resident Portal or Admin Console
-    expect(screen.queryByRole('link', { name: /Resident Portal/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: /Admin Console/i })).not.toBeInTheDocument();
-
-    // Sign out button must be present
-    expect(screen.getByRole('button', { name: /SIGN OUT/i })).toBeInTheDocument();
-  });
-
   it('navigates automatically to the home page (/) upon signing out', async () => {
     const mockLogout = vi.fn().mockResolvedValue(undefined);
     vi.spyOn(authContext, 'useAuth').mockReturnValue({

@@ -20,7 +20,6 @@ class UserRole(str, Enum):
     RESIDENT = "RESIDENT"
     BARANGAY_STAFF = "BARANGAY_STAFF"
     BARANGAY_ADMIN = "BARANGAY_ADMIN"
-    SYSTEM_MAINTAINER = "SYSTEM_MAINTAINER"
 
 
 class Permission(str, Enum):
@@ -36,7 +35,6 @@ class Permission(str, Enum):
     ANALYTICS_READ = "analytics:read"
     USERS_MANAGE = "users:manage"
     USERS_READ = "users:read"
-    SYSTEM_DIAGNOSTICS = "system:diagnostics"
 
 
 # Centralized least-privilege role-to-permission mapping
@@ -70,10 +68,6 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
         Permission.ANALYTICS_READ,
         Permission.USERS_MANAGE,
         Permission.USERS_READ,
-    },
-    UserRole.SYSTEM_MAINTAINER: {
-        Permission.PROFILE_READ_SELF,
-        Permission.SYSTEM_DIAGNOSTICS,
     },
 }
 

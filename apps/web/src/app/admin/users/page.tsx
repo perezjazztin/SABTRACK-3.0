@@ -50,12 +50,6 @@ const ROLE_BADGES: Record<
     text: 'text-purple-700',
     border: 'border-purple-200',
   },
-  SYSTEM_MAINTAINER: {
-    label: 'System Maintainer',
-    bg: 'bg-amber-50',
-    text: 'text-amber-700',
-    border: 'border-amber-200',
-  },
 };
 
 export default function AdminUsersPage() {
@@ -289,7 +283,6 @@ export default function AdminUsersPage() {
               <option value="RESIDENT">Residents</option>
               <option value="BARANGAY_STAFF">Barangay Staff</option>
               <option value="BARANGAY_ADMIN">Barangay Admin</option>
-              <option value="SYSTEM_MAINTAINER">System Maintainer</option>
             </select>
 
             <select
@@ -374,7 +367,6 @@ export default function AdminUsersPage() {
                               <option value="RESIDENT">Resident</option>
                               <option value="BARANGAY_STAFF">Barangay Staff</option>
                               <option value="BARANGAY_ADMIN">Barangay Admin</option>
-                              <option value="SYSTEM_MAINTAINER">System Maintainer</option>
                             </select>
                           ) : (
                             <span className={`inline-block text-[11px] font-bold px-2 py-1 rounded-lg border ${roleBadge.bg} ${roleBadge.text} ${roleBadge.border}`}>
@@ -491,7 +483,6 @@ export default function AdminUsersPage() {
                     <option value="BARANGAY_STAFF">Barangay Staff (Complaint Reviewer)</option>
                     <option value="BARANGAY_ADMIN">Barangay Admin (Full Council Privileges)</option>
                     <option value="RESIDENT">Resident (Reporting &amp; Gamification)</option>
-                    <option value="SYSTEM_MAINTAINER">System Maintainer (Diagnostics Only)</option>
                   </select>
                 </div>
 

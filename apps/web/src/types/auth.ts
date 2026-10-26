@@ -1,8 +1,7 @@
 export type UserRole =
   | 'RESIDENT'
   | 'BARANGAY_STAFF'
-  | 'BARANGAY_ADMIN'
-  | 'SYSTEM_MAINTAINER';
+  | 'BARANGAY_ADMIN';
 
 export interface User {
   id: number;

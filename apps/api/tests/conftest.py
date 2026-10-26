@@ -63,13 +63,6 @@ def seed_test_users():
             role=UserRole.BARANGAY_ADMIN,
             is_active=True,
         ),
-        User(
-            email="maintainer@sabtrack.test",
-            hashed_password=hashed,
-            full_name="Test System Maintainer",
-            role=UserRole.SYSTEM_MAINTAINER,
-            is_active=True,
-        ),
     ]
     db.add_all(users)
     db.commit()

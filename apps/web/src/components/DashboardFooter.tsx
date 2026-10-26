@@ -241,7 +241,7 @@ export const DashboardFooter: React.FC<DashboardFooterProps> = ({ className = ''
                   3. Role-Based Confidentiality &amp; Integrity
                 </span>
                 <p className="text-[11px] text-slate-600">
-                  Personal reports are accessible only to authorized Barangay Staff and Administrators. System maintainers are strictly sequestered from confidential resident information.
+                  Personal reports are accessible only to authorized Barangay Staff and Administrators. Unauthorized personnel are strictly sequestered from confidential resident information.
                 </p>
               </div>
             </div>

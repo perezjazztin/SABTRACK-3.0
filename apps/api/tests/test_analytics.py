@@ -59,21 +59,20 @@ def test_staff_can_view_analytics_overview(client: TestClient):
     assert "decision_insights" in data
 
 
-def test_resident_and_maintainer_denied_analytics(client: TestClient):
-    """Enforces least-privilege: RESIDENT and SYSTEM_MAINTAINER cannot read analytics."""
-    for role_email in ["resident@sabtrack.test", "maintainer@sabtrack.test"]:
-        csrf_token, session_cookie = _login(client, role_email)
+def test_resident_denied_analytics(client: TestClient):
+    """Enforces least-privilege: RESIDENT cannot read analytics."""
+    csrf_token, session_cookie = _login(client, "resident@sabtrack.test")
 
-        res = client.get(
-            "/api/v1/analytics/overview",
-            headers={"x-csrf-token": csrf_token},
-            cookies={settings.SESSION_COOKIE_NAME: session_cookie},
-        )
-        assert res.status_code == 403
-        data = res.json()
-        assert "error" in data
-        assert "message" in data["error"]
-        assert "permission" in data["error"]["message"].lower()
+    res = client.get(
+        "/api/v1/analytics/overview",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res.status_code == 403
+    data = res.json()
+    assert "error" in data
+    assert "message" in data["error"]
+    assert "permission" in data["error"]["message"].lower()
 
     # Unauthenticated request
     client.cookies.clear()

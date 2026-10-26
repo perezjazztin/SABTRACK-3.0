@@ -28,7 +28,7 @@ def test_admin_can_list_users_with_filters(client: TestClient):
     )
     assert res.status_code == 200
     data = res.json()
-    assert data["total"] >= 4
+    assert data["total"] >= 3
     assert any(u["email"] == "resident@sabtrack.test" for u in data["items"])
 
     # Filter by role
@@ -203,17 +203,16 @@ def test_staff_denied_user_mutations(client: TestClient):
     assert res_role.status_code == 403
 
 
-def test_resident_and_maintainer_denied_user_management(client: TestClient):
-    """Enforces least-privilege: RESIDENT and SYSTEM_MAINTAINER cannot read or manage users."""
-    for role_email in ["resident@sabtrack.test", "maintainer@sabtrack.test"]:
-        csrf_token, session_cookie = _login(client, role_email)
+def test_resident_denied_user_management(client: TestClient):
+    """Enforces least-privilege: RESIDENT cannot read or manage users."""
+    csrf_token, session_cookie = _login(client, "resident@sabtrack.test")
 
-        res = client.get(
-            "/api/v1/users",
-            headers={"x-csrf-token": csrf_token},
-            cookies={settings.SESSION_COOKIE_NAME: session_cookie},
-        )
-        assert res.status_code == 403
+    res = client.get(
+        "/api/v1/users",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert res.status_code == 403
 
     client.cookies.clear()
     anon_res = client.get("/api/v1/users")

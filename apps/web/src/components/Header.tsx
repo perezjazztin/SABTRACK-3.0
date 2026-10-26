@@ -16,7 +16,6 @@ import {
   HelpCircle,
   PhoneCall,
   Home as HomeIcon,
-  Wrench,
   CheckCircle2,
 } from 'lucide-react';
 import { RealTimeClock } from '@/components/RealTimeClock';
@@ -152,14 +151,6 @@ export const Header: React.FC = () => {
                   </Link>
                 )}
 
-                {/* System Maintainer: Dedicated diagnostics/maintainer indicator */}
-                {user.role === 'SYSTEM_MAINTAINER' && (
-                  <div className="neu-chip inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700">
-                    <Wrench className="w-3.5 h-3.5 mr-1.5 text-slate-500" />
-                    <span>System Maintainer</span>
-                  </div>
-                )}
-
                 {/* Sign Out Button */}
                 <button
                   type="button"
@@ -273,12 +264,6 @@ export const Header: React.FC = () => {
                       <ShieldAlert className="w-4 h-4 text-slate-600" />
                       <span>{user.role === 'BARANGAY_STAFF' ? 'Staff Console' : 'Admin Console'}</span>
                     </Link>
-                  )}
-                  {user.role === 'SYSTEM_MAINTAINER' && (
-                    <div className="neu-chip flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700">
-                      <Wrench className="w-4 h-4 text-slate-500" />
-                      <span>System Maintainer</span>
-                    </div>
                   )}
                   <button
                     type="button"

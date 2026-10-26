@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.core.deps import require_permission, get_current_user
+from app.core.deps import require_permission
 from app.core.security import Permission
 from app.modules.identity.models import User
 
@@ -63,19 +63,4 @@ def manage_users(
         "message": f"Authorized user management for {user.email}",
         "feature": "User and Access Management",
         "role": user.role.value,
-    }
-
-
-@router.get(
-    "/system/diagnostics",
-    summary="Protected technical system diagnostics",
-)
-def get_system_diagnostics(
-    user: User = Depends(require_permission(Permission.SYSTEM_DIAGNOSTICS)),
-):
-    """Accessible strictly by maintainers holding system:diagnostics permission."""
-    return {
-        "message": f"System diagnostics accessed by {user.email}",
-        "role": user.role.value,
-        "diagnostics": "System operating normally",
     }

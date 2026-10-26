@@ -53,7 +53,7 @@
 | **Auth Endpoints** | **COMPLETE** | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me` with audit logging and rate limiting. |
 | **Rate Limiting** | **COMPLETE** | 5 failed attempts / 15-minute lockout per IP. In-memory; acceptable for academic scope. |
 | **RBAC Dependency System** | **COMPLETE** | `require_permission()` and `require_role()` FastAPI dependency factories. |
-| **Protected Demo Endpoints** | **COMPLETE** | 5 endpoints for RBAC verification: resident, staff, admin, and maintainer access levels. |
+| **Protected Demo Endpoints** | **COMPLETE** | 5 endpoints for RBAC verification: resident, staff, and admin access levels. |
 | **Frontend AuthProvider** | **COMPLETE** | React context with `useAuth()` hook; session hydration on load; `hasPermission()`, `hasRole()`. |
 | **ProtectedRoute Component** | **COMPLETE** | Auth guard with distinct 401 (unauthenticated), 403 role, and 403 permission states. |
 | **Login Page** | **COMPLETE** | Form with dev role-switcher presets for RBAC demonstration. |

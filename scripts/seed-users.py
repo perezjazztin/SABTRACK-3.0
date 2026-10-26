@@ -48,11 +48,6 @@ DEMO_ACCOUNTS = [
         "full_name": "Demo Barangay Admin (Fictional)",
         "role": UserRole.BARANGAY_ADMIN,
     },
-    {
-        "email": "maintainer.demo@sabtrack.local",
-        "full_name": "Demo System Maintainer (Fictional)",
-        "role": UserRole.SYSTEM_MAINTAINER,
-    },
 ]
 
 DEMO_AREAS = [

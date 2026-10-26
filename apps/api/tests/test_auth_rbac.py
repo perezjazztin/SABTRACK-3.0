@@ -189,23 +189,6 @@ def test_admin_rbac_comprehensive_access(client):
     assert client.get("/api/v1/admin/users-manage").status_code == 200
 
 
-def test_maintainer_least_privilege_boundary(client):
-    """Verifies maintainer has diagnostics access but is denied confidential resident reports."""
-    client.post(
-        "/api/v1/auth/login",
-        json={"email": "maintainer@sabtrack.test", "password": TEST_PASSWORD},
-    )
-
-    # Allowed: system diagnostics
-    res_diag = client.get("/api/v1/system/diagnostics")
-    assert res_diag.status_code == 200
-    assert res_diag.json()["diagnostics"] == "System operating normally"
-
-    # Denied: confidential report queue (Least privilege principle)
-    res_rep = client.get("/api/v1/admin/reports-queue")
-    assert res_rep.status_code == 403
-
-
 def test_resident_registration_endpoint_with_resident_id_num(client):
     """Verifies that public resident self-registration succeeds and accepts Resident ID number."""
     payload = {

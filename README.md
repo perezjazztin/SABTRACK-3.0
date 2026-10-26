@@ -105,14 +105,13 @@ REM 4. Launch both services
 - **Health Check:** http://127.0.0.1:8000/api/v1/health
 
 ### Demo Login
-Navigate to `http://localhost:3000/login` to sign in as any of the four designated roles:
+Navigate to `http://localhost:3000/login` to sign in as any of the designated roles:
 
 | Role | Email |
 |---|---|
 | Resident | `resident.demo@sabtrack.local` |
 | Barangay Staff | `staff.demo@sabtrack.local` |
 | Barangay Admin | `admin.demo@sabtrack.local` |
-| System Maintainer | `maintainer.demo@sabtrack.local` |
 
 *(Password: `SabtrackDevPass2026!` — development demo only)*
 

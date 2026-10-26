@@ -180,7 +180,6 @@ Run `.\scripts\seed-users.bat` to create the following accounts. **These are dev
 | `resident.demo@sabtrack.local` | `RESIDENT` | `SabtrackDevPass2026!` |
 | `staff.demo@sabtrack.local` | `BARANGAY_STAFF` | `SabtrackDevPass2026!` |
 | `admin.demo@sabtrack.local` | `BARANGAY_ADMIN` | `SabtrackDevPass2026!` |
-| `maintainer.demo@sabtrack.local` | `SYSTEM_MAINTAINER` | `SabtrackDevPass2026!` |
 
 > **Security Warning:** The seed script uses `is_demo_data=True` to flag synthetic records. Re-running the seeder is idempotent — existing demo accounts are skipped. These credentials are committed in documentation as they are fictional development fixtures. Production credentials must never appear in version-controlled files.
 
