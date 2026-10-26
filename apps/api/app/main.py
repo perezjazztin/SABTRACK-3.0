@@ -21,6 +21,11 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     setup_logging()
     logger.info("Initializing %s v%s (%s)", settings.PROJECT_NAME, settings.VERSION, settings.ENVIRONMENT)
+    try:
+        settings.STORAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info("Storage uploads directory verified: %s", settings.STORAGE_UPLOAD_DIR)
+    except Exception as exc:
+        logger.error("Failed to initialize storage directory: %s", exc)
     yield
     logger.info("Shutting down %s", settings.PROJECT_NAME)
 
@@ -51,6 +56,10 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 # Include versioned API router
 app.include_router(api_router, prefix=settings.API_V1_STR)
+
+# Top-level /health route alias for load balancers and system monitoring
+from app.api.v1.endpoints.health import get_health
+app.add_api_route("/health", get_health, methods=["GET"], tags=["Health"], include_in_schema=False)
 
 
 @app.get("/", tags=["Root"])

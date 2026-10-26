@@ -190,14 +190,14 @@ export const HealthDashboard: React.FC = () => {
       )}
 
       {/* Architectural Verification Summary */}
-      <div className="bg-white rounded-xl border border-civic-border p-5 shadow-sm space-y-4">
+      <div className="neu-card rounded-3xl border border-emerald-900/10 p-6 sm:p-7 shadow-neu-raised space-y-4">
         <h3 className="text-sm font-bold text-civic-slate uppercase tracking-wider flex items-center">
           <CheckCircle2 className="w-4 h-4 text-civic-emerald mr-2" />
           Phase 1 Foundation Verification Checklist
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-start space-x-2">
+          <div className="neu-socket p-3.5 rounded-2xl border border-emerald-900/5 flex items-start space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-slate-800">Decoupled Monolith Stack:</span>
@@ -205,7 +205,7 @@ export const HealthDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-start space-x-2">
+          <div className="neu-socket p-3.5 rounded-2xl border border-emerald-900/5 flex items-start space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-slate-800">No Hardcoded Purok Assumptions:</span>
@@ -213,7 +213,7 @@ export const HealthDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-start space-x-2">
+          <div className="neu-socket p-3.5 rounded-2xl border border-emerald-900/5 flex items-start space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-slate-800">Alembic Migration Discipline:</span>
@@ -221,7 +221,7 @@ export const HealthDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 flex items-start space-x-2">
+          <div className="neu-socket p-3.5 rounded-2xl border border-emerald-900/5 flex items-start space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0" />
             <div>
               <span className="font-semibold text-slate-800">Test Harness & CI Ready:</span>

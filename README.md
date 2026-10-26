@@ -7,18 +7,20 @@
 [![FastAPI](https://img.shields.io/badge/Backend-FastAPI_0.143-009688.svg)](https://fastapi.tiangolo.com/)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js_16-black.svg)](https://nextjs.org/)
 [![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL_16-336791.svg)](https://www.postgresql.org/)
-[![Phase 2 Complete](https://img.shields.io/badge/Phase_2-Identity_%26_RBAC_%E2%9C%85-brightgreen.svg)](#phase-status)
+[![Phase 5 Complete](https://img.shields.io/badge/Phase_5-Complete_%26_Verified_%E2%9C%85-brightgreen.svg)](#phase-status)
+[![Tests Passing](https://img.shields.io/badge/Tests-148%2F148_Passed-brightgreen.svg)](#6-running-automated-tests)
 
 ---
 
 ## 1. Project Background
 
 **SABTRACK** is an academic digital governance initiative developed under **IT 313 (System Analysis and Design)** at **Batangas State University – The National Engineering University, Lipa Campus**. Developed in cooperation with **Barangay Sabang, Lipa City, Batangas**, the platform addresses critical community solid waste management needs:
-- Transparent publication of garbage collection schedules and change advisories.
-- Verified, photo-based reporting of community waste violations and uncollected garbage.
-- Recording verified community participation through the **SAB-Points** civic engagement ledger.
-- A multi-step **Business Analytics Procedure** for authorized officials to monitor waste patterns and resolution turnaround times.
-- Bounded, privacy-preserving AI decision support for administrative summary briefings.
+- Transparent publication of garbage collection schedules, Purok route filters, and direct resident email advisories.
+- Verified, photo-based reporting of community waste violations and uncollected garbage with automated EXIF GPS scrubbing.
+- Recording verified community participation and waste reduction drives through the **SAB-Points** civic engagement ledger.
+- A multi-step **Business Analytics Procedure** for authorized barangay officials to monitor waste patterns, hotspot frequencies, and resolution turnaround times.
+- **EcoGabay AI Chatbot:** An intelligent, bilingual (Tagalog/English) waste segregation and upcycling guide equipped with offline knowledge retrieval.
+- Modern, people-friendly **minimal green neumorphic design** optimized for desktop, tablet, and mobile browsers.
 
 ---
 
@@ -41,16 +43,19 @@ SABTRACK is engineered as a **Modular Monolith** with a decoupled frontend:
 
 ```mermaid
 flowchart LR
-    Resident[Resident / Admin Portal] -->|Next.js 16 App Router / Port 3000| Web[Frontend PWA]
+    Resident[Resident / Admin Portal] -->|Next.js 16 App Router / Port 3000| Web[Frontend Web App]
     Web -->|JSON REST API /api/v1 HttpOnly Cookie + CSRF| API[FastAPI Backend / Port 8000]
+    Web <-->|WebSockets /ws/sync| API
     API --> DB[(PostgreSQL 16)]
     API --> Store[(Private Object Storage)]
+    API --> AI[(EcoGabay Gemini AI / Local Knowledge)]
 ```
 
-- **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS, shadcn/ui tokens.
-- **Backend:** Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, psycopg 3.x.
+- **Frontend:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS, minimal green neumorphic design tokens (`#0F5132`, `#198754`, `#f4f8f5`).
+- **Backend:** Python 3.13, FastAPI, Pydantic v2, SQLAlchemy 2.0, Alembic, psycopg 3.x, WebSocket connection manager.
 - **Database:** PostgreSQL 16 (Primary development and production database).
-- **Security:** Argon2id password hashing, server-managed HttpOnly session cookies, CSRF double-submit protection.
+- **Security:** Argon2id password hashing, server-managed HttpOnly session cookies (SHA-256 tokens), double-submit CSRF tokens, strict 3-role RBAC boundaries (`RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`).
+- **Data Privacy (RA 10173):** Server-side EXIF GPS camera metadata scrubbing on all uploaded violation photos.
 - **Testing:** Pytest (Backend API & RBAC tests), Vitest (React component tests).
 
 ---
@@ -59,11 +64,11 @@ flowchart LR
 
 | Phase | Description | Status | Commit |
 |---|---|---|---|
-| **Phase 1** | Foundation — FastAPI, PostgreSQL, Next.js, Health Check, Design System | ✅ Complete | `b5831f4` |
+| **Phase 1** | Foundation — FastAPI, PostgreSQL, Next.js, Health Check, Design Tokens | ✅ Complete | `b5831f4` |
 | **Phase 2** | Identity, RBAC, Sessions, CSRF, Portal Navigation Shells | ✅ Complete | `098632c` |
-| **Phase 3** | Core Waste Operations — Reports, Schedules, Announcements, File Uploads | 🔄 Pending Approval | — |
-| **Phase 4** | SAB-Points Ledger, Analytics Dashboard, AI Integration | ⏳ Future | — |
-| **Phase 5** | Production Deployment, Hardening, Accessibility | ⏳ Future | — |
+| **Phase 3** | Core Waste Operations — Reports, Schedules, Announcements, File Storage, Email Alerts | ✅ Complete | `e523418` |
+| **Phase 4** | Gamification & Analytics — SAB-Points Ledger, Participation Claims, Analytics Engine | ✅ Complete | `ec06468` |
+| **Phase 5** | Hardening & UI/UX Polish — Minimal Green Redesign, EcoGabay AI Chatbot, 100% Tests, Build Verification | ✅ Complete | `28926f7` |
 
 ---
 
@@ -78,7 +83,8 @@ flowchart LR
 ### Setup Steps
 ```cmd
 REM 1. Clone and enter the project
-cd C:\Users\jazzt\Projects\SABTRACK
+git clone https://github.com/perezjazztin/SABTRACK-3.0.git
+cd SABTRACK-3.0
 
 REM 2. Apply database migrations
 cd apps\api
@@ -99,14 +105,13 @@ REM 4. Launch both services
 - **Health Check:** http://127.0.0.1:8000/api/v1/health
 
 ### Demo Login
-Navigate to `http://localhost:3000/login` and use the **Evaluation Demo Accounts** panel to test each role:
+Navigate to `http://localhost:3000/login` to sign in as any of the designated roles:
 
 | Role | Email |
 |---|---|
 | Resident | `resident.demo@sabtrack.local` |
 | Barangay Staff | `staff.demo@sabtrack.local` |
 | Barangay Admin | `admin.demo@sabtrack.local` |
-| System Maintainer | `maintainer.demo@sabtrack.local` |
 
 *(Password: `SabtrackDevPass2026!` — development demo only)*
 
@@ -119,10 +124,11 @@ Run the full automated test suite:
 .\scripts\run-tests.bat
 ```
 
-**Current test results (Phase 2):**
-- ✅ Backend Pytest: **14/14** (3 health + 11 auth/RBAC)
-- ✅ Frontend Vitest: **2/2**
-- ✅ Next.js build: **Clean** (zero TypeScript errors, 16 routes)
+**Current Verified Test Results (Phase 5):**
+- ✅ **Backend Pytest:** **70 / 70 passed (100%)** (Auth, RBAC, Schedules, Reports, Storage, Chatbot, Analytics, WebSockets)
+- ✅ **Frontend Vitest:** **78 / 78 passed across 20 test files (100%)**
+- ✅ **Total Test Suite:** **148 / 148 passed (100%)**
+- ✅ **Next.js Production Build:** **Clean (18 routes prerendered, 0 TypeScript errors)**
 
 ---
 
@@ -139,7 +145,7 @@ Run the full automated test suite:
 
 The project complies with the **Philippine Data Privacy Act of 2012 (RA 10173)**:
 - Complainant personal data is minimized and shielded from public access.
-- Image uploads are stored in an authenticated non-public directory with EXIF telemetry stripped.
+- Image uploads are stored in an authenticated non-public directory with EXIF telemetry stripped upon ingestion.
 - Demonstration data in development is synthetic (`is_demo_data=True`).
 - Session tokens are stored as SHA-256 hashes only; never persisted in plaintext.
 - Official field operational rules and zoning boundaries are subject to ongoing barangay validation.

@@ -96,3 +96,22 @@ class SecurityAuditLog(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+
+class LoginThrottling(Base):
+    """Tracks failed authentication attempts for persistent brute-force defense across restarts."""
+    __tablename__ = "login_throttling"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    ip_address: Mapped[str] = mapped_column(String(45), index=True, nullable=False)
+    email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
+    attempt_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    last_attempt_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False,
+    )
+    locked_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )

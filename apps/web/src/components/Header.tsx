@@ -1,125 +1,343 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Leaf, Activity, LogIn, LogOut, User, Shield, ShieldAlert } from 'lucide-react';
+import {
+  Leaf,
+  LogIn,
+  LogOut,
+  User,
+  ShieldAlert,
+  Menu,
+  X,
+  UserPlus,
+  HelpCircle,
+  PhoneCall,
+  Home as HomeIcon,
+  CheckCircle2,
+} from 'lucide-react';
+import { RealTimeClock } from '@/components/RealTimeClock';
 
 export const Header: React.FC = () => {
-  const { user, isAuthenticated, logout, loading } = useAuth();
+  const { user, isAuthenticated, logout, loading, isLoggingOut } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [signOutStep, setSignOutStep] = useState<'closing' | 'done'>('closing');
+  const router = useRouter();
+  const pathname = usePathname() || '';
+  const isTimeHidden =
+    pathname === '/' ||
+    pathname === '' ||
+    pathname.startsWith('/#') ||
+    pathname === '/login' ||
+    pathname.startsWith('/login') ||
+    pathname === '/register' ||
+    pathname.startsWith('/register');
+
+  const handleLogout = async () => {
+    setIsSigningOut(true);
+    setSignOutStep('closing');
+    const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+
+    try {
+      await logout();
+    } catch (err) {
+      console.warn('Logout error:', err);
+    }
+
+    // Brief, snappy visual feedback on opaque white screen
+    if (!isTest) {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+
+    // Transition to completed state and navigate to home behind the white screen
+    setSignOutStep('done');
+    router.push('/');
+    if (typeof router.refresh === 'function') {
+      router.refresh();
+    }
+
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo(0, 0);
+    }
+
+    // Hold white screen briefly (180ms) while home page mounts invisibly
+    if (!isTest) {
+      await new Promise((resolve) => setTimeout(resolve, 180));
+    }
+
+    setIsSigningOut(false);
+    setSignOutStep('closing');
+  };
+
+  const isProcessingSignOut = isSigningOut;
 
   return (
-    <header className="border-b border-civic-border bg-white shadow-sm sticky top-0 z-50">
-      {/* Top Civic Identity Bar */}
-      <div className="bg-civic-forest text-white px-4 py-1.5 text-xs">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-medium tracking-wide">
-              Barangay Sabang, Lipa City, Batangas
-            </span>
-            <span className="text-emerald-200 hidden sm:inline">|</span>
-            <span className="text-emerald-200 hidden sm:inline">
-              Official Solid Waste Management Portal
-            </span>
-          </div>
-          <div className="flex items-center space-x-3 text-emerald-100">
-            <span className="hidden md:inline">Republic Act 9003 — Ecological Solid Waste Management</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
-        <Link href="/" className="flex items-center space-x-3 group">
-          <div className="bg-civic-forest text-white p-2.5 rounded-lg shadow-sm flex items-center justify-center group-hover:bg-civic-forestHover transition-colors">
-            <Leaf className="w-6 h-6 text-emerald-300" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-bold text-civic-slate tracking-tight">
-                SABTRACK
-              </h1>
-              <span className="bg-civic-emeraldLight text-civic-forest font-semibold text-xs px-2 py-0.5 rounded">
-                3.0 RBAC
-              </span>
+    <>
+      <header className="sticky top-0 z-50 bg-[#f4f8f5]/90 backdrop-blur-md border-b border-slate-200/60 shadow-neu-xs transition-all">
+        {/* Main Navigation Bar */}
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3 flex items-center justify-between">
+          {/* Brand Logo with tactile extruded icon */}
+          <Link href="/" className="flex items-center space-x-3 group">
+            <div className="bg-emerald-600 text-white p-2.5 rounded-xl shadow-neu-green flex items-center justify-center group-hover:scale-105 transition-all">
+              <Leaf className="w-5 h-5 text-emerald-100" />
             </div>
-            <p className="text-xs text-slate-500 hidden sm:block">
-              Solid Waste Management, Community Reporting &amp; Analytics
-            </p>
-          </div>
-        </Link>
-
-        {/* Navigation & Auth Actions */}
-        <nav className="flex items-center space-x-2 sm:space-x-3">
-          <Link
-            href="/"
-            className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-600 hover:text-civic-forest hover:bg-slate-50 transition-colors"
-          >
-            <Activity className="w-3.5 h-3.5 mr-1.5 text-civic-emerald" />
-            <span className="hidden sm:inline">System Diagnostics</span>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xl font-black text-slate-900 tracking-tight">
+                  SABTRACK
+                </span>
+                <span className="neu-chip bg-emerald-50 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded-full border border-emerald-200/50">
+                  3.0
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium hidden sm:block">
+                Barangay Sabang &bull; Lipa City
+              </p>
+            </div>
           </Link>
 
-          {/* If Authenticated: Show Portal Navigation and User Info */}
-          {isAuthenticated && user ? (
-            <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* Portal Links */}
-              {['RESIDENT', 'BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
-                <Link
-                  href="/resident"
-                  className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-civic-forest bg-emerald-50 hover:bg-emerald-100 transition-colors"
-                >
-                  <User className="w-3.5 h-3.5 mr-1 text-civic-forest" />
-                  <span>Resident Portal</span>
-                </Link>
-              )}
-
-              {['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center px-2.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
-                >
-                  <ShieldAlert className="w-3.5 h-3.5 mr-1 text-slate-700" />
-                  <span>Admin Console</span>
-                </Link>
-              )}
-
-              {/* User Identity Chip */}
-              <div className="hidden lg:flex items-center space-x-2 pl-2 border-l border-slate-200">
-                <div className="text-right">
-                  <div className="text-xs font-semibold text-slate-800 leading-tight">
-                    {user.full_name}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    {user.role}
-                  </div>
-                </div>
-              </div>
-
-              {/* Logout Button */}
-              <button
-                type="button"
-                onClick={() => logout()}
-                disabled={loading}
-                aria-label="Sign out of SABTRACK"
-                className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors disabled:opacity-50"
+          {/* Desktop Navigation Links: HOME, ABOUT, CONTACT US (visible for visitors/residents) */}
+          {!isAuthenticated && (
+            <nav className="hidden md:flex items-center space-x-2 lg:space-x-3">
+              <Link
+                href="/#home"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-700 hover:shadow-neu-sm transition-all uppercase tracking-wider"
               >
-                <LogOut className="w-3.5 h-3.5 mr-1 text-rose-600" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </button>
-            </div>
-          ) : (
-            /* If Unauthenticated: Sign In Button */
-            <Link
-              href="/login"
-              className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-civic-forest text-white hover:bg-civic-forestHover focus:ring-2 focus:ring-emerald-500 transition-colors"
-            >
-              <LogIn className="w-3.5 h-3.5 mr-1.5" />
-              <span>Sign In</span>
-            </Link>
+                HOME
+              </Link>
+              <Link
+                href="/#about"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-700 hover:shadow-neu-sm transition-all uppercase tracking-wider"
+              >
+                ABOUT
+              </Link>
+              <Link
+                href="/#contact"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-700 hover:shadow-neu-sm transition-all uppercase tracking-wider"
+              >
+                CONTACT US
+              </Link>
+            </nav>
           )}
-        </nav>
-      </div>
-    </header>
+
+          {/* Right Action Controls: Real-Time Clock (hidden on landing page), REGISTER & LOGIN (or Portals if logged in) */}
+          <div className="hidden md:flex items-center space-x-3">
+            {!isTimeHidden && <RealTimeClock />}
+
+            {isAuthenticated && user ? (
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                {/* Strict Role Isolation: RESIDENT only navigates to Resident Portal */}
+                {user.role === 'RESIDENT' && (
+                  <Link
+                    href="/resident"
+                    className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800"
+                  >
+                    <User className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                    <span>Resident Portal</span>
+                  </Link>
+                )}
+
+                {/* Strict Role Isolation: STAFF navigates to Staff Console, ADMIN to Admin Console */}
+                {['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
+                  <Link
+                    href="/admin"
+                    className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
+                    <span>{user.role === 'BARANGAY_STAFF' ? 'Staff Console' : 'Admin Console'}</span>
+                  </Link>
+                )}
+
+                {/* Sign Out Button */}
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loading || isProcessingSignOut}
+                  aria-label="Sign out of SABTRACK"
+                  className="neu-btn-secondary inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 hover:text-rose-800 transition-colors disabled:opacity-50"
+                >
+                  {isProcessingSignOut ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-rose-600 border-t-transparent rounded-full animate-spin mr-1.5" />
+                      <span>SIGNING OUT...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="w-3.5 h-3.5 mr-1.5 text-rose-600" />
+                      <span>SIGN OUT</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-3">
+                <Link
+                  href="/register"
+                  className="neu-btn-secondary inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold text-slate-700 hover:text-emerald-700 uppercase tracking-wider"
+                >
+                  <UserPlus className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                  <span>REGISTER</span>
+                </Link>
+                <Link
+                  href="/login"
+                  className="neu-btn-primary inline-flex items-center px-5 py-2 rounded-xl text-xs font-bold text-white uppercase tracking-wider"
+                >
+                  <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                  <span>LOGIN</span>
+                </Link>
+              </div>
+            )}
+          </div>
+
+          {/* Mobile Hamburger Button */}
+          <div className="flex md:hidden items-center">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+              className="neu-btn-secondary p-2.5 rounded-xl text-slate-700"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-slate-200/60 bg-white px-4 pt-3 pb-5 space-y-2.5 shadow-neu-raised">
+            {!isTimeHidden && (
+              <div className="pb-1 flex justify-center">
+                <RealTimeClock className="w-full justify-center" />
+              </div>
+            )}
+            {!isAuthenticated && (
+              <>
+                <Link
+                  href="/#home"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="neu-card-interactive flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 uppercase"
+                >
+                  <HomeIcon className="w-4 h-4 text-emerald-600" />
+                  <span>HOME</span>
+                </Link>
+                <Link
+                  href="/#about"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="neu-card-interactive flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 uppercase"
+                >
+                  <HelpCircle className="w-4 h-4 text-emerald-600" />
+                  <span>ABOUT</span>
+                </Link>
+                <Link
+                  href="/#contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="neu-card-interactive flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-700 uppercase"
+                >
+                  <PhoneCall className="w-4 h-4 text-emerald-600" />
+                  <span>CONTACT US</span>
+                </Link>
+              </>
+            )}
+
+            <div className="pt-2 border-t border-slate-200/60 space-y-2">
+              {isAuthenticated && user ? (
+                <>
+                  {user.role === 'RESIDENT' && (
+                    <Link
+                      href="/resident"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="neu-btn-secondary flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-emerald-800"
+                    >
+                      <User className="w-4 h-4 text-emerald-600" />
+                      <span>Resident Portal</span>
+                    </Link>
+                  )}
+                  {['BARANGAY_STAFF', 'BARANGAY_ADMIN'].includes(user.role) && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="neu-btn-secondary flex items-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-800"
+                    >
+                      <ShieldAlert className="w-4 h-4 text-slate-600" />
+                      <span>{user.role === 'BARANGAY_STAFF' ? 'Staff Console' : 'Admin Console'}</span>
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setMobileMenuOpen(false);
+                      await handleLogout();
+                    }}
+                    disabled={loading || isProcessingSignOut}
+                    className="w-full neu-btn-secondary flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-700 disabled:opacity-50"
+                  >
+                    {isProcessingSignOut ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-rose-600 border-t-transparent rounded-full animate-spin mr-1.5" />
+                        <span>SIGNING OUT...</span>
+                      </>
+                    ) : (
+                      <>
+                        <LogOut className="w-4 h-4 text-rose-600" />
+                        <span>SIGN OUT</span>
+                      </>
+                    )}
+                  </button>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <Link
+                    href="/register"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="neu-btn-secondary flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 uppercase"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>REGISTER</span>
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="neu-btn-primary flex items-center justify-center space-x-1.5 px-3 py-2.5 rounded-xl text-xs font-bold text-white uppercase"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>LOGIN</span>
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Full-screen opaque white screen sign out transition */}
+      {isProcessingSignOut && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 select-none"
+        >
+          <div className="flex flex-col items-center justify-center space-y-4 max-w-xs text-center animate-in fade-in duration-100">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm">
+              {signOutStep === 'done' ? (
+                <CheckCircle2 className="w-7 h-7 text-emerald-600 animate-in zoom-in-75 duration-100" />
+              ) : (
+                <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+              )}
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-black tracking-tight text-slate-800 uppercase">
+                {signOutStep === 'done' ? 'Signed Out' : 'Signing Out...'}
+              </h3>
+              <p className="text-xs text-slate-400">
+                Barangay Sabang Civic Portal
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 };

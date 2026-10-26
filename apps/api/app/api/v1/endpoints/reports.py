@@ -1,3 +1,4 @@
+from app.core.websocket import ws_manager
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -99,6 +100,14 @@ def create_report(
     db.add(initial_history)
     db.commit()
     db.refresh(new_report)
+
+    ws_manager.broadcast_sync({
+        "type": "REPORT_CREATED",
+        "entity": "reports",
+        "id": new_report.id,
+        "category": new_report.category.value,
+        "title": new_report.title,
+    })
 
     return _to_report_read(new_report)
 
@@ -221,5 +230,13 @@ def update_report_status(
     db.add(history_entry)
     db.commit()
     db.refresh(report)
+
+    ws_manager.broadcast_sync({
+        "type": "REPORT_STATUS_CHANGED",
+        "entity": "reports",
+        "id": report.id,
+        "new_status": report.status.value,
+        "resident_id": report.resident_id,
+    })
 
     return _to_report_read(report)

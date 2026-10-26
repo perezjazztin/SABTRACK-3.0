@@ -8,9 +8,10 @@ interface AuthContextType {
   user: User | null;
   permissions: string[];
   loading: boolean;
+  isLoggingOut?: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
@@ -23,6 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [permissions, setPermissions] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshSession = useCallback(async () => {
@@ -45,13 +47,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     refreshSession();
   }, [refreshSession]);
 
-  const login = async (credentials: LoginCredentials) => {
+  const login = async (credentials: LoginCredentials): Promise<User> => {
     setLoading(true);
     setError(null);
     try {
       const data = await apiLogin(credentials);
       setUser(data.user);
       setPermissions(data.permissions || []);
+      return data.user;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
       setError(message);
@@ -62,6 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    setIsLoggingOut(true);
     setLoading(true);
     try {
       await apiLogout();
@@ -71,6 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setPermissions([]);
       setLoading(false);
+      const isTest = typeof process !== 'undefined' && process.env?.NODE_ENV === 'test';
+      setTimeout(() => {
+        setIsLoggingOut(false);
+      }, isTest ? 0 : 500);
     }
   };
 
@@ -96,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         permissions,
         loading,
+        isLoggingOut,
         error,
         isAuthenticated: !!user,
         login,

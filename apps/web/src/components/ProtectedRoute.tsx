@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { UserRole } from '@/types/auth';
@@ -19,14 +19,27 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiredPermission,
   moduleName = 'Protected Module',
 }) => {
-  const { user, loading, isAuthenticated, hasRole, hasPermission } = useAuth();
+  const { user, loading, isLoggingOut, isAuthenticated, hasRole, hasPermission, logout } = useAuth();
+  const [switching, setSwitching] = useState(false);
 
-  if (loading) {
+  const handleSwitchAccount = async () => {
+    setSwitching(true);
+    try {
+      await logout();
+    } catch (err) {
+      console.warn('Logout error during account switch:', err);
+    }
+    if (typeof window !== 'undefined') {
+      window.location.href = '/register';
+    }
+  };
+
+  if (loading || isLoggingOut) {
     return (
       <div className="flex flex-col items-center justify-center py-24 space-y-4">
         <div className="w-10 h-10 border-4 border-civic-emeraldLight border-t-civic-forest rounded-full animate-spin" />
         <p className="text-xs text-slate-500 font-medium">
-          Verifying session credentials and permissions...
+          {isLoggingOut ? 'Signing out securely...' : 'Verifying session credentials and permissions...'}
         </p>
       </div>
     );
@@ -35,7 +48,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Case 1: Unauthenticated user
   if (!isAuthenticated || !user) {
     return (
-      <div className="max-w-md mx-auto my-12 bg-white rounded-2xl border border-civic-border p-8 shadow-sm text-center space-y-4">
+      <div className="neu-card max-w-md mx-auto my-12 rounded-3xl border border-emerald-900/10 p-8 shadow-neu-raised text-center space-y-4">
         <div className="w-12 h-12 bg-emerald-50 text-civic-forest rounded-full flex items-center justify-center mx-auto">
           <Lock className="w-6 h-6" />
         </div>
@@ -48,7 +61,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="pt-2">
           <Link
             href="/login"
-            className="inline-flex items-center justify-center w-full px-4 py-2.5 rounded-lg text-xs font-semibold bg-civic-forest text-white hover:bg-civic-forestHover focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
+            className="neu-btn-primary inline-flex items-center justify-center w-full px-5 py-3 rounded-xl text-xs font-bold text-white shadow-neu-green transition-all"
           >
             <LogIn className="w-4 h-4 mr-2" />
             Sign in to Your Account
@@ -62,7 +75,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requiredRole && !hasRole(requiredRole)) {
     const rolesStr = Array.isArray(requiredRole) ? requiredRole.join(' or ') : requiredRole;
     return (
-      <div className="max-w-lg mx-auto my-12 bg-white rounded-2xl border border-rose-200 p-8 shadow-sm space-y-4">
+      <div className="neu-card max-w-lg mx-auto my-12 rounded-3xl border border-rose-200 p-8 shadow-neu-raised space-y-4">
         <div className="flex items-center space-x-3 text-rose-600">
           <div className="p-2.5 bg-rose-100 rounded-xl">
             <ShieldAlert className="w-6 h-6" />
@@ -89,17 +102,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
           <Link
             href={user.role === 'RESIDENT' ? '/resident' : '/admin'}
-            className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            className="neu-btn-secondary w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition-all"
           >
             Return to Authorized Portal
             <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
           </Link>
-          <Link
-            href="/login"
-            className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold bg-civic-forest text-white hover:bg-civic-forestHover transition-colors"
+          <button
+            type="button"
+            onClick={handleSwitchAccount}
+            disabled={switching}
+            className="neu-btn-primary w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-neu-green transition-all disabled:opacity-50"
           >
-            Switch Account
-          </Link>
+            {switching ? 'Signing out...' : 'Switch Account'}
+          </button>
         </div>
       </div>
     );
@@ -108,7 +123,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Case 3: Specific permission check failed
   if (requiredPermission && !hasPermission(requiredPermission)) {
     return (
-      <div className="max-w-lg mx-auto my-12 bg-white rounded-2xl border border-amber-200 p-8 shadow-sm space-y-4">
+      <div className="neu-card max-w-lg mx-auto my-12 rounded-3xl border border-amber-200 p-8 shadow-neu-raised space-y-4">
         <div className="flex items-center space-x-3 text-amber-700">
           <div className="p-2.5 bg-amber-100 rounded-xl">
             <ShieldAlert className="w-6 h-6" />
@@ -127,13 +142,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           Your role does not possess the explicit permission required to perform actions in <span className="font-semibold">{moduleName}</span>.
         </p>
 
-        <div className="pt-2">
+        <div className="pt-2 flex flex-col sm:flex-row items-center gap-3">
           <Link
             href={user.role === 'RESIDENT' ? '/resident' : '/admin'}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg text-xs font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            className="neu-btn-secondary w-full sm:w-auto inline-flex items-center justify-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-700 transition-all"
           >
             Return to Authorized Dashboard
           </Link>
+          <button
+            type="button"
+            onClick={handleSwitchAccount}
+            disabled={switching}
+            className="neu-btn-primary w-full sm:w-auto inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-xs font-bold text-white shadow-neu-green transition-all disabled:opacity-50"
+          >
+            {switching ? 'Signing out...' : 'Switch Account'}
+          </button>
         </div>
       </div>
     );

@@ -1,12 +1,22 @@
+import { ChatQueryRequest, ChatQueryResponse, QuickPromptItem } from '@/types/chatbot';
 import { API_BASE_URL } from './config';
 import { HealthResponse } from '@/types/api';
-import { LoginCredentials, SessionUserResponse } from '@/types/auth';
+import { LoginCredentials, SessionUserResponse, RegisterPayload, User } from '@/types/auth';
 import {
   ReportCreatePayload,
   ReportStatusUpdatePayload,
   ReportListResponse,
   WasteReport,
 } from '@/types/reports';
+import {
+  ScheduleItem,
+  ScheduleListResponse,
+  ScheduleCreatePayload,
+  AdvisoryItem,
+  AdvisoryListResponse,
+  AdvisoryCreatePayload,
+  ScheduleNotificationResponse,
+} from '@/types/schedules';
 
 export class ApiClientError extends Error {
   constructor(
@@ -103,6 +113,16 @@ export async function getHealth(): Promise<HealthResponse> {
 /**
  * Authenticate with credentials and initialize session.
  */
+/**
+ * Register a new resident user account.
+ */
+export async function registerResident(payload: RegisterPayload): Promise<User> {
+  return apiFetch<User>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function login(credentials: LoginCredentials): Promise<SessionUserResponse> {
   const data = await apiFetch<SessionUserResponse>('/api/v1/auth/login', {
     method: 'POST',
@@ -184,5 +204,275 @@ export async function updateReportStatus(
   return apiFetch<WasteReport>(`/api/v1/reports/${id}/status`, {
     method: 'PATCH',
     body: JSON.stringify(payload),
+  });
+}
+
+
+export async function getSchedules(params?: {
+  areaId?: number;
+  dayOfWeek?: string;
+}): Promise<ScheduleListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.areaId) searchParams.set('area_id', params.areaId.toString());
+  if (params?.dayOfWeek) searchParams.set('day_of_week', params.dayOfWeek);
+  const query = searchParams.toString();
+  return apiFetch<ScheduleListResponse>(`/api/v1/schedules${query ? `?${query}` : ''}`);
+}
+
+export async function createSchedule(
+  payload: ScheduleCreatePayload
+): Promise<ScheduleItem> {
+  return apiFetch<ScheduleItem>('/api/v1/schedules', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteSchedule(scheduleId: number): Promise<{ message: string; id: number }> {
+  return apiFetch<{ message: string; id: number }>(`/api/v1/schedules/${scheduleId}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function getAdvisories(params?: {
+  areaId?: number;
+}): Promise<AdvisoryListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.areaId) searchParams.set('area_id', params.areaId.toString());
+  const query = searchParams.toString();
+  return apiFetch<AdvisoryListResponse>(`/api/v1/schedules/advisories${query ? `?${query}` : ''}`);
+}
+
+export async function createAdvisory(
+  payload: AdvisoryCreatePayload
+): Promise<AdvisoryItem> {
+  return apiFetch<AdvisoryItem>('/api/v1/schedules/advisories', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+
+export interface AreaItem {
+  id: number;
+  code: string;
+  name: string;
+  description?: string | null;
+}
+
+export async function getScheduleAreas(): Promise<AreaItem[]> {
+  return apiFetch<AreaItem[]>('/api/v1/schedules/areas');
+}
+export async function subscribeScheduleNotification(
+  scheduleId: number,
+  email?: string
+): Promise<ScheduleNotificationResponse> {
+  const endpoint = `/api/v1/schedules/${scheduleId}/notify`;
+  return apiFetch<ScheduleNotificationResponse>(endpoint, {
+    method: 'POST',
+    body: JSON.stringify({ email: email || undefined }),
+  });
+}
+
+
+
+import {
+  AnnouncementItem,
+  AnnouncementListResponse,
+  AnnouncementCreatePayload,
+} from '@/types/announcements';
+
+export async function getAnnouncements(category?: string): Promise<AnnouncementListResponse> {
+  const searchParams = new URLSearchParams();
+  if (category) searchParams.set('category', category);
+  const query = searchParams.toString();
+  return apiFetch<AnnouncementListResponse>(`/api/v1/announcements${query ? `?${query}` : ''}`);
+}
+
+export async function createAnnouncement(
+  payload: AnnouncementCreatePayload
+): Promise<AnnouncementItem> {
+  return apiFetch<AnnouncementItem>('/api/v1/announcements', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAnnouncement(
+  announcementId: number
+): Promise<{ message: string; id: number }> {
+  return apiFetch<{ message: string; id: number }>(`/api/v1/announcements/${announcementId}`, {
+    method: 'DELETE',
+  });
+}
+
+
+import {
+  InitiativeItem,
+  ClaimItem,
+  ResidentPointsSummary,
+  InitiativeCreatePayload,
+  ClaimCreatePayload,
+  ClaimReviewPayload,
+} from '@/types/gamification';
+
+export async function getMyPointsSummary(): Promise<ResidentPointsSummary> {
+  return apiFetch<ResidentPointsSummary>('/api/v1/gamification/my-points');
+}
+
+/**
+ * Alias for getMyPointsSummary to support both naming conventions.
+ */
+export const getPointsSummary = getMyPointsSummary;
+
+export async function getInitiatives(): Promise<InitiativeItem[]> {
+  return apiFetch<InitiativeItem[]>('/api/v1/gamification/initiatives');
+}
+
+export async function createInitiative(payload: InitiativeCreatePayload): Promise<InitiativeItem> {
+  return apiFetch<InitiativeItem>('/api/v1/gamification/initiatives', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitClaim(payload: ClaimCreatePayload): Promise<ClaimItem> {
+  return apiFetch<ClaimItem>('/api/v1/gamification/claims', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getMyClaims(): Promise<ClaimItem[]> {
+  return apiFetch<ClaimItem[]>('/api/v1/gamification/claims/my');
+}
+
+export async function getAllClaims(status?: string): Promise<ClaimItem[]> {
+  const query = status ? `?status=${status}` : '';
+  return apiFetch<ClaimItem[]>(`/api/v1/gamification/claims${query}`);
+}
+
+export async function reviewClaim(
+  claimId: number,
+  payload: ClaimReviewPayload
+): Promise<ClaimItem> {
+  return apiFetch<ClaimItem>(`/api/v1/gamification/claims/${claimId}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+}
+
+
+import { AnalyticsOverviewResponse } from '@/types/analytics';
+
+export async function getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
+  return apiFetch<AnalyticsOverviewResponse>('/api/v1/analytics/overview');
+}
+
+
+import {
+  AdminUserItem,
+  UserListResponse,
+  UserCreatePayload,
+} from '@/types/users';
+
+export async function getUsers(params?: {
+  role?: string;
+  isActive?: boolean;
+  search?: string;
+}): Promise<UserListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params?.role) searchParams.set('role', params.role);
+  if (params?.isActive !== undefined) searchParams.set('is_active', params.isActive.toString());
+  if (params?.search) searchParams.set('search', params.search);
+  const query = searchParams.toString();
+  return apiFetch<UserListResponse>(`/api/v1/users${query ? `?${query}` : ''}`);
+}
+
+export async function createUser(payload: UserCreatePayload): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUserStatus(userId: number, isActive: boolean): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>(`/api/v1/users/${userId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ is_active: isActive }),
+  });
+}
+
+export async function updateUserRole(userId: number, role: string): Promise<AdminUserItem> {
+  return apiFetch<AdminUserItem>(`/api/v1/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
+
+export async function uploadEvidencePhoto(
+  file: File
+): Promise<{ file_url: string; filename: string }> {
+  const url = `${API_BASE_URL}/api/v1/uploads`;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+  if (activeCsrfToken) {
+    headers['X-CSRF-Token'] = activeCsrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+    credentials: 'include',
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { message: response.statusText };
+    }
+    const errorMessage =
+      errorData?.error?.message ||
+      errorData?.detail ||
+      `Upload failed with status ${response.status}`;
+    throw new ApiClientError(errorMessage, response.status, errorData);
+  }
+
+  return (await response.json()) as { file_url: string; filename: string };
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  if (url.startsWith('/api/v1')) {
+    return `${API_BASE_URL}${url}`;
+  }
+  if (url.startsWith('/')) {
+    return `${API_BASE_URL}/api/v1${url}`;
+  }
+  return `${API_BASE_URL}/api/v1/${url}`;
+}
+
+export async function queryEcoBot(payload: ChatQueryRequest): Promise<ChatQueryResponse> {
+  return apiFetch<ChatQueryResponse>('/api/v1/chatbot/query', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getEcoBotPrompts(): Promise<QuickPromptItem[]> {
+  return apiFetch<QuickPromptItem[]>('/api/v1/chatbot/prompts', {
+    method: 'GET',
   });
 }

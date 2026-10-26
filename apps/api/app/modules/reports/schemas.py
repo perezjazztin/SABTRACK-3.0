@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 from app.modules.reports.models import ReportCategory, ReportStatus
 
@@ -13,7 +13,14 @@ class ReportCreate(BaseModel):
     area_id: Optional[int] = Field(None, description="Optional associated barangay area/purok ID")
     latitude: Optional[float] = Field(None, ge=-90.0, le=90.0, description="GPS Latitude")
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="GPS Longitude")
-    photo_url: Optional[str] = Field(None, max_length=512, description="Optional photo URL or base64 representation")
+    photo_url: str = Field(..., min_length=1, max_length=512, description="Mandatory evidence photo URL or path")
+
+    @field_validator("photo_url")
+    @classmethod
+    def validate_photo_url(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("Evidence photo is required for report submission")
+        return v.strip()
 
 
 class ReportStatusUpdate(BaseModel):

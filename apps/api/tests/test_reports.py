@@ -39,14 +39,56 @@ def test_resident_can_submit_waste_report(client: TestClient):
     assert data["category"] == "UNCOLLECTED_GARBAGE"
     assert data["status"] == "SUBMITTED"
     assert data["location_text"] == payload["location_text"]
+    assert data["photo_url"] == payload["photo_url"]
     assert len(data["status_history"]) == 1
     assert data["status_history"][0]["new_status"] == "SUBMITTED"
+
+
+def test_resident_cannot_submit_report_without_photo(client: TestClient):
+    csrf_token, session_cookie = _login(client, "resident@sabtrack.test")
+
+    payload = {
+        "category": "UNCOLLECTED_GARBAGE",
+        "title": "Uncollected Biodegradable Bags on Corner",
+        "description": "Garbage has not been picked up since Monday morning. Three bags on the sidewalk.",
+        "location_text": "Sitio Sampaguita, corner of Main Street",
+    }
+
+    res = client.post(
+        "/api/v1/reports",
+        json=payload,
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+
+    assert res.status_code == 422
+
+
+def test_resident_cannot_submit_report_with_empty_photo(client: TestClient):
+    csrf_token, session_cookie = _login(client, "resident@sabtrack.test")
+
+    payload = {
+        "category": "UNCOLLECTED_GARBAGE",
+        "title": "Uncollected Biodegradable Bags on Corner",
+        "description": "Garbage has not been picked up since Monday morning. Three bags on the sidewalk.",
+        "location_text": "Sitio Sampaguita, corner of Main Street",
+        "photo_url": "   ",
+    }
+
+    res = client.post(
+        "/api/v1/reports",
+        json=payload,
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+
+    assert res.status_code == 422
 
 
 def test_resident_can_view_my_reports(client: TestClient):
     csrf_token, session_cookie = _login(client, "resident@sabtrack.test")
 
-    # Create a report
+    # Create a report with required photo
     client.post(
         "/api/v1/reports",
         json={
@@ -54,6 +96,7 @@ def test_resident_can_view_my_reports(client: TestClient):
             "title": "Illegal waste dump near creek",
             "description": "Plastic bottles and construction scraps dumped near creek bridge.",
             "location_text": "Creek Bridge, Sitio Ilaya",
+            "photo_url": "/api/v1/uploads/demo-creek.jpg",
         },
         headers={"x-csrf-token": csrf_token},
         cookies={settings.SESSION_COOKIE_NAME: session_cookie},
@@ -92,6 +135,7 @@ def test_resident_cannot_update_report_status(client: TestClient):
             "title": "Overflowing Public Segregation Bin",
             "description": "Public bin near basketball court is overflowing with plastic bottles.",
             "location_text": "Public Basketball Court",
+            "photo_url": "/api/v1/uploads/demo-bin.jpg",
         },
         headers={"x-csrf-token": csrf_token},
         cookies={settings.SESSION_COOKIE_NAME: res_cookie},
@@ -119,6 +163,7 @@ def test_staff_can_review_and_transition_report_status_with_immutable_history(cl
             "title": "Broken glass and chemical containers on roadside",
             "description": "Hazardous broken fluorescent tubes and discarded container bottles.",
             "location_text": "Purok 4 access road",
+            "photo_url": "/api/v1/uploads/demo-hazardous.jpg",
         },
         headers={"x-csrf-token": res_csrf},
         cookies={settings.SESSION_COOKIE_NAME: res_cookie},

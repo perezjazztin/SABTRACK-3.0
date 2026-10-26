@@ -38,8 +38,7 @@
 5. **RBAC and Authentication:**
    - The canonical RBAC source of truth is `apps/api/app/core/security.py` (`ROLE_PERMISSIONS` dict).
    - All permission enforcement is backend-enforced. Frontend visibility checks (hiding nav links) are UX only, not security.
-   - Roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, `SYSTEM_MAINTAINER`.
-   - `SYSTEM_MAINTAINER` must never be granted access to confidential resident reports or unrestricted admin functions.
+   - Roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`.
 
 ---
 
@@ -95,13 +94,12 @@ SABTRACK/
 
 ## 4. Seed Accounts (Development Only)
 
-Run `.\scripts\seed-users.bat` after applying migrations (`alembic upgrade head`) to create 4 demo accounts. These credentials are development-only and must NEVER be used in production:
+Run `.\scripts\seed-users.bat` after applying migrations (`alembic upgrade head`) to create 3 demo accounts. These credentials are development-only and must NEVER be used in production:
 
 | Email | Role | Password |
 |---|---|---|
 | `resident.demo@sabtrack.local` | `RESIDENT` | `SabtrackDevPass2026!` |
 | `staff.demo@sabtrack.local` | `BARANGAY_STAFF` | `SabtrackDevPass2026!` |
 | `admin.demo@sabtrack.local` | `BARANGAY_ADMIN` | `SabtrackDevPass2026!` |
-| `maintainer.demo@sabtrack.local` | `SYSTEM_MAINTAINER` | `SabtrackDevPass2026!` |
 
 Seed data is tagged `is_demo_data=True`. Never ship or expose these credentials in production configuration.

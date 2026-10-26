@@ -3,7 +3,7 @@
 **Course:** IT 313 — System Analysis and Design  
 **Client / Community:** Barangay Sabang, Lipa City, Batangas  
 **Proponents:** Jazztin H. Perez, Faith A. Valencia, May Sigrid M. Dimaano  
-**Status:** Phase 2 Identity & RBAC Complete — Phase 3 Pending Approval  
+**Status:** Phase 5 UI Modernization, Hardening & System Verification Complete  
 
 ---
 
@@ -237,7 +237,7 @@ Protected by `ProtectedRoute` requiring `BARANGAY_STAFF | BARANGAY_ADMIN` role.
 - **Audit Logging:** `security_audit_logs` table records `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `SESSION_EXPIRED` events with IP address.
 - **Upload Isolation:** Evidence photos and attachments are stored in an authenticated directory, never exposed as public static files.
 - **Metadata Sanitization:** Image EXIF metadata (GPS, device serials) is stripped upon upload.
-- **Least Privilege RBAC:** Roles distinguish `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`, and `SYSTEM_MAINTAINER`.
+- **Least Privilege RBAC:** Roles distinguish `RESIDENT`, `BARANGAY_STAFF`, and `BARANGAY_ADMIN`.
 
 ---
 

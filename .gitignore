@@ -51,3 +51,10 @@ storage/
 # IDE Files
 .vscode/
 .idea/
+
+.superpowers/
+
+# Microsoft Office Temporary & Local Documents
+*.docx
+*.xlsx
+*.pptx

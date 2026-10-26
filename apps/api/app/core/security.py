@@ -20,7 +20,6 @@ class UserRole(str, Enum):
     RESIDENT = "RESIDENT"
     BARANGAY_STAFF = "BARANGAY_STAFF"
     BARANGAY_ADMIN = "BARANGAY_ADMIN"
-    SYSTEM_MAINTAINER = "SYSTEM_MAINTAINER"
 
 
 class Permission(str, Enum):
@@ -35,7 +34,7 @@ class Permission(str, Enum):
     PARTICIPATION_REVIEW = "participation:review"
     ANALYTICS_READ = "analytics:read"
     USERS_MANAGE = "users:manage"
-    SYSTEM_DIAGNOSTICS = "system:diagnostics"
+    USERS_READ = "users:read"
 
 
 # Centralized least-privilege role-to-permission mapping
@@ -54,6 +53,8 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
         Permission.REPORTS_REVIEW,
         Permission.PARTICIPATION_REVIEW,
         Permission.ANNOUNCEMENTS_MANAGE,
+        Permission.ANALYTICS_READ,
+        Permission.USERS_READ,
     },
     UserRole.BARANGAY_ADMIN: {
         Permission.PROFILE_READ_SELF,
@@ -66,10 +67,7 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
         Permission.PARTICIPATION_REVIEW,
         Permission.ANALYTICS_READ,
         Permission.USERS_MANAGE,
-    },
-    UserRole.SYSTEM_MAINTAINER: {
-        Permission.PROFILE_READ_SELF,
-        Permission.SYSTEM_DIAGNOSTICS,
+        Permission.USERS_READ,
     },
 }
 
