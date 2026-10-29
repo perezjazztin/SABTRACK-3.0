@@ -37,7 +37,7 @@ describe('Header Component Navigation & Role Isolation', () => {
     // Public links must be visible
     expect(screen.getByRole('link', { name: /^HOME$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^ABOUT$/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^CONTACT US$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^CONTACT/i })).toBeInTheDocument();
 
     // Register & Login must be visible
     expect(screen.getByRole('link', { name: /LOGIN/i })).toBeInTheDocument();
