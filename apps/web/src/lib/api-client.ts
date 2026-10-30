@@ -363,10 +363,16 @@ export async function reviewClaim(
 }
 
 
-import { AnalyticsOverviewResponse } from '@/types/analytics';
+import { AnalyticsOverviewResponse, NarrativeSummaryResponse } from '@/types/analytics';
 
 export async function getAnalyticsOverview(): Promise<AnalyticsOverviewResponse> {
   return apiFetch<AnalyticsOverviewResponse>('/api/v1/analytics/overview');
+}
+
+export async function getReportNarrativeSummary(): Promise<NarrativeSummaryResponse> {
+  return apiFetch<NarrativeSummaryResponse>('/api/v1/analytics/narrative-summary', {
+    method: 'POST',
+  });
 }
 
 
