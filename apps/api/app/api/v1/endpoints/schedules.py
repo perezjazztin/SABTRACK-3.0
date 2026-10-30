@@ -1,5 +1,6 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from app.modules.notifications.service import email_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -101,6 +102,7 @@ def subscribe_schedule_notification_endpoint(
     schedule_id: int,
     payload: ScheduleNotificationRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """Register an email address to receive collection day reminders for a schedule slot."""
@@ -144,6 +146,25 @@ def subscribe_schedule_notification_endpoint(
         schedule.waste_type.value,
         area_name,
         target_email,
+    )
+
+    # Queue automated email reminder in background
+    resident_name = None
+    raw_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    if raw_token:
+        token_hash = hash_token(raw_token)
+        sess = db.scalar(select(SessionModel).where(SessionModel.session_id_hash == token_hash))
+        if sess and sess.user:
+            resident_name = sess.user.full_name
+
+    background_tasks.add_task(
+        email_service.send_schedule_reminder,
+        to_email=target_email,
+        resident_name=resident_name,
+        day_of_week=schedule.day_of_week.value,
+        waste_type=schedule.waste_type.value,
+        collection_time=f"{schedule.start_time} - {schedule.end_time}",
+        area_name=area_name,
     )
 
     return ScheduleNotificationResponse(

@@ -54,6 +54,20 @@ class Settings(BaseSettings):
         description="Maximum allowed image upload size in bytes"
     )
 
+    # Email & Notification Settings (100% Free via Gmail SMTP or Local Dev Simulator)
+    SMTP_ENABLED: bool = Field(default=False, description="Enable real SMTP email dispatching")
+    SMTP_HOST: str = Field(default="smtp.gmail.com", description="SMTP server hostname")
+    SMTP_PORT: int = Field(default=587, description="SMTP server port (587 for TLS, 465 for SSL)")
+    SMTP_USER: Optional[str] = Field(default=None, description="Sender email address")
+    SMTP_PASSWORD: Optional[str] = Field(default=None, description="Gmail 16-character App Password")
+    SMTP_FROM_NAME: str = Field(default="SABTRACK - Barangay Sabang", description="Sender display name")
+    SMTP_FROM_EMAIL: Optional[str] = Field(default=None, description="Sender email address")
+    SMTP_USE_TLS: bool = Field(default=True, description="Use TLS encryption")
+    STORAGE_EMAIL_DIR: Path = Field(
+        default=_API_DIR / "storage" / "emails",
+        description="Local directory for offline simulated email previews"
+    )
+
     # EcoBot & AI Settings (Google Gemini 1.5 Flash Search Grounding)
     GEMINI_API_KEY: Optional[str] = Field(
         default=None,
