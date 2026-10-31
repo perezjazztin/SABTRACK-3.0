@@ -119,3 +119,8 @@ def test_query_ecobot_gemini_mocked(client, monkeypatch):
         assert data["model_used"] in ["gemini-flash-search", "gemini-1.5-flash-search"]
         assert len(data["citations"]) == 1
         assert data["citations"][0]["title"] == "DIY Vertical Gardening with Plastic Bottles"
+        
+        # Verify prompt instructions explicitly forbid gimmicky monikers
+        call_args = mock_client_instance.__enter__.return_value.post.call_args
+        sent_instruction = call_args.kwargs["json"]["system_instruction"]["parts"][0]["text"]
+        assert "NEVER use cheesy or forced monikers like 'Ka-Sabang'" in sent_instruction

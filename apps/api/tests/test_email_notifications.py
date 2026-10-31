@@ -46,6 +46,28 @@ def test_dev_simulator_creates_offline_preview_file(tmp_path, monkeypatch):
     assert "Clean Up Drive Notice" in content
 
 
+def test_non_routable_test_domains_route_to_simulator(tmp_path, monkeypatch):
+    """Verifies that non-routable test domains (.test, .local, example.com) avoid live SMTP and save offline."""
+    monkeypatch.setattr(settings, "SMTP_ENABLED", True)
+    monkeypatch.setattr(settings, "SMTP_USER", "test.sabtrack@gmail.com")
+    monkeypatch.setattr(settings, "SMTP_PASSWORD", "mock-app-password-16")
+    monkeypatch.setattr(settings, "STORAGE_EMAIL_DIR", tmp_path)
+
+    with patch("smtplib.SMTP") as mock_smtp:
+        success = email_service.send_email(
+            to_email="new.citizen@sabtrack.test",
+            subject="Welcome Notice",
+            html_body="<p>Welcome!</p>",
+        )
+        assert success is True
+        # SMTP should NEVER be called for .test domain
+        mock_smtp.assert_not_called()
+        # Preview file should be generated offline
+        created_files = list(tmp_path.glob("*.html"))
+        assert len(created_files) == 1
+        assert "new.citizen@sabtrack.test" in created_files[0].read_text(encoding="utf-8")
+
+
 def test_render_base_email_template():
     """Verifies official template elements: Barangay Sabang, RA 10173, BatStateU NEU."""
     rendered = email_service.render_base_email(
@@ -75,7 +97,7 @@ def test_live_smtp_dispatch_with_mock(monkeypatch):
         mock_smtp_class.return_value.__enter__.return_value = mock_server
 
         success = email_service.send_schedule_reminder(
-            to_email="resident@sabtrack.test",
+            to_email="resident@sabtrack.gov.ph",
             resident_name="Juan dela Cruz",
             day_of_week="Monday",
             waste_type="Biodegradable",

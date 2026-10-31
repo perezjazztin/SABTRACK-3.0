@@ -245,8 +245,15 @@ class EmailService:
             logger.warning("Email dispatch skipped: invalid recipient '%s'", to_email)
             return False
 
-        # Live SMTP sending branch
-        if settings.SMTP_ENABLED and settings.SMTP_USER and settings.SMTP_PASSWORD:
+        # Non-routable test/development domains (RFC 2606 / RFC 6761)
+        domain = clean_to.split("@")[-1] if "@" in clean_to else ""
+        is_test_domain = (
+            domain.endswith((".test", ".local", ".invalid", ".localhost"))
+            or domain in ("example.com", "example.org", "example.net")
+        )
+
+        # Live SMTP sending branch (strictly for real, routable domains)
+        if settings.SMTP_ENABLED and settings.SMTP_USER and settings.SMTP_PASSWORD and not is_test_domain:
             try:
                 msg = EmailMessage()
                 msg["Subject"] = subject

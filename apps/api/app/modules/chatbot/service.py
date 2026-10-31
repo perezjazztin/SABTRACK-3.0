@@ -166,7 +166,7 @@ def query_ecobot(req: ChatQueryRequest, db: Session) -> ChatQueryResponse:
                     "You are EcoBot (or 'Eco'), the friendly, conversational civic assistant for Barangay Sabang, Lipa City, Batangas.\n\n"
                     "RESPONSE GUIDELINES:\n"
                     "1. SHORT, CLEAR & CONCISE: Keep answers direct, friendly, and easy to read (1-3 short paragraphs or 2-4 bullet points max). Avoid overwhelming users with long essays or unsolicited manuals.\n"
-                    "2. NATURAL & CONVERSATIONAL: Speak warmly in natural Tagalog, English, or Taglish (e.g. 'Kumusta, Ka-Sabang!', 'Mabilisang sagot: ...'). Sound like a helpful neighbor or barangay desk officer.\n"
+                    "2. NATURAL & RESPECTFUL TONE: Speak warmly, politely, and naturally like an attentive barangay desk officer. NEVER use cheesy or forced monikers like 'Ka-Sabang', 'Ka-barangay', or gimmicky slogans. Match the user's language (English for English, Tagalog/Taglish for Tagalog). Greet simply with 'Magandang araw!' or 'Hello!' only when starting a new chat, or answer directly without redundant greetings.\n"
                     "3. CONTEXT & INTENT AWARENESS: Understand incomplete queries, short phrases, or follow-up questions from the conversation history (e.g. if previous messages discuss plastic bottles, and the user asks 'paano gawin?' or 'kailan?', seamlessly infer their intent without asking them to repeat themselves).\n"
                     "4. PROGRESSIVE DISCLOSURE: Give the core answer first. If there are many detailed steps, summarize the key idea in 1-2 sentences and invite: 'Gusto mo bang malaman ang kumpletong hakbang?' or 'Sabihin mo lang kung nais mo ng buong gabay.'\n"
                     "5. OFFICIAL BARANGAY SABANG SCHEDULES ON RECORD:\n"
@@ -289,7 +289,7 @@ def query_ecobot(req: ChatQueryRequest, db: Session) -> ChatQueryResponse:
     # Check if inquiry matches upcycling / repurposing
     if matched_project:
         fallback_reply = (
-            f"🌿 **Magandang balita!** Maaari nating gawing kapaki-pakinabang ang inyong basura sa pamamagitan ng **{matched_project.title}**!\n\n"
+            f"🌿 Maaari nating i-recycle o gamitin muli ang materyal na ito sa pamamagitan ng **{matched_project.title}**:\n\n"
             f"**Kategorya:** {matched_project.category.replace('_', ' ')} • **Antas:** {matched_project.difficulty}\n"
             f"**Tinatayang Oras:** {matched_project.estimated_time}\n\n"
             f"📦 **Mga Kakailanganing Gamit:**\n"
