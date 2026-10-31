@@ -12,7 +12,9 @@ from app.core.logging import logger
 
 
 class EmailService:
-    """Free and resilient email dispatch service supporting live SMTP and offline dev simulation."""
+    """Free and resilient email dispatch service supporting live SMTP and offline dev simulation.
+    Rendered in Official LGU Memorandum (Formal Government Letterhead) layout.
+    """
 
     def __init__(self) -> None:
         pass
@@ -23,9 +25,19 @@ class EmailService:
         sender_name = settings.SMTP_FROM_NAME or "SABTRACK - Barangay Sabang"
         return f"{sender_name} <{sender_email}>"
 
-    def render_base_email(self, title: str, preheader: str, body_html: str) -> str:
-        """Wraps body HTML in a responsive, green-branded civic layout with academic attribution."""
-        year = datetime.now(timezone.utc).year
+    def render_base_email(
+        self,
+        title: str,
+        preheader: str,
+        body_html: str,
+        memo_ref: str = "SB-2026-SWM-GEN",
+        memo_to: str = "Concerned Citizen / Registered Resident",
+        memo_subject: str = "Official Solid Waste Management Advisory",
+    ) -> str:
+        """Wraps body HTML in a formal Republic of the Philippines LGU Memorandum letterhead."""
+        now = datetime.now(timezone.utc)
+        date_str = now.strftime("%B %d, %Y")
+        
         return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -36,89 +48,112 @@ class EmailService:
     body {{
       margin: 0;
       padding: 0;
-      background-color: #f4f8f5;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      color: #1e293b;
+      background-color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: #0f172a;
       -webkit-font-smoothing: antialiased;
     }}
     .wrapper {{
       width: 100%;
-      background-color: #f4f8f5;
-      padding: 28px 12px;
+      background-color: #f1f5f9;
+      padding: 32px 12px;
       box-sizing: border-box;
     }}
     .container {{
-      max-width: 600px;
+      max-width: 640px;
       margin: 0 auto;
       background: #ffffff;
-      border-radius: 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
       overflow: hidden;
-      border: 1px solid #d1e7dd;
-      box-shadow: 0 10px 25px -5px rgba(15, 81, 50, 0.08);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     }}
-    .header {{
-      background: linear-gradient(135deg, #0F5132 0%, #198754 100%);
-      padding: 28px 24px;
+    .lgu-header {{
+      background: #ffffff;
+      padding: 28px 24px 20px 24px;
       text-align: center;
-      color: #ffffff;
+      border-bottom: 3px double #0F5132;
     }}
-    .badge {{
-      display: inline-block;
-      background: rgba(255, 255, 255, 0.18);
-      border: 1px solid rgba(255, 255, 255, 0.35);
-      border-radius: 9999px;
-      padding: 4px 12px;
+    .rep-heading {{
+      margin: 0;
       font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #64748b;
+      font-weight: 600;
+    }}
+    .prov-heading {{
+      margin: 2px 0 0 0;
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #334155;
+      font-weight: 700;
+    }}
+    .brgy-title {{
+      margin: 6px 0 0 0;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #0F5132;
+    }}
+    .office-sub {{
+      margin: 4px 0 0 0;
+      font-size: 11px;
+      color: #475569;
       font-weight: 700;
       letter-spacing: 0.05em;
       text-transform: uppercase;
-      margin-bottom: 8px;
     }}
-    .title {{
-      margin: 0;
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-    }}
-    .subtitle {{
-      margin: 4px 0 0 0;
-      font-size: 13px;
-      opacity: 0.9;
+    .memo-bar {{
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 16px 24px;
+      font-size: 12px;
+      line-height: 1.6;
     }}
     .content {{
-      padding: 32px 28px;
-      line-height: 1.6;
-      font-size: 15px;
+      padding: 28px 24px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: #1e293b;
     }}
-    .card-box {{
-      background: #f8fafc;
+    .table-details {{
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 13px;
+    }}
+    .table-details th {{
+      background: #f0fdf4;
+      color: #0F5132;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid #bbf7d0;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }}
+    .table-details td {{
+      padding: 10px 14px;
       border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 18px 20px;
-      margin: 20px 0;
+      color: #334155;
+    }}
+    .signoff-box {{
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid #e2e8f0;
     }}
     .footer {{
       background: #f8fafc;
       border-top: 1px solid #e2e8f0;
-      padding: 22px 24px;
+      padding: 20px 24px;
       text-align: center;
-      font-size: 12px;
+      font-size: 11px;
       color: #64748b;
-      line-height: 1.5;
-    }}
-    .footer strong {{
-      color: #0F5132;
-    }}
-    .button {{
-      display: inline-block;
-      background: #0F5132;
-      color: #ffffff !important;
-      text-decoration: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-weight: 700;
-      font-size: 14px;
-      margin-top: 16px;
+      line-height: 1.6;
     }}
   </style>
 </head>
@@ -128,21 +163,70 @@ class EmailService:
   </div>
   <div class="wrapper">
     <div class="container">
-      <div class="header">
-        <span class="badge">Official Citizen Notice</span>
-        <h1 class="title">SABTRACK 3.0</h1>
-        <p class="subtitle">Barangay Sabang Solid Waste Governance • Lipa City</p>
+      
+      <!-- Official LGU Memorandum Letterhead -->
+      <div class="lgu-header">
+        <p class="rep-heading">Republic of the Philippines</p>
+        <p class="prov-heading">Province of Batangas &bull; City of Lipa</p>
+        <h1 class="brgy-title">BARANGAY SABANG</h1>
+        <p class="office-sub">Office of the Punong Barangay &bull; Barangay Sabang Solid Waste Governance</p>
       </div>
+
+      <!-- Memorandum Routing Bar -->
+      <div class="memo-bar">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <tr>
+            <td style="width: 100px; font-weight: bold; color: #0F5132; padding: 2px 0;">MEMORANDUM:</td>
+            <td style="font-family: monospace; font-weight: bold; color: #0f172a; padding: 2px 0;">{memo_ref}</td>
+            <td style="text-align: right; color: #64748b; padding: 2px 0;"><strong>DATE:</strong> {date_str}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #0F5132; padding: 2px 0;">FOR / TO:</td>
+            <td colspan="2" style="font-weight: bold; color: #1e293b; padding: 2px 0;">{memo_to}</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #0F5132; padding: 2px 0;">FROM:</td>
+            <td colspan="2" style="color: #334155; padding: 2px 0;">Solid Waste Management Operations Committee &bull; SABTRACK System</td>
+          </tr>
+          <tr>
+            <td style="font-weight: bold; color: #0F5132; padding: 2px 0;">SUBJECT:</td>
+            <td colspan="2" style="font-weight: bold; color: #0F5132; padding: 2px 0;">{memo_subject}</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- Formal Body Content -->
       <div class="content">
         {body_html}
+
+        <!-- Official Sign-Off Block -->
+        <div class="signoff-box">
+          <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+            <tr>
+              <td style="width: 50%; vertical-align: top;">
+                <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase;">Dispatched by:</p>
+                <p style="margin: 20px 0 2px 0; font-weight: bold; color: #0F5132; border-top: 1px solid #94a3b8; display: inline-block; padding-top: 4px; min-width: 180px;">SABTRACK Operations</p>
+                <p style="margin: 0; font-size: 11px; color: #64748b;">Barangay Sabang SWM Unit</p>
+              </td>
+              <td style="width: 50%; vertical-align: top; text-align: right;">
+                <p style="margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase;">Attested by:</p>
+                <p style="margin: 20px 0 2px 0; font-weight: bold; color: #0F5132; border-top: 1px solid #94a3b8; display: inline-block; padding-top: 4px; min-width: 180px;">Hon. Punong Barangay</p>
+                <p style="margin: 0; font-size: 11px; color: #64748b;">Barangay Sabang, Lipa City</p>
+              </td>
+            </tr>
+          </table>
+        </div>
       </div>
+
+      <!-- Academic & Privacy Footer -->
       <div class="footer">
-        <p style="margin: 0 0 6px 0;"><strong>SABTRACK</strong> — A Digital Governance Platform for Barangay Sabang</p>
-        <p style="margin: 0 0 8px 0;">Batangas State University – The National Engineering University • IT 313</p>
-        <p style="margin: 0; font-size: 11px; color: #94a3b8;">
-          In strict compliance with RA 10173 (Data Privacy Act of 2012). This email is an automated system advisory.
+        <p style="margin: 0 0 4px 0; font-weight: bold; color: #0F5132;">SABTRACK 3.0 &bull; Official Digital Governance Platform</p>
+        <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">Batangas State University &ndash; The National Engineering University &bull; IT 313 Academic Mandate</p>
+        <p style="margin: 0; font-size: 10px; color: #94a3b8;">
+          In strict compliance with RA 10173 (Data Privacy Act of 2012). This memorandum is an automated official municipal advisory transmitted to registered stakeholders.
         </p>
       </div>
+
     </div>
   </div>
 </body>
@@ -203,7 +287,7 @@ class EmailService:
 
             # Prepend preview metadata bar
             annotated_html = f"""<!-- 
-  [DEV EMAIL PREVIEW]
+  [DEV EMAIL PREVIEW - OFFICIAL LGU MEMORANDUM]
   To: {clean_to}
   Subject: {subject}
   Sender: {self._get_sender()}
@@ -232,41 +316,65 @@ class EmailService:
         collection_time: str,
         area_name: str,
     ) -> bool:
-        """Dispatches collection schedule advisory / reminder email."""
-        greeting_name = resident_name or "Resident of Barangay Sabang"
-        subject = f"[SABTRACK Alert] Garbage Collection Reminder: {day_of_week} ({waste_type})"
-        preheader = f"Reminder: Scheduled {waste_type} waste collection on {day_of_week} in {area_name}."
+        """Dispatches collection schedule advisory / reminder memorandum."""
+        greeting_name = resident_name or "Concerned Resident"
+        subject = f"[MEMORANDUM] Waste Collection Schedule Notice: {day_of_week} ({waste_type})"
+        preheader = f"Official Memorandum: Scheduled {waste_type} pickup on {day_of_week} for {area_name}."
+        memo_ref = f"SB-SWM-SCHED-{day_of_week[:3].upper()}"
 
         body_html = f"""
-          <h2 style="color: #0F5132; margin-top: 0; font-size: 18px;">Garbage Collection Advisory</h2>
-          <p>Hello <strong>{greeting_name}</strong>,</p>
-          <p>This is an official automated advisory for your registered collection route in <strong>{area_name}</strong>.</p>
+          <p>Please be formally advised that the Barangay Solid Waste Management Committee has scheduled regular 
+          garbage collection operations for your designated sector in <strong>{area_name}</strong>.</p>
           
-          <div class="card-box" style="border-left: 4px solid #198754; background: #f0fdf4;">
-            <p style="margin: 0 0 6px 0; font-size: 14px; color: #166534; font-weight: bold;">
-              SCHEDULE DETAILS
-            </p>
-            <p style="margin: 4px 0;"><strong>Pickup Day:</strong> {day_of_week}</p>
-            <p style="margin: 4px 0;"><strong>Collection Window:</strong> {collection_time}</p>
-            <p style="margin: 4px 0;"><strong>Waste Classification:</strong> <span style="background: #0F5132; color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 12px;">{waste_type}</span></p>
-            <p style="margin: 4px 0;"><strong>Route / Sector:</strong> {area_name}</p>
-          </div>
+          <table class="table-details">
+            <thead>
+              <tr>
+                <th colspan="2">Official Collection Details &bull; Schedule Specification</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="width: 35%; font-weight: bold; background: #fafafa;">Designated Sector:</td>
+                <td><strong>{area_name}</strong></td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Collection Day:</td>
+                <td><strong>{day_of_week}</strong></td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Pickup Hours:</td>
+                <td>{collection_time}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Waste Classification:</td>
+                <td><span style="background: #0F5132; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 11px;">{waste_type}</span></td>
+              </tr>
+            </tbody>
+          </table>
 
-          <p style="font-size: 14px; color: #334155;">
-            <strong>Reminder Reminders:</strong>
+          <p style="margin-top: 18px; font-weight: bold; color: #0F5132; font-size: 13px;">
+            MUNICIPAL DIRECTIVES FOR COMPLIANCE:
           </p>
-          <ul style="font-size: 14px; color: #475569; padding-left: 20px;">
-            <li>Please bring out properly segregated bags no earlier than 30 minutes before collection.</li>
-            <li>Ensure waste bins are securely closed to prevent animal tampering and street litter.</li>
-            <li>Unsegregated waste will not be collected pursuant to Barangay Sabang Ecological Solid Waste Ordinance.</li>
-          </ul>
+          <ol style="font-size: 13px; color: #334155; padding-left: 20px; line-height: 1.7;">
+            <li><strong>Proper Segregation at Source:</strong> Mixed or unsegregated solid waste will strictly NOT be loaded by collection personnel pursuant to Republic Act 9003 and Barangay Ecological Solid Waste Ordinance.</li>
+            <li><strong>Disposal Window:</strong> Curbside placement of garbage receptacles is permitted strictly within thirty (30) minutes prior to the scheduled pickup time.</li>
+            <li><strong>Sanitary Containment:</strong> Waste receptacles and durable plastic sacks must be securely tied to prevent animal tampering, street scattering, and rainwater contamination.</li>
+          </ol>
 
-          <p style="margin-top: 24px; font-size: 13px; color: #64748b;">
-            Thank you for helping keep Barangay Sabang clean and sustainable!
+          <p style="margin-top: 20px; font-size: 13px; color: #475569;">
+            For route adjustments, change advisories, or uncollected garbage reporting, kindly access the official 
+            <strong>SABTRACK Resident Portal</strong>.
           </p>
         """
 
-        full_html = self.render_base_email("Collection Schedule Reminder", preheader, body_html)
+        full_html = self.render_base_email(
+            title="Garbage Collection Schedule Advisory",
+            preheader=preheader,
+            body_html=body_html,
+            memo_ref=memo_ref,
+            memo_to=f"{greeting_name} ({to_email})",
+            memo_subject=f"Garbage Collection Schedule Timetable &bull; {area_name}",
+        )
         return self.send_email(to_email, subject, full_html)
 
     def send_report_status_update(
@@ -279,14 +387,16 @@ class EmailService:
         remarks: Optional[str] = None,
         category: Optional[str] = None,
     ) -> bool:
-        """Dispatches waste violation / uncollected trash report status update email."""
-        greeting_name = resident_name or "Concerned Resident"
-        subject = f"[SABTRACK Update] Report #{report_id} status changed to {new_status}"
-        preheader = f"Update on your waste report #{report_id}: Status is now {new_status}."
+        """Dispatches waste violation / uncollected trash report status update memorandum."""
+        greeting_name = resident_name or "Reporting Resident"
+        subject = f"[MEMORANDUM] Citizen Waste Incident Report #{report_id}: Status Updated to {new_status}"
+        preheader = f"Official Memorandum: Status update on Report #{report_id} &mdash; {new_status}."
+        memo_ref = f"SB-SWM-REP-{report_id}"
 
         status_colors = {
             "SUBMITTED": ("#e0f2fe", "#0369a1"),
             "UNDER_REVIEW": ("#fef3c7", "#b45309"),
+            "IN_PROGRESS": ("#ede9fe", "#6d28d9"),
             "DISPATCHED": ("#ede9fe", "#6d28d9"),
             "RESOLVED": ("#dcfce7", "#15803d"),
             "REJECTED": ("#ffe4e6", "#be123c"),
@@ -294,36 +404,56 @@ class EmailService:
         bg_col, text_col = status_colors.get(new_status.upper(), ("#f1f5f9", "#334155"))
 
         body_html = f"""
-          <h2 style="color: #0F5132; margin-top: 0; font-size: 18px;">Community Waste Report Update</h2>
-          <p>Hello <strong>{greeting_name}</strong>,</p>
-          <p>Your reported incident <strong>Report #{report_id}</strong> has been updated by Barangay Sabang sanitation staff.</p>
+          <p>This is an official administrative update regarding the community incident ticket 
+          <strong>Report #{report_id}</strong> lodged through the SABTRACK Digital Governance platform.</p>
 
-          <div class="card-box">
-            <p style="margin: 0 0 8px 0; font-size: 13px; color: #64748b; font-weight: bold;">
-              OFFICIAL ACTION TIMELINE
-            </p>
-            <p style="margin: 6px 0;">
-              <strong>New Status:</strong>
-              <span style="background: {bg_col}; color: {text_col}; padding: 3px 10px; border-radius: 9999px; font-weight: bold; font-size: 12px;">
-                {new_status}
-              </span>
-            </p>
-            {f'<p style="margin: 6px 0; font-size: 13px; color: #64748b;"><strong>Previous Status:</strong> {previous_status}</p>' if previous_status else ''}
-            {f'<p style="margin: 6px 0; font-size: 13px; color: #64748b;"><strong>Category:</strong> {category}</p>' if category else ''}
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
-              <strong>Barangay Remarks:</strong>
-              <p style="margin: 4px 0 0 0; font-style: italic; color: #1e293b;">
-                "{remarks or 'No remarks provided.'}"
-              </p>
-            </div>
-          </div>
+          <table class="table-details">
+            <thead>
+              <tr>
+                <th colspan="2">Official Incident Investigation &amp; Resolution Tracking</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="width: 35%; font-weight: bold; background: #fafafa;">Incident Reference:</td>
+                <td><strong>Report #{report_id}</strong></td>
+              </tr>
+              {f'<tr><td style="font-weight: bold; background: #fafafa;">Incident Category:</td><td>{category}</td></tr>' if category else ''}
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Previous Status:</td>
+                <td style="color: #64748b;">{previous_status or 'N/A'}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Official Current Status:</td>
+                <td>
+                  <span style="background: {bg_col}; color: {text_col}; padding: 3px 10px; border-radius: 4px; font-weight: bold; font-size: 12px; display: inline-block;">
+                    {new_status}
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Barangay Action / Remarks:</td>
+                <td style="color: #1e293b; font-style: italic;">
+                  "{remarks or 'Official field inspection completed by Barangay Sabang sanitation operations.'}"
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-          <p style="font-size: 14px; color: #334155;">
-            You may log in to the <strong>SABTRACK Resident Portal</strong> to view the full resolution timeline, inspection notes, and earned civic engagement points.
+          <p style="margin-top: 18px; font-size: 13px; color: #475569;">
+            You may log in to the <strong>SABTRACK Resident Portal</strong> to inspect the immutable chronological action history, 
+            view evidence photographs, and monitor awarded community engagement points.
           </p>
         """
 
-        full_html = self.render_base_email(f"Report #{report_id} Update", preheader, body_html)
+        full_html = self.render_base_email(
+            title=f"Incident Report #{report_id} Status Notice",
+            preheader=preheader,
+            body_html=body_html,
+            memo_ref=memo_ref,
+            memo_to=f"{greeting_name} ({to_email})",
+            memo_subject=f"Official Action Notice &bull; Incident Report #{report_id}",
+        )
         return self.send_email(to_email, subject, full_html)
 
     def send_welcome_email(
@@ -331,33 +461,67 @@ class EmailService:
         to_email: str,
         full_name: str,
     ) -> bool:
-        """Dispatches welcome email upon successful resident account registration."""
-        subject = "[SABTRACK] Welcome to Barangay Sabang Digital Waste Governance"
-        preheader = f"Welcome to SABTRACK, {full_name}! Your resident account is now active."
+        """Dispatches official welcome and account accreditation memorandum to newly registered resident."""
+        subject = "[MEMORANDUM] Resident Account Accreditation &bull; SABTRACK 3.0"
+        preheader = f"Official Notice: Welcome to SABTRACK, {full_name}. Citizen account accredited."
+        now_code = datetime.now(timezone.utc).strftime("%y%m%d")
+        memo_ref = f"SB-SWM-REG-{now_code}"
 
         body_html = f"""
-          <h2 style="color: #0F5132; margin-top: 0; font-size: 18px;">Welcome to SABTRACK 3.0!</h2>
-          <p>Hello <strong>{full_name}</strong>,</p>
-          <p>Thank you for registering on <strong>SABTRACK</strong>, the official digital solid waste governance platform of Barangay Sabang, Lipa City.</p>
+          <p>Greetings in good governance.</p>
+          <p><strong>Welcome to SABTRACK 3.0!</strong> Please be officially informed that your citizen user account under the name <strong>{full_name}</strong> 
+          has been successfully accredited in the <strong>SABTRACK Digital Solid Waste Governance Platform</strong> 
+          of Barangay Sabang, Lipa City.</p>
 
-          <div class="card-box" style="background: #f0fdf4; border: 1px solid #bbf7d0;">
-            <p style="margin: 0 0 8px 0; font-weight: bold; color: #166534;">
-              WHAT YOU CAN DO WITH YOUR ACCOUNT:
-            </p>
-            <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #14532d;">
-              <li><strong>Pickup Timetables:</strong> View your Purok garbage collection route and subscribe to email reminders.</li>
-              <li><strong>Citizen Reporting:</strong> File photo-verified reports for uncollected garbage and environmental violations.</li>
-              <li><strong>SAB-Points:</strong> Earn verified civic engagement rewards for participating in barangay waste reduction drives.</li>
-              <li><strong>EcoGabay AI:</strong> Chat with our bilingual waste segregation and upcycling advisor.</li>
-            </ul>
-          </div>
+          <table class="table-details">
+            <thead>
+              <tr>
+                <th colspan="2">Accredited Citizen Profile &amp; Governance Privileges</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="width: 35%; font-weight: bold; background: #fafafa;">Accredited Resident:</td>
+                <td><strong>{full_name}</strong></td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Linked Email:</td>
+                <td style="font-family: monospace;">{to_email}</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Jurisdiction:</td>
+                <td>Barangay Sabang, Lipa City, Batangas</td>
+              </tr>
+              <tr>
+                <td style="font-weight: bold; background: #fafafa;">Citizen Privileges:</td>
+                <td>Route Schedules &bull; Violation Reporting &bull; SAB-Points Rewards &bull; EcoGabay AI</td>
+              </tr>
+            </tbody>
+          </table>
 
-          <p style="font-size: 13px; color: #64748b;">
-            Your account is linked to your registered email: <strong>{to_email}</strong>.
+          <p style="margin-top: 18px; font-weight: bold; color: #0F5132; font-size: 13px;">
+            PLATFORM CAPABILITIES AVAILABLE TO YOU:
+          </p>
+          <ul style="font-size: 13px; color: #334155; padding-left: 20px; line-height: 1.8;">
+            <li><strong>Garbage Collection Timetables:</strong> Access verified Purok pickup hours and register for automated email route advisories.</li>
+            <li><strong>Verified Citizen Reporting:</strong> Submit photographic evidence of uncollected garbage, illegal dumping, or environmental infractions with automated EXIF GPS scrubbing.</li>
+            <li><strong>SAB-Points Civic Ledger:</strong> Earn accredited points for participating in community clean-up and segregation drives, redeemable for barangay civic rewards.</li>
+            <li><strong>EcoGabay AI Assistant:</strong> Consult our bilingual conversational assistant for proper segregation rules and localized waste upcycling ideas.</li>
+          </ul>
+
+          <p style="margin-top: 20px; font-size: 13px; color: #475569;">
+            We look forward to your active civic cooperation in preserving the ecological cleanliness and sustainable health of Barangay Sabang.
           </p>
         """
 
-        full_html = self.render_base_email("Welcome to SABTRACK", preheader, body_html)
+        full_html = self.render_base_email(
+            title="Resident Account Accreditation Notice",
+            preheader=preheader,
+            body_html=body_html,
+            memo_ref=memo_ref,
+            memo_to=f"{full_name} ({to_email})",
+            memo_subject="Citizen Account Accreditation &amp; Solid Waste Governance Participation",
+        )
         return self.send_email(to_email, subject, full_html)
 
 
