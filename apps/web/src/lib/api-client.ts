@@ -34,31 +34,86 @@ let activeCsrfToken: string | null = null;
 
 export function setCsrfToken(token: string | null): void {
   activeCsrfToken = token;
+  if (typeof window !== 'undefined') {
+    try {
+      if (token) {
+        window.sessionStorage?.setItem('sabtrack_csrf_token', token);
+      } else {
+        window.sessionStorage?.removeItem('sabtrack_csrf_token');
+      }
+    } catch {
+      // Storage access may be restricted in sandboxed environments
+    }
+  }
 }
 
 export function getCsrfToken(): string | null {
-  return activeCsrfToken;
+  if (activeCsrfToken) {
+    return activeCsrfToken;
+  }
+  // Fallback 1: Read accessible document.cookie (sabtrack_csrf)
+  if (typeof document !== 'undefined') {
+    try {
+      const match = document.cookie.match(/(?:^|;\s*)sabtrack_csrf=([^;]+)/);
+      if (match && match[1]) {
+        activeCsrfToken = decodeURIComponent(match[1].trim());
+        return activeCsrfToken;
+      }
+    } catch {
+      // Ignore cookie parsing error
+    }
+  }
+  // Fallback 2: Read from sessionStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = window.sessionStorage?.getItem('sabtrack_csrf_token');
+      if (stored) {
+        activeCsrfToken = stored;
+        return activeCsrfToken;
+      }
+    } catch {
+      // Ignore storage access error
+    }
+  }
+  return null;
 }
 
 /**
  * Centralized fetch helper for FastAPI backend endpoints.
  * Automatically includes credentials (cookies) and CSRF header on mutating requests.
+ * Proactively retrieves or refreshes CSRF tokens to prevent 403 CSRF validation failures.
  */
 export async function apiFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  isRetry = false
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   const method = (options.method || 'GET').toUpperCase();
+  const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
   const headers: Record<string, string> = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
   };
 
   // Attach X-CSRF-Token header to state-mutating requests
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && activeCsrfToken) {
-    headers['X-CSRF-Token'] = activeCsrfToken;
+  if (isMutating) {
+    let token = getCsrfToken();
+    // Proactively fetch session context if token is missing and not logging in/registering
+    if (!token && endpoint !== '/api/v1/auth/login' && endpoint !== '/api/v1/auth/register') {
+      try {
+        const me = await getMe();
+        token = me?.csrf_token || getCsrfToken();
+      } catch {
+        // Unauthenticated request will proceed and return 401
+      }
+    }
+    if (token) {
+      headers['X-CSRF-Token'] = token;
+    }
   }
 
   try {
@@ -74,17 +129,49 @@ export async function apiFetch<T>(
     });
 
     if (!response.ok) {
-      let errorData;
+      let errorData: any;
       try {
         errorData = await response.json();
       } catch {
         errorData = { message: response.statusText };
       }
 
-      const errorMessage =
-        errorData?.error?.message ||
-        errorData?.detail ||
-        `Request failed with status ${response.status}`;
+      let errorMessage = `Request failed with status ${response.status}`;
+      if (errorData?.error?.details && Array.isArray(errorData.error.details)) {
+        const detailMsgs = errorData.error.details
+          .map((d: any) => (d.message ? `${d.field ? `${d.field}: ` : ''}${d.message}` : JSON.stringify(d)))
+          .join(', ');
+        errorMessage = `${errorData.error.message || 'Validation error'}: ${detailMsgs}`;
+      } else if (typeof errorData?.error?.message === 'string') {
+        errorMessage = errorData.error.message;
+      } else if (typeof errorData?.detail === 'string') {
+        errorMessage = errorData.detail;
+      } else if (Array.isArray(errorData?.detail)) {
+        errorMessage = errorData.detail
+          .map((d: any) => (d.msg ? `${d.loc ? `${d.loc.slice(1).join('.')}: ` : ''}${d.msg}` : JSON.stringify(d)))
+          .join(', ');
+      } else if (errorData?.message) {
+        errorMessage = String(errorData.message);
+      }
+
+      // If CSRF validation failed and we haven't retried yet, refresh token from /auth/me and retry once
+      if (
+        response.status === 403 &&
+        !isRetry &&
+        isMutating &&
+        typeof errorMessage === 'string' &&
+        errorMessage.toLowerCase().includes('csrf')
+      ) {
+        try {
+          const me = await getMe();
+          if (me?.csrf_token) {
+            setCsrfToken(me.csrf_token);
+            return await apiFetch<T>(endpoint, options, true);
+          }
+        } catch {
+          // If session is expired, re-throw original error below
+        }
+      }
 
       throw new ApiClientError(errorMessage, response.status, errorData);
     }
@@ -224,6 +311,16 @@ export async function createSchedule(
 ): Promise<ScheduleItem> {
   return apiFetch<ScheduleItem>('/api/v1/schedules', {
     method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateSchedule(
+  scheduleId: number,
+  payload: Partial<ScheduleCreatePayload>
+): Promise<ScheduleItem> {
+  return apiFetch<ScheduleItem>(`/api/v1/schedules/${scheduleId}`, {
+    method: 'PUT',
     body: JSON.stringify(payload),
   });
 }
@@ -418,7 +515,8 @@ export async function updateUserRole(userId: number, role: string): Promise<Admi
 
 
 export async function uploadEvidencePhoto(
-  file: File
+  file: File,
+  isRetry = false
 ): Promise<{ file_url: string; filename: string }> {
   const url = `${API_BASE_URL}/api/v1/uploads`;
   const formData = new FormData();
@@ -427,8 +525,17 @@ export async function uploadEvidencePhoto(
   const headers: Record<string, string> = {
     Accept: 'application/json',
   };
-  if (activeCsrfToken) {
-    headers['X-CSRF-Token'] = activeCsrfToken;
+  let token = getCsrfToken();
+  if (!token) {
+    try {
+      const me = await getMe();
+      token = me?.csrf_token || getCsrfToken();
+    } catch {
+      // Unauthenticated
+    }
+  }
+  if (token) {
+    headers['X-CSRF-Token'] = token;
   }
 
   const response = await fetch(url, {
@@ -450,6 +557,24 @@ export async function uploadEvidencePhoto(
       errorData?.error?.message ||
       errorData?.detail ||
       `Upload failed with status ${response.status}`;
+
+    if (
+      response.status === 403 &&
+      !isRetry &&
+      typeof errorMessage === 'string' &&
+      errorMessage.toLowerCase().includes('csrf')
+    ) {
+      try {
+        const me = await getMe();
+        if (me?.csrf_token) {
+          setCsrfToken(me.csrf_token);
+          return await uploadEvidencePhoto(file, true);
+        }
+      } catch {
+        // Fall through
+      }
+    }
+
     throw new ApiClientError(errorMessage, response.status, errorData);
   }
 

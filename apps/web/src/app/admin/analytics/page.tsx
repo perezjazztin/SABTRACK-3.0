@@ -480,7 +480,7 @@ export default function AdminAnalyticsPage() {
                       const badge = SEVERITY_BADGES[spot.severity_level] || SEVERITY_BADGES.NORMAL;
                       return (
                         <div
-                          key={spot.area_id ?? idx}
+                          key={`hotspot-${spot.area_id ?? "na"}-${idx}`}
                           className="p-3.5 rounded-xl border border-slate-200/70 hover:border-slate-300 bg-slate-50/50 flex items-center justify-between gap-3 transition-colors"
                         >
                           <div className="space-y-0.5">
@@ -673,7 +673,7 @@ export default function AdminAnalyticsPage() {
                       predictive.area_risk_forecasts.map((forecast, i) => {
                         const badge = RISK_BADGES[forecast.risk_level] || RISK_BADGES.LOW_RISK;
                         return (
-                          <tr key={forecast.area_id ?? i} className="hover:bg-slate-50/70 transition-colors">
+                          <tr key={`forecast-${forecast.area_id ?? "na"}-${i}`} className="hover:bg-slate-50/70 transition-colors">
                             <td className="px-5 py-3.5 font-bold text-slate-900">
                               {forecast.area_name}
                             </td>

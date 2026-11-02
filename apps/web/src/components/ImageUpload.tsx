@@ -10,19 +10,25 @@ interface ImageUploadProps {
   label?: string;
   helperText?: string;
   disabled?: boolean;
+  maxSizeMb?: number;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
   label = 'Evidence Photo',
-  helperText = 'JPEG, PNG, or WebP up to 5MB. EXIF GPS telemetry is stripped automatically per RA 10173.',
+  maxSizeMb = 30,
+  helperText,
   disabled = false,
 }) => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const displayHelperText =
+    helperText ??
+    `JPEG, PNG, or WebP up to ${maxSizeMb}MB. EXIF GPS telemetry is stripped automatically per RA 10173.`;
 
   const handleFileProcess = async (file: File) => {
     setError(null);
@@ -34,9 +40,9 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       return;
     }
 
-    // Validate size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('File is too large. Maximum allowed size is 5MB.');
+    // Validate size
+    if (file.size > maxSizeMb * 1024 * 1024) {
+      setError(`File is too large. Maximum allowed size is ${maxSizeMb}MB.`);
       return;
     }
 
@@ -160,7 +166,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </span>
           </div>
 
-          <p className="text-[11px] text-slate-500">{helperText}</p>
+          <p className="text-[11px] text-slate-500">{displayHelperText}</p>
         </div>
       )}
 

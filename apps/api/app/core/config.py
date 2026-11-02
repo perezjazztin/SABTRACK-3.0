@@ -50,7 +50,7 @@ class Settings(BaseSettings):
         description="Protected local directory for uploaded files"
     )
     MAX_UPLOAD_SIZE_BYTES: int = Field(
-        default=5 * 1024 * 1024,  # 5 MB
+        default=30 * 1024 * 1024,  # 30 MB
         description="Maximum allowed image upload size in bytes"
     )
 

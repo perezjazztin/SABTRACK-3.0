@@ -15,6 +15,7 @@ from app.modules.areas.models import Area
 from app.modules.schedules.models import Schedule
 from app.modules.schedules.schemas import (
     ScheduleCreate,
+    ScheduleUpdate,
     ScheduleRead,
     ScheduleListResponse,
     AdvisoryCreate,
@@ -25,6 +26,7 @@ from app.modules.schedules.schemas import (
 )
 from app.modules.schedules.service import (
     create_schedule,
+    update_schedule,
     get_schedules,
     deactivate_schedule,
     create_advisory,
@@ -68,6 +70,33 @@ def create_schedule_endpoint(
         return schedule
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.put(
+    "/{schedule_id}",
+    response_model=ScheduleRead,
+    status_code=status.HTTP_200_OK,
+    summary="Update collection schedule (Admin only)",
+)
+def update_schedule_endpoint(
+    schedule_id: int,
+    payload: ScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.SCHEDULES_MANAGE)),
+):
+    """Update an existing collection timetable entry. Requires `schedules:manage` permission."""
+    try:
+        schedule = update_schedule(db, schedule_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schedule with ID {schedule_id} not found.",
+        )
+    ws_manager.broadcast_sync({"type": "SCHEDULE_UPDATED", "entity": "schedules", "id": schedule_id})
+    return schedule
 
 
 @router.delete(

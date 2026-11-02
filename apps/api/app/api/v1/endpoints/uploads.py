@@ -26,7 +26,7 @@ async def upload_image(
     file: UploadFile = File(...),
     current_user: UserModel = Depends(get_current_user),
 ):
-    """Uploads an evidence photo (JPEG, PNG, WebP up to 5MB).
+    """Uploads an evidence photo (JPEG, PNG, WebP up to 30MB).
 
     Automatically strips all EXIF metadata (GPS telemetry, timestamps, camera hardware serials)
     to ensure compliance with RA 10173 (Data Privacy Act of 2012).
@@ -60,4 +60,5 @@ def get_uploaded_image(
         path=file_path,
         media_type=media_type,
         filename=filename,
+        content_disposition_type="inline",
     )
