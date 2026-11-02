@@ -209,3 +209,52 @@ def test_descriptive_and_predictive_analytics_results(client: TestClient):
         assert forecast["risk_level"] in ["HIGH_RISK", "MODERATE_RISK", "LOW_RISK"]
         assert "proactive_dispatch_action" in forecast
         assert len(forecast["proactive_dispatch_action"]) > 0
+
+
+
+def test_admin_can_generate_narrative_summary(client: TestClient):
+    """Verifies that an administrator can generate an AI-assisted executive narrative summary."""
+    csrf_token, session_cookie = _login(client, "admin@sabtrack.test")
+
+    res = client.post(
+        "/api/v1/analytics/narrative-summary",
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+
+    assert res.status_code == 200
+    data = res.json()
+    assert "executive_summary" in data
+    assert len(data["executive_summary"]) > 50
+    assert "key_findings" in data
+    assert isinstance(data["key_findings"], list)
+    assert len(data["key_findings"]) >= 3
+    assert "recommended_actions" in data
+    assert isinstance(data["recommended_actions"], list)
+    assert len(data["recommended_actions"]) >= 2
+    assert "model_used" in data
+    assert "governance_disclaimer" in data
+    assert "RA 10173" in data["governance_disclaimer"]
+    assert "metrics_snapshot" in data
+    assert "total_reports" in data["metrics_snapshot"]
+
+
+def test_non_admin_cannot_generate_narrative_summary(client: TestClient):
+    """Verifies that non-admin accounts (resident, staff) cannot access narrative summary generation."""
+    # 1. Resident
+    csrf_res, cookie_res = _login(client, "resident@sabtrack.test")
+    res_resident = client.post(
+        "/api/v1/analytics/narrative-summary",
+        headers={"x-csrf-token": csrf_res},
+        cookies={settings.SESSION_COOKIE_NAME: cookie_res},
+    )
+    assert res_resident.status_code == 403
+
+    # 2. Staff (view-only on analytics, cannot generate admin executive narrative memo)
+    csrf_staff, cookie_staff = _login(client, "staff@sabtrack.test")
+    res_staff = client.post(
+        "/api/v1/analytics/narrative-summary",
+        headers={"x-csrf-token": csrf_staff},
+        cookies={settings.SESSION_COOKIE_NAME: cookie_staff},
+    )
+    assert res_staff.status_code == 403

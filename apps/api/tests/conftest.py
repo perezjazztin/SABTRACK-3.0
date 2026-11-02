@@ -23,6 +23,13 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_
 TEST_PASSWORD = "TestSecretPassword123!"
 
 
+@pytest.fixture(autouse=True)
+def disable_live_smtp_for_tests(monkeypatch):
+    """Hermetic test isolation: disable live external SMTP during all test runs."""
+    from app.core.config import settings
+    monkeypatch.setattr(settings, "SMTP_ENABLED", False)
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     """Initializes schema once for the entire test session."""

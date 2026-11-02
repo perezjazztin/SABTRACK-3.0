@@ -1,5 +1,6 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from app.modules.notifications.service import email_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -14,6 +15,7 @@ from app.modules.areas.models import Area
 from app.modules.schedules.models import Schedule
 from app.modules.schedules.schemas import (
     ScheduleCreate,
+    ScheduleUpdate,
     ScheduleRead,
     ScheduleListResponse,
     AdvisoryCreate,
@@ -24,6 +26,7 @@ from app.modules.schedules.schemas import (
 )
 from app.modules.schedules.service import (
     create_schedule,
+    update_schedule,
     get_schedules,
     deactivate_schedule,
     create_advisory,
@@ -69,6 +72,33 @@ def create_schedule_endpoint(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
+@router.put(
+    "/{schedule_id}",
+    response_model=ScheduleRead,
+    status_code=status.HTTP_200_OK,
+    summary="Update collection schedule (Admin only)",
+)
+def update_schedule_endpoint(
+    schedule_id: int,
+    payload: ScheduleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.SCHEDULES_MANAGE)),
+):
+    """Update an existing collection timetable entry. Requires `schedules:manage` permission."""
+    try:
+        schedule = update_schedule(db, schedule_id, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if not schedule:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Schedule with ID {schedule_id} not found.",
+        )
+    ws_manager.broadcast_sync({"type": "SCHEDULE_UPDATED", "entity": "schedules", "id": schedule_id})
+    return schedule
+
+
 @router.delete(
     "/{schedule_id}",
     status_code=status.HTTP_200_OK,
@@ -101,6 +131,7 @@ def subscribe_schedule_notification_endpoint(
     schedule_id: int,
     payload: ScheduleNotificationRequest,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """Register an email address to receive collection day reminders for a schedule slot."""
@@ -144,6 +175,25 @@ def subscribe_schedule_notification_endpoint(
         schedule.waste_type.value,
         area_name,
         target_email,
+    )
+
+    # Queue automated email reminder in background
+    resident_name = None
+    raw_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
+    if raw_token:
+        token_hash = hash_token(raw_token)
+        sess = db.scalar(select(SessionModel).where(SessionModel.session_id_hash == token_hash))
+        if sess and sess.user:
+            resident_name = sess.user.full_name
+
+    background_tasks.add_task(
+        email_service.send_schedule_reminder,
+        to_email=target_email,
+        resident_name=resident_name,
+        day_of_week=schedule.day_of_week.value,
+        waste_type=schedule.waste_type.value,
+        collection_time=f"{schedule.start_time} - {schedule.end_time}",
+        area_name=area_name,
     )
 
     return ScheduleNotificationResponse(

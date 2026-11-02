@@ -41,14 +41,14 @@ describe('ImageUpload Component', () => {
     });
   });
 
-  it('blocks files larger than 5MB with an error message', async () => {
+  it('blocks files larger than 30MB with an error message', async () => {
     const onChangeMock = vi.fn();
     const spy = vi.spyOn(apiClient, 'uploadEvidencePhoto');
 
     const { container } = render(<ImageUpload onChange={onChangeMock} />);
 
-    // 6MB file
-    const bigFile = new File([new ArrayBuffer(6 * 1024 * 1024)], 'huge.jpg', {
+    // 31MB file exceeding default 30MB limit
+    const bigFile = new File([new ArrayBuffer(31 * 1024 * 1024)], 'huge.jpg', {
       type: 'image/jpeg',
     });
 
@@ -56,7 +56,28 @@ describe('ImageUpload Component', () => {
     fireEvent.change(fileInput, { target: { files: [bigFile] } });
 
     await waitFor(() => {
-      expect(screen.getByText(/maximum allowed size is 5MB/i)).toBeInTheDocument();
+      expect(screen.getByText(/maximum allowed size is 30MB/i)).toBeInTheDocument();
+      expect(spy).not.toHaveBeenCalled();
+      expect(onChangeMock).not.toHaveBeenCalled();
+    });
+  });
+
+  it('respects custom maxSizeMb prop for file size validation', async () => {
+    const onChangeMock = vi.fn();
+    const spy = vi.spyOn(apiClient, 'uploadEvidencePhoto');
+
+    const { container } = render(<ImageUpload onChange={onChangeMock} maxSizeMb={10} />);
+
+    // 12MB file exceeding 10MB limit
+    const bigFile = new File([new ArrayBuffer(12 * 1024 * 1024)], 'custom-large.jpg', {
+      type: 'image/jpeg',
+    });
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, { target: { files: [bigFile] } });
+
+    await waitFor(() => {
+      expect(screen.getByText(/maximum allowed size is 10MB/i)).toBeInTheDocument();
       expect(spy).not.toHaveBeenCalled();
       expect(onChangeMock).not.toHaveBeenCalled();
     });

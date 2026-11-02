@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import select, and_, or_
 
 from app.modules.schedules.models import Schedule, ScheduleAdvisory, DayOfWeek
-from app.modules.schedules.schemas import ScheduleCreate, ScheduleRead, AdvisoryCreate, AdvisoryRead
+from app.modules.schedules.schemas import ScheduleCreate, ScheduleUpdate, ScheduleRead, AdvisoryCreate, AdvisoryRead
 from app.modules.areas.models import Area
 from app.modules.identity.models import User
 
@@ -90,6 +90,52 @@ def create_schedule(db: Session, payload: ScheduleCreate) -> ScheduleRead:
         updated_at=schedule.updated_at,
     )
 
+
+
+def update_schedule(db: Session, schedule_id: int, payload: ScheduleUpdate) -> Optional[ScheduleRead]:
+    """Updates an existing collection timetable entry."""
+    schedule = db.get(Schedule, schedule_id)
+    if not schedule:
+        return None
+
+    if payload.area_id is not None:
+        area = db.get(Area, payload.area_id)
+        if not area or not area.is_active:
+            raise ValueError(f"Area with ID {payload.area_id} does not exist or is inactive.")
+        schedule.area_id = payload.area_id
+
+    if payload.day_of_week is not None:
+        schedule.day_of_week = payload.day_of_week
+    if payload.waste_type is not None:
+        schedule.waste_type = payload.waste_type
+    if payload.start_time is not None:
+        schedule.start_time = payload.start_time.strip()
+    if payload.end_time is not None:
+        schedule.end_time = payload.end_time.strip()
+    if payload.notes is not None:
+        schedule.notes = payload.notes.strip() if payload.notes else None
+    if payload.is_active is not None:
+        schedule.is_active = payload.is_active
+
+    db.add(schedule)
+    db.commit()
+    db.refresh(schedule)
+
+    return ScheduleRead(
+        id=schedule.id,
+        area_id=schedule.area_id,
+        area_name=schedule.area.name if schedule.area else None,
+        area_code=schedule.area.code if schedule.area else None,
+        day_of_week=schedule.day_of_week,
+        waste_type=schedule.waste_type,
+        start_time=schedule.start_time,
+        end_time=schedule.end_time,
+        notes=schedule.notes,
+        is_active=schedule.is_active,
+        is_demo_data=schedule.is_demo_data,
+        created_at=schedule.created_at,
+        updated_at=schedule.updated_at,
+    )
 
 def deactivate_schedule(db: Session, schedule_id: int) -> bool:
     schedule = db.scalar(select(Schedule).where(Schedule.id == schedule_id))

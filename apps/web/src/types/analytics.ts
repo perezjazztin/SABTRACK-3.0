@@ -96,3 +96,28 @@ export interface AnalyticsOverviewResponse {
   descriptive?: DescriptiveAnalytics;
   predictive?: PredictiveAnalytics;
 }
+
+
+export interface NarrativeSummaryResponse {
+  title: string;
+  executive_summary: string;
+  key_findings: string[];
+  recommended_actions: string[];
+  model_used: string;
+  generated_at: string;
+  governance_disclaimer: string;
+  metrics_snapshot: {
+    total_reports: number;
+    open_reports: number;
+    resolved_reports: number;
+    resolution_rate_pct: number;
+    avg_resolution_days: number;
+    primary_hotspot: string;
+    dominant_category: string;
+    trend_direction: string;
+    projected_weekly_reports: number;
+    backlog_clearance_eta_days: number;
+    total_claims_awarded: number;
+    total_points_distributed: number;
+  };
+}

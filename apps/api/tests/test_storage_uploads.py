@@ -114,6 +114,7 @@ def test_download_image_authenticated(client: TestClient):
     )
     assert download_res.status_code == 200
     assert download_res.headers["content-type"] in ["image/jpeg", "image/jpg"]
+    assert download_res.headers.get("content-disposition", "").startswith("inline")
     assert len(download_res.content) > 0
 
 
@@ -155,3 +156,24 @@ def test_download_nonexistent_returns_404(client: TestClient):
         cookies={settings.SESSION_COOKIE_NAME: session_cookie},
     )
     assert res.status_code == 404
+
+def test_upload_file_exceeding_max_size_returns_413(client: TestClient, monkeypatch):
+    """Verifies that payloads exceeding MAX_UPLOAD_SIZE_BYTES return HTTP 413."""
+    csrf_token, session_cookie = _login(client)
+    monkeypatch.setattr(settings, "MAX_UPLOAD_SIZE_BYTES", 50)
+
+    # 100 bytes payload > 50 bytes limit
+    oversized_bytes = b"X" * 100
+    files = {"file": ("oversized.jpg", oversized_bytes, "image/jpeg")}
+    res = client.post(
+        "/api/v1/uploads",
+        files=files,
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+
+    assert res.status_code == 413
+    data = res.json()
+    error_msg = data.get("error", {}).get("message") or data.get("detail", "")
+    assert "exceeds maximum allowed size" in error_msg.lower()
+

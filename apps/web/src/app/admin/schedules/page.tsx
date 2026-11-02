@@ -5,6 +5,7 @@ import { useRealtimeSync } from '@/lib/use-realtime-sync';
 import {
   CalendarDays,
   Plus,
+  Pencil,
   Trash2,
   AlertTriangle,
   RefreshCw,
@@ -21,6 +22,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
   getSchedules,
   createSchedule,
+  updateSchedule,
   deleteSchedule,
   getAdvisories,
   createAdvisory,
@@ -65,6 +67,7 @@ export default function AdminSchedulesPage() {
 
   // Modals state
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<ScheduleItem | null>(null);
   const [showAdvisoryModal, setShowAdvisoryModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -117,13 +120,49 @@ export default function AdminSchedulesPage() {
   // Automatic real-time background synchronization (< 3s SLA)
   useRealtimeSync(() => loadData(true), { entity: 'schedules' });
 
-  // Handle Create Schedule
-  const handleCreateSchedule = async (e: React.FormEvent) => {
+  const handleOpenAddSchedule = () => {
+    setEditingSchedule(null);
+    setSchedForm({
+      area_id: areas[0]?.id || 1,
+      day_of_week: 'MONDAY',
+      waste_type: 'BIODEGRADABLE',
+      start_time: '06:00 AM',
+      end_time: '09:00 AM',
+      notes: '',
+    });
+    setShowScheduleModal(true);
+  };
+
+  const handleOpenEditSchedule = (item: ScheduleItem) => {
+    setEditingSchedule(item);
+    setSchedForm({
+      area_id: item.area_id,
+      day_of_week: item.day_of_week,
+      waste_type: item.waste_type,
+      start_time: item.start_time,
+      end_time: item.end_time,
+      notes: item.notes || '',
+    });
+    setShowScheduleModal(true);
+  };
+
+  const handleCloseScheduleModal = () => {
+    setShowScheduleModal(false);
+    setEditingSchedule(null);
+  };
+
+  // Handle Create or Update Schedule
+  const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createSchedule(schedForm);
+      if (editingSchedule) {
+        await updateSchedule(editingSchedule.id, schedForm);
+      } else {
+        await createSchedule(schedForm);
+      }
       setShowScheduleModal(false);
+      setEditingSchedule(null);
       setSchedForm({
         area_id: areas[0]?.id || 1,
         day_of_week: 'MONDAY',
@@ -134,7 +173,7 @@ export default function AdminSchedulesPage() {
       });
       await loadData();
     } catch (err: unknown) {
-      alert((err as Error).message || 'Failed to create schedule.');
+      alert((err as Error).message || `Failed to ${editingSchedule ? 'update' : 'create'} schedule.`);
     } finally {
       setSubmitting(false);
     }
@@ -212,7 +251,7 @@ export default function AdminSchedulesPage() {
                   Broadcast Advisory
                 </button>
                 <button
-                  onClick={() => setShowScheduleModal(true)}
+                  onClick={handleOpenAddSchedule}
                   className="flex items-center gap-1.5 px-4.5 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
                 >
                   <Plus className="w-4 h-4" />
@@ -342,13 +381,24 @@ export default function AdminSchedulesPage() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         {isAdmin ? (
-                          <button
-                            onClick={() => handleDeleteSchedule(item.id)}
-                            className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded transition-colors"
-                            title="Deactivate schedule"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end space-x-1">
+                            <button
+                              onClick={() => handleOpenEditSchedule(item)}
+                              className="text-emerald-700 hover:text-emerald-900 p-1.5 hover:bg-emerald-50 rounded transition-colors"
+                              title="Edit schedule"
+                              aria-label={`Edit schedule for ${item.area_name || 'Area'}`}
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSchedule(item.id)}
+                              className="text-red-600 hover:text-red-800 p-1.5 hover:bg-red-50 rounded transition-colors"
+                              title="Deactivate schedule"
+                              aria-label={`Deactivate schedule for ${item.area_name || 'Area'}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         ) : (
                           <span className="inline-flex items-center text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded font-mono border border-slate-200">
                             View Only
@@ -369,17 +419,17 @@ export default function AdminSchedulesPage() {
             <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-slate-900 text-base">
-                  Add Collection Schedule Slot
+                  {editingSchedule ? 'Edit Collection Schedule Slot' : 'Add Collection Schedule Slot'}
                 </h3>
                 <button
-                  onClick={() => setShowScheduleModal(false)}
+                  onClick={handleCloseScheduleModal}
                   className="text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreateSchedule} className="space-y-3 text-xs">
+              <form onSubmit={handleSaveSchedule} className="space-y-3 text-xs">
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">
                     Barangay Purok / Sector
@@ -499,7 +549,7 @@ export default function AdminSchedulesPage() {
                 <div className="flex justify-end gap-2 pt-3 border-t">
                   <button
                     type="button"
-                    onClick={() => setShowScheduleModal(false)}
+                    onClick={handleCloseScheduleModal}
                     className="px-3 py-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
                   >
                     Cancel
@@ -509,7 +559,7 @@ export default function AdminSchedulesPage() {
                     disabled={submitting}
                     className="px-4 py-1.5 text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg disabled:opacity-50"
                   >
-                    {submitting ? 'Saving...' : 'Save Schedule'}
+                    {submitting ? 'Saving...' : editingSchedule ? 'Save Changes' : 'Save Schedule'}
                   </button>
                 </div>
               </form>

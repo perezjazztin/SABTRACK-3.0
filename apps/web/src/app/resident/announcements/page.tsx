@@ -3,6 +3,7 @@
 import { useRealtimeSync } from '@/lib/use-realtime-sync';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   Bell,
   Pin,
@@ -16,7 +17,9 @@ import {
   Tag,
   Clock,
   User,
+  Plus,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth-context';
 import { getAnnouncements } from '@/lib/api-client';
 import {
   AnnouncementItem,
@@ -64,6 +67,9 @@ const CATEGORY_CONFIG: Record<
 };
 
 export default function ResidentAnnouncementsPage() {
+  const { user } = useAuth();
+  const canManage = user?.role === 'BARANGAY_STAFF' || user?.role === 'BARANGAY_ADMIN';
+
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -126,14 +132,25 @@ export default function ResidentAnnouncementsPage() {
             Verified solid waste announcements, cleanup drives, and holiday collection timetables from Barangay Sabang Council.
           </p>
         </div>
-        <button
-          onClick={loadData}
-          disabled={loading}
-          className="neu-button flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 rounded-xl shadow-neu-raised transition-all disabled:opacity-50 self-start sm:self-auto"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {canManage && (
+            <Link
+              href="/admin/announcements"
+              className="flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl shadow-neu-green transition-all"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Compose Notice
+            </Link>
+          )}
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="neu-button flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 rounded-xl shadow-neu-raised transition-all disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
