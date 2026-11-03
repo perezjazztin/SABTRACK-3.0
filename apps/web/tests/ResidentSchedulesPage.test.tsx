@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import ResidentSchedulesPage from '@/app/resident/schedules/page';
 import * as apiClient from '@/lib/api-client';
@@ -15,17 +16,19 @@ describe('ResidentSchedulesPage', () => {
 
     vi.spyOn(authContext, 'useAuth').mockReturnValue({
       user: {
-        id: 'user-1',
+        id: 1,
         email: 'resident.test@sabtrack.local',
         full_name: 'Faith Valencia',
         role: 'RESIDENT',
         is_active: true,
         area_id: 1,
+        created_at: '2026-10-25T00:00:00Z',
       },
+      permissions: [],
+      error: null,
       isAuthenticated: true,
       loading: false,
       login: vi.fn(),
-      register: vi.fn(),
       logout: vi.fn(),
       hasRole: vi.fn(),
       hasPermission: vi.fn(),
