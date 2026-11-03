@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import AdminAnalyticsPage from '@/app/admin/analytics/page';
 import * as authContext from '@/lib/auth-context';
@@ -211,5 +211,88 @@ describe('AdminAnalyticsPage Component', () => {
 
     expect(screen.getByText('Staff View-Only Access Mode')).toBeInTheDocument();
     expect(screen.getByText('Read-Only')).toBeInTheDocument();
+  });
+
+  it('allows BARANGAY_ADMIN to summarize reports and download/print official PDF memorandum', async () => {
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 1,
+        email: 'admin@sabtrack.local',
+        role: 'BARANGAY_ADMIN',
+        full_name: 'Barangay Captain Admin',
+        is_active: true,
+        created_at: new Date().toISOString(),
+      },
+      permissions: ['analytics:read', 'reports:review'],
+      loading: false,
+      error: null,
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+      hasPermission: vi.fn().mockReturnValue(true),
+      hasRole: (roles: any) => {
+        const list = Array.isArray(roles) ? roles : [roles];
+        return list.includes('BARANGAY_ADMIN');
+      },
+      refreshSession: vi.fn(),
+    });
+
+    vi.spyOn(apiClient, 'getAnalyticsOverview').mockResolvedValue(mockAnalyticsData);
+
+    const mockNarrative = {
+      title: 'Official Solid Waste Governance Executive Decision-Support Memorandum',
+      executive_summary: 'Barangay Sabang recorded 24 community reports with 75% resolution rate. Purok 1 Centro requires supplementary collection.',
+      key_findings: [
+        'Resolution efficiency is at 75%.',
+        'Purok 1 Centro is the primary hotspot.',
+        'Forecast projects stable trend.',
+      ],
+      recommended_actions: [
+        'Dispatch immediate truck to Purok 1 Centro.',
+        'Enforce segregation advisory bulletins.',
+      ],
+      model_used: 'deterministic-municipal-synthesis-engine',
+      generated_at: new Date().toISOString(),
+      governance_disclaimer: 'Draft Decision-Support Aid (RA 10173 Protected).',
+      metrics_snapshot: {
+        total_reports: 24,
+        open_reports: 6,
+        resolved_reports: 18,
+        resolution_rate_pct: 75.0,
+        avg_resolution_days: 1.45,
+        primary_hotspot: 'Purok 1 Centro',
+        dominant_category: 'Uncollected Garbage',
+        trend_direction: 'STABLE',
+        projected_weekly_reports: 12.0,
+        backlog_clearance_eta_days: 2.3,
+        total_claims_awarded: 12,
+        total_points_distributed: 600,
+      },
+    };
+
+    const spyNarrative = vi.spyOn(apiClient, 'getReportNarrativeSummary').mockResolvedValue(mockNarrative);
+    const spyPrint = vi.spyOn(window, 'print').mockImplementation(() => {});
+
+    render(<AdminAnalyticsPage />);
+
+    // Admin should see Summarize Reports buttons
+    const summarizeBtns = screen.getAllByRole('button', { name: /Summarize Reports/i });
+    expect(summarizeBtns.length).toBeGreaterThanOrEqual(1);
+
+    // Click Summarize Reports
+    fireEvent.click(summarizeBtns[0]);
+
+    await waitFor(() => {
+      expect(spyNarrative).toHaveBeenCalledTimes(1);
+      expect(screen.getByText(/Executive Narrative Overview/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Barangay Sabang recorded 24 community reports/i).length).toBeGreaterThanOrEqual(1);
+    });
+
+    // Check Download / Print PDF button
+    const printBtn = screen.getByRole('button', { name: /Download \/ Print PDF/i });
+    expect(printBtn).toBeInTheDocument();
+
+    fireEvent.click(printBtn);
+    expect(spyPrint).toHaveBeenCalledTimes(1);
   });
 });

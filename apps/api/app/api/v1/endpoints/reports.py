@@ -1,6 +1,7 @@
 from app.core.websocket import ws_manager
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from app.modules.notifications.service import email_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select, desc
 
@@ -200,6 +201,7 @@ def get_report(
 def update_report_status(
     report_id: int,
     payload: ReportStatusUpdate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_permission(Permission.REPORTS_REVIEW)),
 ) -> ReportRead:
@@ -238,5 +240,18 @@ def update_report_status(
         "new_status": report.status.value,
         "resident_id": report.resident_id,
     })
+
+    # Dispatch email advisory to resident in background
+    if report.resident and report.resident.email:
+        background_tasks.add_task(
+            email_service.send_report_status_update,
+            to_email=report.resident.email,
+            resident_name=report.resident.full_name,
+            report_id=report.id,
+            new_status=report.status.value,
+            previous_status=previous_status,
+            remarks=payload.remarks or payload.admin_notes,
+            category=report.category.value if report.category else None,
+        )
 
     return _to_report_read(report)

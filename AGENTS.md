@@ -40,6 +40,12 @@
    - All permission enforcement is backend-enforced. Frontend visibility checks (hiding nav links) are UX only, not security.
    - Roles: `RESIDENT`, `BARANGAY_STAFF`, `BARANGAY_ADMIN`.
 
+6. **EcoBot Chatbot Off-Topic Response Rule:**
+   - When the user asks general trivia, identity, or non-waste questions (e.g., "who is our president", "what time is it", "how's the weather"):
+     - **Answer directly in sentence 1:** Give the factual answer immediately without conversational fluff.
+     - **One natural follow-up in sentence 2:** Briefly ask if they need assistance with waste management, collection schedules, or barangay concerns.
+     - **Strict Constraints:** Maximum total response length: 2 to 3 sentences. Do NOT cite Republic Acts, laws, or full system names unless the user explicitly asks about them. Do NOT append any DIY cards, blueprints, recipes, steps, or widget containers.
+
 ---
 
 ## 2. Directory Layout

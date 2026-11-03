@@ -14,6 +14,16 @@ class ScheduleCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=500, description="Optional pickup guidance")
 
 
+class ScheduleUpdate(BaseModel):
+    area_id: Optional[int] = Field(None, description="ID of the barangay area/purok")
+    day_of_week: Optional[DayOfWeek] = Field(None, description="Collection day of week")
+    waste_type: Optional[WasteType] = Field(None, description="Type of waste collected")
+    start_time: Optional[str] = Field(None, min_length=2, max_length=20, description="Collection window start")
+    end_time: Optional[str] = Field(None, min_length=2, max_length=20, description="Collection window end")
+    notes: Optional[str] = Field(None, max_length=500, description="Optional pickup guidance")
+    is_active: Optional[bool] = Field(None, description="Active status of the schedule")
+
+
 class ScheduleRead(BaseModel):
     id: int
     area_id: int
