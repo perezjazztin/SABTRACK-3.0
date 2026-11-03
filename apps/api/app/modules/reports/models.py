@@ -10,6 +10,7 @@ from sqlalchemy import (
     Integer,
     ForeignKey,
     Enum as SQLEnum,
+    false,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -92,6 +93,12 @@ class Report(Base):
     is_demo_data: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
+        nullable=False,
+    )
+    civic_task_eligible: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default=false(),
         nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(

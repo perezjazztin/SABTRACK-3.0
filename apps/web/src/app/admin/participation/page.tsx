@@ -86,7 +86,7 @@ export default function AdminParticipationPage() {
   const handleOpenReview = (claim: ClaimItem) => {
     setSelectedClaim(claim);
     setReviewNotes('');
-    setCustomPoints(claim.points_requested);
+    setCustomPoints(claim.activity_type === 'SEGREGATION' ? 25 : claim.points_requested);
   };
 
   // Submit Review (Approve or Reject)
@@ -97,7 +97,9 @@ export default function AdminParticipationPage() {
       const payload: ClaimReviewPayload = {
         status,
         review_notes: reviewNotes.trim() || undefined,
-        points_awarded: status === 'APPROVED' ? customPoints : undefined,
+        ...(status === 'APPROVED' && selectedClaim.activity_type !== 'SEGREGATION'
+          ? { points_awarded: customPoints }
+          : {}),
       };
       await reviewClaim(selectedClaim.id, payload);
       setSelectedClaim(null);
@@ -219,7 +221,8 @@ export default function AdminParticipationPage() {
                 <tr>
                   <th className="px-5 py-4">Resident</th>
                   <th className="px-5 py-4">Civic Action Title</th>
-                  <th className="px-5 py-4">Points Requested</th>
+                  <th className="px-5 py-4">Claim Type</th>
+                  <th className="px-5 py-4">Award / Requested</th>
                   <th className="px-5 py-4">Evidence</th>
                   <th className="px-5 py-4">Status</th>
                   <th className="px-5 py-4 text-right">Actions</th>
@@ -228,7 +231,7 @@ export default function AdminParticipationPage() {
               <tbody className="divide-y divide-slate-200/60 bg-white">
                 {claims.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-4 py-8 text-center text-slate-500">
                       No claims found matching status filter "{statusFilter}".
                     </td>
                   </tr>
@@ -246,8 +249,13 @@ export default function AdminParticipationPage() {
                           {claim.description}
                         </div>
                       </td>
+                      <td className="px-4 py-3 font-semibold text-slate-700">
+                        {claim.activity_type ?? 'OTHER'}
+                      </td>
                       <td className="px-4 py-3 font-bold text-emerald-800">
-                        +{claim.points_requested} pts
+                        {claim.activity_type === 'SEGREGATION'
+                          ? '25 pts fixed'
+                          : `+${claim.points_requested} pts`}
                       </td>
                       <td className="px-4 py-3">
                         {claim.evidence_url ? (
@@ -302,9 +310,14 @@ export default function AdminParticipationPage() {
         {/* Modal: Review Claim */}
         {selectedClaim && (
           <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="claim-review-title"
+              className="neu-modal rounded-3xl border border-slate-200/70 max-w-md w-full p-6 sm:p-7 space-y-5 shadow-neu-raised"
+            >
               <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 id="claim-review-title" className="font-bold text-slate-900 text-base">
                   Verify Participation Claim #{selectedClaim.id}
                 </h3>
                 <button
@@ -329,6 +342,12 @@ export default function AdminParticipationPage() {
                   </span>
                 </div>
                 <div>
+                  <span className="text-slate-500">Claim Type: </span>
+                  <span className="font-semibold text-slate-800">
+                    {selectedClaim.activity_type ?? 'OTHER'}
+                  </span>
+                </div>
+                <div>
                   <span className="text-slate-500">Description: </span>
                   <p className="text-slate-700 mt-0.5">{selectedClaim.description}</p>
                 </div>
@@ -348,19 +367,28 @@ export default function AdminParticipationPage() {
               </div>
 
               <div className="space-y-3 text-xs">
-                <div>
-                  <label className="block font-medium text-slate-700 mb-1">
-                    Points to Award upon Approval
-                  </label>
-                  <input
-                    type="number"
-                    value={customPoints}
-                    onChange={(e) => setCustomPoints(Number(e.target.value))}
-                    min={1}
-                    max={500}
-                    className="w-full px-3 py-1.5 border rounded-lg"
-                  />
-                </div>
+                {selectedClaim.activity_type === 'SEGREGATION' ? (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="font-semibold text-emerald-900">Fixed 25-point award</p>
+                    <p className="mt-1 text-slate-700">
+                      Approved segregation claims receive 25 points; custom awards are not available.
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="block font-medium text-slate-700 mb-1">
+                      Points to Award upon Approval
+                    </label>
+                    <input
+                      type="number"
+                      value={customPoints}
+                      onChange={(e) => setCustomPoints(Number(e.target.value))}
+                      min={1}
+                      max={500}
+                      className="w-full px-3 py-1.5 border rounded-lg"
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label className="block font-medium text-slate-700 mb-1">

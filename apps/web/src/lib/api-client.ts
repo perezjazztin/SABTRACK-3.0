@@ -314,7 +314,30 @@ import {
   InitiativeCreatePayload,
   ClaimCreatePayload,
   ClaimReviewPayload,
+  ArticleReadingStatus,
+  ArticleReadingSession,
+  ArticleReadingCompletion,
 } from '@/types/gamification';
+
+export async function getArticleReadingStatus(): Promise<ArticleReadingStatus> {
+  return apiFetch<ArticleReadingStatus>('/api/v1/gamification/article-reading/status');
+}
+
+export async function openArticleReading(articleId: string): Promise<ArticleReadingSession> {
+  return apiFetch<ArticleReadingSession>('/api/v1/gamification/article-reading/open', {
+    method: 'POST',
+    body: JSON.stringify({ article_id: articleId }),
+  });
+}
+
+export async function completeArticleReading(
+  sessionId: string
+): Promise<ArticleReadingCompletion> {
+  return apiFetch<ArticleReadingCompletion>('/api/v1/gamification/article-reading/complete', {
+    method: 'POST',
+    body: JSON.stringify({ session_id: sessionId }),
+  });
+}
 
 export async function getMyPointsSummary(): Promise<ResidentPointsSummary> {
   return apiFetch<ResidentPointsSummary>('/api/v1/gamification/my-points');
@@ -475,4 +498,66 @@ export async function getEcoBotPrompts(): Promise<QuickPromptItem[]> {
   return apiFetch<QuickPromptItem[]>('/api/v1/chatbot/prompts', {
     method: 'GET',
   });
+}
+
+// ---------------------------------------------------------------------------
+// Gamification: Leaderboard, Civic Tasks, Rewards Catalog & Redemptions
+// ---------------------------------------------------------------------------
+import {
+  RewardItem,
+  RedemptionRequest,
+  RedemptionReviewPayload,
+  LeaderboardEntry,
+  CivicTaskItem,
+} from '@/types/gamification';
+
+/**
+ * Leaderboard — top residents ranked by verified SAB-Points (RA 10173 masked names).
+ */
+export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
+  return apiFetch<LeaderboardEntry[]>('/api/v1/gamification/leaderboard');
+}
+
+/**
+ * Civic Tasks — predefined missions and completion progress for the resident.
+ */
+export async function getCivicTasks(): Promise<CivicTaskItem[]> {
+  return apiFetch<CivicTaskItem[]>('/api/v1/gamification/tasks');
+}
+
+/**
+ * Rewards Catalog — active prizes redeemable with SAB-Points.
+ */
+export async function getRewards(): Promise<RewardItem[]> {
+  return apiFetch<RewardItem[]>('/api/v1/gamification/rewards');
+}
+
+/**
+ * Redeem SAB-Points for a reward. Writes a double-entry ledger deduction.
+ */
+export async function redeemReward(rewardId: number): Promise<RedemptionRequest> {
+  return apiFetch<RedemptionRequest>('/api/v1/gamification/redeem', {
+    method: 'POST',
+    body: JSON.stringify({ reward_id: rewardId }),
+  });
+}
+
+/**
+ * My redemption vouchers and claim status history.
+ */
+export async function getMyRedemptions(): Promise<RedemptionRequest[]> {
+  return apiFetch<RedemptionRequest[]>('/api/v1/gamification/my-redemptions');
+}
+
+export async function reviewRedemption(
+  redemptionId: number,
+  payload: RedemptionReviewPayload
+): Promise<RedemptionRequest> {
+  return apiFetch<RedemptionRequest>(
+    `/api/v1/gamification/redemptions/${redemptionId}/review`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }
+  );
 }

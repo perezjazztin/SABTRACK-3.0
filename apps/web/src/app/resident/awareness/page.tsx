@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
   Video,
@@ -18,6 +18,17 @@ import {
   Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  completeArticleReading,
+  getArticleReadingStatus,
+  getMyPointsSummary,
+  openArticleReading,
+} from '@/lib/api-client';
+import {
+  ArticleReadingCompletion,
+  ArticleReadingSession,
+  ArticleReadingStatus,
+} from '@/types/gamification';
 
 type TopicCategory = 'ALL' | 'SEGREGATION' | 'SUSTAINABLE_DEV' | 'VIDEOS' | 'COMPOSTING';
 
@@ -243,6 +254,196 @@ export default function AwarenessHubPage() {
   const [selectedCategory, setSelectedCategory] = useState<TopicCategory>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeModalItem, setActiveModalItem] = useState<EducationalItem | null>(null);
+  const [readingStatus, setReadingStatus] = useState<ArticleReadingStatus | null>(null);
+  const [readingStatusError, setReadingStatusError] = useState<string | null>(null);
+  const [readingError, setReadingError] = useState<string | null>(null);
+  const [readingSession, setReadingSession] = useState<ArticleReadingSession | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [reachedArticleEnd, setReachedArticleEnd] = useState(false);
+  const [completionResult, setCompletionResult] = useState<ArticleReadingCompletion | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [refreshedPoints, setRefreshedPoints] = useState<number | null>(null);
+  const openedArticleId = useRef<string | null>(null);
+  const articleContentRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getArticleReadingStatus()
+      .then((status) => {
+        if (active) {
+          setReadingStatus(status);
+          setReadingStatusError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          const reason = error instanceof Error ? `: ${error.message}` : '';
+          setReadingStatusError(`Unable to load article reading status${reason}`);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeModalItem || activeModalItem.type !== 'article' || !readingStatus) {
+      return;
+    }
+
+    if (openedArticleId.current === activeModalItem.id) {
+      return;
+    }
+    openedArticleId.current = activeModalItem.id;
+
+    setReadingSession(null);
+    setElapsedSeconds(0);
+    setReachedArticleEnd(false);
+    setCompletionResult(null);
+    setReadingError(null);
+
+    if (readingStatus.completed_article_ids.includes(activeModalItem.id)) {
+      return;
+    }
+
+    let active = true;
+    openArticleReading(activeModalItem.id)
+      .then((session) => {
+        if (active) {
+          setReadingSession(session);
+          if (session.already_read) {
+            setReadingStatus((current) =>
+              current
+                ? {
+                    ...current,
+                    completed_article_ids: Array.from(
+                      new Set([...current.completed_article_ids, session.article_id])
+                    ),
+                  }
+                : current
+            );
+          }
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setReadingError(
+            error instanceof Error ? error.message : 'Unable to start article reading session.'
+          );
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [activeModalItem, readingStatus]);
+
+  useEffect(() => {
+    if (
+      activeModalItem?.type !== 'article' ||
+      !readingSession?.session_id ||
+      !articleContentRef.current
+    ) {
+      return;
+    }
+
+    const content = articleContentRef.current;
+    if (content.clientHeight > 0 && content.scrollHeight <= content.clientHeight + 1) {
+      setReachedArticleEnd(true);
+    }
+  }, [activeModalItem, readingSession]);
+
+  useEffect(() => {
+    if (!readingSession?.session_id || completionResult || reachedArticleEnd && elapsedSeconds >= (readingStatus?.minimum_read_seconds ?? 20)) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setElapsedSeconds((seconds) => seconds + 1);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [readingSession, completionResult, reachedArticleEnd, elapsedSeconds, readingStatus]);
+
+  const openResource = (item: EducationalItem) => {
+    setActiveModalItem(item);
+  };
+
+  const closeResource = () => {
+    setActiveModalItem(null);
+    openedArticleId.current = null;
+    setReadingSession(null);
+    setElapsedSeconds(0);
+    setReachedArticleEnd(false);
+    setCompletionResult(null);
+    setReadingError(null);
+  };
+
+  const handleArticleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 1) {
+      setReachedArticleEnd(true);
+    }
+  };
+
+  const refreshAfterCompletion = async (result: ArticleReadingCompletion) => {
+    if (result.status === 'AWARDED' || result.status === 'ALREADY_READ') {
+      setReadingStatus((current) =>
+        current
+          ? {
+              ...current,
+              awards_today: result.awards_today,
+              completed_article_ids: Array.from(
+                new Set([...current.completed_article_ids, result.article_id])
+              ),
+            }
+          : current
+      );
+    } else {
+      setReadingStatus((current) =>
+        current ? { ...current, awards_today: result.awards_today } : current
+      );
+    }
+
+    try {
+      const [status, pointsSummary] = await Promise.all([
+        getArticleReadingStatus(),
+        getMyPointsSummary(),
+      ]);
+      setReadingStatus(status);
+      setRefreshedPoints(pointsSummary.total_points);
+    } catch (error: unknown) {
+      setReadingError(
+        error instanceof Error
+          ? `The reading result was recorded, but points could not be refreshed: ${error.message}`
+          : 'The reading result was recorded, but points could not be refreshed.'
+      );
+    }
+  };
+
+  const handleMarkAsRead = async () => {
+    const sessionId = readingSession?.session_id;
+    if (!sessionId || isCompleting) {
+      return;
+    }
+
+    setIsCompleting(true);
+    setReadingError(null);
+    try {
+      const result = await completeArticleReading(sessionId);
+      setCompletionResult(result);
+      if (result.status === 'DAILY_LIMIT_REACHED') {
+        setReadingSession(null);
+      }
+      await refreshAfterCompletion(result);
+    } catch (error: unknown) {
+      setReadingError(
+        error instanceof Error ? error.message : 'Unable to submit article reading completion.'
+      );
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   const filteredResources = EDUCATIONAL_RESOURCES.filter((item) => {
     const matchesCategory =
@@ -269,8 +470,22 @@ export default function AwarenessHubPage() {
           </h1>
 
           <p className="text-xs sm:text-sm text-emerald-100/95 leading-relaxed max-w-2xl">
-            Read expert environmental guides, watch step-by-step video tutorials, and master waste segregation to earn civic SAB-Points while advancing UN Sustainable Development Goals (SDG 11 &amp; 12) right here in Lipa City.
+            Read expert environmental guides, watch step-by-step video tutorials, and master waste segregation while advancing UN Sustainable Development Goals (SDG 11 &amp; 12) right here in Lipa City.
           </p>
+
+          <div className="space-y-1 text-xs text-emerald-100/95" aria-live="polite">
+            <p>Eligible articles earn 5 SAB-Points after at least 20 seconds.</p>
+            <p>Reach the end and select Mark as Read, up to three articles per day.</p>
+            <p>Each article can earn points only once.</p>
+            {readingStatus && (
+              <p className="font-semibold">
+                Today&apos;s article awards: {readingStatus.awards_today} / {readingStatus.daily_limit}
+              </p>
+            )}
+          </div>
+          {readingStatusError && (
+            <p role="alert" className="text-sm text-amber-100">{readingStatusError}</p>
+          )}
 
           <div className="pt-2 flex flex-wrap gap-2 text-xs">
             <span className="bg-black/25 px-2.5 py-1 rounded-lg border border-white/10 text-emerald-100">
@@ -521,6 +736,9 @@ export default function AwarenessHubPage() {
                     <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold border', item.badgeColor)}>
                       {item.badge}
                     </span>
+                    {item.type === 'article' && readingStatus?.completed_article_ids.includes(item.id) && (
+                      <span className="text-[10px] font-bold text-emerald-800">Read ✓</span>
+                    )}
                     <span className="text-[11px] font-mono text-slate-500 flex items-center">
                       {item.type === 'video' ? <Video className="w-3 h-3 mr-1 text-slate-400" /> : <BookOpen className="w-3 h-3 mr-1 text-slate-400" />}
                       {item.durationOrReadTime}
@@ -546,7 +764,7 @@ export default function AwarenessHubPage() {
                     {item.type === 'video' ? '▶ Watch Tutorial' : '📖 Read Article'}
                   </span>
                   <button
-                    onClick={() => setActiveModalItem(item)}
+                    onClick={() => openResource(item)}
                     className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-civic-forest hover:bg-civic-forest hover:text-white transition-colors shadow-soft-raised"
                   >
                     View Details
@@ -580,7 +798,7 @@ export default function AwarenessHubPage() {
                 </p>
               </div>
               <button
-                onClick={() => setActiveModalItem(null)}
+                onClick={closeResource}
                 aria-label="Close modal"
                 className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
@@ -602,7 +820,13 @@ export default function AwarenessHubPage() {
             )}
 
             {/* Reading Content */}
-            <div className="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
+            <div
+              ref={articleContentRef}
+              role="region"
+              aria-label="Article content"
+              onScroll={handleArticleScroll}
+              className="max-h-60 overflow-y-auto space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed pr-2"
+            >
               {activeModalItem.content.map((p, idx) => (
                 <p key={idx}>{p}</p>
               ))}
@@ -624,10 +848,51 @@ export default function AwarenessHubPage() {
               </ul>
             </div>
 
+            {activeModalItem.type === 'article' && (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2">
+                {readingStatusError && <p role="alert">{readingStatusError}</p>}
+                {readingError && <p role="alert">{readingError}</p>}
+                {completionResult?.status === 'AWARDED' && (
+                  <div className="font-bold text-emerald-800">
+                    <p>+{completionResult.points_awarded} SAB-Points</p>
+                    {refreshedPoints !== null && <p>Current balance: {refreshedPoints} SAB-Points</p>}
+                  </div>
+                )}
+                {readingStatus?.completed_article_ids.includes(activeModalItem.id) ? (
+                  <p className="font-semibold text-emerald-800">Read ✓</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-emerald-900">
+                      Reading progress: {Math.min(elapsedSeconds, readingStatus?.minimum_read_seconds ?? 20)} / {readingStatus?.minimum_read_seconds ?? 20} seconds
+                      {reachedArticleEnd ? ' • Article end reached' : ' • Scroll to the end'}
+                    </p>
+                    {completionResult?.status === 'DAILY_LIMIT_REACHED' && (
+                      <p className="text-sm font-semibold text-amber-800">
+                        You’ve reached today’s reading limit. Come back tomorrow to earn 5 SAB-Points for this article.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleMarkAsRead}
+                      disabled={
+                        !readingSession?.session_id ||
+                        !reachedArticleEnd ||
+                        elapsedSeconds < (readingStatus?.minimum_read_seconds ?? 20) ||
+                        isCompleting
+                      }
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-civic-forest text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isCompleting ? 'Submitting…' : 'Mark as Read'}
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
+
             {/* Close action */}
             <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setActiveModalItem(null)}
+                onClick={closeResource}
                 className="px-4 py-2 rounded-xl text-xs font-semibold bg-civic-forest text-white hover:bg-civic-forestHover transition-colors shadow-soft-raised"
               >
                 Close Guide
