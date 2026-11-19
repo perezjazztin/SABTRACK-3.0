@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "paths": {
+      "@/*": ["../src/*"]
+    },
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": [
+    "ResidentPointsPage.test.tsx"
+  ],
+  "exclude": []
+}
+

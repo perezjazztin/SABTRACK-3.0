@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.deps import get_current_user, require_permission, verify_csrf
-from app.core.security import Permission
+from app.core.deps import get_current_user, require_permission, require_role, verify_csrf
+from app.core.security import Permission, UserRole
 from app.core.websocket import ws_manager
 from app.modules.identity.models import User
 from app.modules.gamification.schemas import (
@@ -16,6 +16,17 @@ from app.modules.gamification.schemas import (
     ClaimReviewPayload,
     ResidentPointsSummary,
     ClaimStatus,
+    RewardItemRead,
+    RedemptionCreate,
+    RedemptionReviewPayload,
+    RedemptionRequestRead,
+    CivicTaskItem,
+    LeaderboardEntry,
+    ArticleReadingOpenRequest,
+    ArticleReadingSessionRead,
+    ArticleReadingStatus,
+    ArticleReadingCompleteRequest,
+    ArticleReadingCompletion,
 )
 from app.modules.gamification.service import (
     create_initiative,
@@ -24,9 +35,64 @@ from app.modules.gamification.service import (
     get_claims,
     review_claim,
     get_resident_points_summary,
+    get_reward_items,
+    redeem_reward,
+    review_redemption,
+    get_my_redemptions,
+    get_leaderboard,
+    get_civic_tasks,
+    open_article_reading_session,
+    get_article_reading_status,
+    complete_article_reading,
 )
 
 router = APIRouter()
+
+
+@router.post(
+    "/article-reading/open",
+    response_model=ArticleReadingSessionRead,
+    summary="Open a server-tracked Awareness Hub article reading session",
+    dependencies=[Depends(verify_csrf)],
+)
+def open_article_reading_endpoint(
+    payload: ArticleReadingOpenRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RESIDENT)),
+):
+    try:
+        return open_article_reading_session(db, current_user.id, payload.article_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.get(
+    "/article-reading/status",
+    response_model=ArticleReadingStatus,
+    summary="Get resident Awareness Hub article reading progress",
+)
+def article_reading_status_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RESIDENT)),
+):
+    return get_article_reading_status(db, current_user.id)
+
+
+@router.post(
+    "/article-reading/complete",
+    response_model=ArticleReadingCompletion,
+    summary="Complete a server-tracked Awareness Hub article reading session",
+    dependencies=[Depends(verify_csrf)],
+)
+def complete_article_reading_endpoint(
+    payload: ArticleReadingCompleteRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RESIDENT)),
+):
+    try:
+        return complete_article_reading(db, current_user.id, payload.session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
 
 
 @router.get(
@@ -40,6 +106,109 @@ def get_my_points_endpoint(
 ):
     """Returns total points, active tier, and complete immutable transaction history."""
     return get_resident_points_summary(db, current_user.id)
+
+
+@router.get(
+    "/leaderboard",
+    response_model=List[LeaderboardEntry],
+    summary="Get community civic action leaderboard",
+)
+def get_leaderboard_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns top participating residents ranked by verified SAB-Points and purok."""
+    return get_leaderboard(db, current_user.id)
+
+
+@router.get(
+    "/tasks",
+    response_model=List[CivicTaskItem],
+    summary="Get resident civic action tasks and missions",
+)
+def get_tasks_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns predefined civic tasks, requirements, point values, and completion progress."""
+    return get_civic_tasks(db, current_user.id)
+
+
+@router.get(
+    "/rewards",
+    response_model=List[RewardItemRead],
+    summary="List in-app academic demonstration vouchers",
+)
+def get_rewards_endpoint(db: Session = Depends(get_db)):
+    """Returns active vouchers recorded for academic demonstration only."""
+    return get_reward_items(db, active_only=True)
+
+
+@router.post(
+    "/redeem",
+    response_model=RedemptionRequestRead,
+    status_code=status.HTTP_201_CREATED,
+    summary="Record an in-app academic demonstration voucher",
+    dependencies=[Depends(verify_csrf)],
+)
+def redeem_reward_endpoint(
+    payload: RedemptionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Record an in-app academic demonstration voucher using accumulated points."""
+    try:
+        redemption = redeem_reward(db, current_user.id, payload.reward_id)
+        ws_manager.broadcast_sync({
+            "type": "REWARD_REDEEMED",
+            "entity": "rewards",
+            "id": redemption.id,
+            "resident_id": current_user.id,
+            "reward_name": redemption.reward_name,
+        })
+        return redemption
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get(
+    "/my-redemptions",
+    response_model=List[RedemptionRequestRead],
+    summary="List my academic demonstration vouchers",
+)
+def get_my_redemptions_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Returns only the current resident's in-app voucher history."""
+    return get_my_redemptions(db, current_user.id)
+
+
+@router.patch(
+    "/redemptions/{redemption_id}/review",
+    response_model=RedemptionRequestRead,
+    summary="Review a reward redemption (Staff / Admin)",
+    dependencies=[Depends(verify_csrf)],
+)
+def review_redemption_endpoint(
+    redemption_id: int,
+    payload: RedemptionReviewPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_permission(Permission.PARTICIPATION_REVIEW)),
+):
+    """Approve, cancel, or fulfill a resident's in-app academic demonstration voucher."""
+    try:
+        redemption = review_redemption(db, redemption_id, current_user.id, payload)
+        ws_manager.broadcast_sync({
+            "type": "REDEMPTION_REVIEWED",
+            "entity": "redemptions",
+            "id": redemption.id,
+            "status": redemption.status.value,
+            "resident_id": redemption.resident_id,
+        })
+        return redemption
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.get(

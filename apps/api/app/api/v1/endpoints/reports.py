@@ -17,6 +17,7 @@ from app.modules.reports.schemas import (
     ReportListResponse,
     StatusHistoryRead,
 )
+from app.modules.gamification.service import award_verified_report
 
 router = APIRouter()
 
@@ -86,6 +87,7 @@ def create_report(
         photo_url=payload.photo_url,
         status=ReportStatus.SUBMITTED,
         is_demo_data=True if "demo" in current_user.email else False,
+        civic_task_eligible=True,
     )
     db.add(new_report)
     db.flush()
@@ -220,6 +222,12 @@ def update_report_status(
 
     if payload.admin_notes is not None:
         report.admin_notes = payload.admin_notes
+
+    if (
+        previous_status != ReportStatus.RESOLVED.value
+        and payload.status == ReportStatus.RESOLVED
+    ):
+        award_verified_report(db, report)
 
     # Add immutable history record
     history_entry = ReportStatusHistory(

@@ -1,15 +1,126 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, it, expect, vi, beforeEach } from 'vitest';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import AwarenessHubPage from '@/app/resident/awareness/page';
+
+const completedArticleId = 'article-sdgs-sabtrack';
+const readingStatus = {
+  completed_article_ids: [] as string[],
+  awards_today: 0,
+  daily_limit: 3,
+  points_per_article: 5,
+  minimum_read_seconds: 20,
+};
+
+let statusResponse: typeof readingStatus;
+let openSessions: Array<{ article_id: string; session_id: string | null; opened_at: string | null; already_read: boolean }>;
+let completionResponse: {
+  article_id: string;
+  status: 'AWARDED' | 'ALREADY_READ' | 'DAILY_LIMIT_REACHED';
+  points_awarded: number;
+  awards_today: number;
+};
+let statusFailure: boolean;
+let fetchSpy: ReturnType<typeof vi.fn>;
+
+function jsonResponse(data: unknown, ok = true) {
+  return {
+    ok,
+    status: ok ? 200 : 500,
+    json: async () => data,
+  };
+}
+
+async function flushMicrotasks() {
+  await act(async () => {
+    for (let index = 0; index < 5; index += 1) {
+      await Promise.resolve();
+    }
+  });
+}
+
+async function waitForStatusLoad() {
+  await screen.findByText(/Today's article awards: \d+ \/ \d+/);
+}
+
+function scrollToEnd(element: HTMLElement) {
+  Object.defineProperties(element, {
+    scrollTop: { configurable: true, value: 100 },
+    scrollHeight: { configurable: true, value: 200 },
+    clientHeight: { configurable: true, value: 100 },
+  });
+  fireEvent.scroll(element);
+}
 
 describe('AwarenessHubPage Component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    statusResponse = { ...readingStatus };
+    openSessions = [];
+    completionResponse = {
+      article_id: completedArticleId,
+      status: 'AWARDED',
+      points_awarded: 5,
+      awards_today: 1,
+    };
+    statusFailure = false;
+    fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('/api/v1/gamification/article-reading/status')) {
+        return statusFailure
+          ? jsonResponse({ detail: 'Reading status unavailable.' }, false)
+          : jsonResponse(statusResponse);
+      }
+      if (url.includes('/api/v1/gamification/article-reading/open')) {
+        const request = JSON.parse(String(init?.body)) as { article_id: string };
+        const session = {
+          article_id: request.article_id,
+          session_id: `session-${openSessions.length + 1}`,
+          opened_at: '2026-11-01T13:00:00Z',
+          already_read: false,
+        };
+        openSessions.push(session);
+        return jsonResponse(session);
+      }
+      if (url.includes('/api/v1/gamification/article-reading/complete')) {
+        if (completionResponse.status === 'AWARDED') {
+          statusResponse = {
+            ...statusResponse,
+            awards_today: completionResponse.awards_today,
+            completed_article_ids: Array.from(
+              new Set([...statusResponse.completed_article_ids, completionResponse.article_id])
+            ),
+          };
+        } else if (completionResponse.status === 'DAILY_LIMIT_REACHED') {
+          statusResponse = {
+            ...statusResponse,
+            awards_today: completionResponse.awards_today,
+          };
+        }
+        return jsonResponse(completionResponse);
+      }
+      if (url.includes('/api/v1/gamification/my-points')) {
+        return jsonResponse({
+          total_points: 5,
+          tier: 'Bronze',
+          verified_activities_count: 0,
+          ledger_history: [],
+          recent_claims: [],
+        });
+      }
+      throw new Error(`Unexpected API request: ${url}`);
+    });
+    vi.stubGlobal('fetch', fetchSpy);
   });
 
-  it('renders AwarenessHub header, topic tabs, and segregation matrix', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('renders AwarenessHub header, topic tabs, and segregation matrix', async () => {
     render(<AwarenessHubPage />);
+    await waitForStatusLoad();
 
     expect(
       screen.getByText(/AwarenessHub: Waste, SDGs & Climate Action/i)
@@ -28,8 +139,9 @@ describe('AwarenessHubPage Component', () => {
     expect(screen.getByText(/Special \/ Hazardous \(Mapanganib\)/i)).toBeInTheDocument();
   });
 
-  it('renders educational resources including video guides and SDG articles', () => {
+  it('renders educational resources including video guides and SDG articles', async () => {
     render(<AwarenessHubPage />);
+    await waitForStatusLoad();
 
     expect(
       screen.getByText(/Sustainable Development Goals \(SDGs\) & Digital Governance/i)
@@ -64,8 +176,9 @@ describe('AwarenessHubPage Component', () => {
     ).toBeGreaterThan(0);
   });
 
-  it('filters resources when a category tab is clicked', () => {
+  it('filters resources when a category tab is clicked', async () => {
     render(<AwarenessHubPage />);
+    await waitForStatusLoad();
 
     // Click "Home Composting" tab
     const compostingTab = screen.getByRole('tab', { name: /Home Composting/i });
@@ -82,8 +195,9 @@ describe('AwarenessHubPage Component', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('opens and closes reader modal when View Details is clicked', () => {
+  it('opens and closes reader modal when View Details is clicked', async () => {
     render(<AwarenessHubPage />);
+    await waitForStatusLoad();
 
     const viewDetailsButtons = screen.getAllByRole('button', { name: /View Details/i });
     expect(viewDetailsButtons.length).toBeGreaterThan(0);

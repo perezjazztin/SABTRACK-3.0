@@ -1,6 +1,12 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import select
 from starlette.testclient import TestClient
 
 from app.core.config import settings
+from app.modules.gamification.models import PointsLedger
+from app.modules.identity.models import User
+from app.modules.reports.models import Report, ReportCategory, ReportStatus
 
 
 def _login(client: TestClient, email: str, password: str = "TestSecretPassword123!"):
@@ -229,3 +235,218 @@ def test_staff_can_review_and_transition_report_status_with_immutable_history(cl
     res_data = resident_view.json()
     assert res_data["status"] == "RESOLVED"
     assert len(res_data["status_history"]) == 3
+
+
+def test_first_report_award_waits_for_staff_resolution(
+    client: TestClient, db_session
+):
+    resident_csrf, resident_cookie = _login(client, "resident@sabtrack.test")
+    staff_csrf, staff_cookie = _login(client, "staff@sabtrack.test")
+    create_response = client.post(
+        "/api/v1/reports",
+        json={
+            "category": "UNCOLLECTED_GARBAGE",
+            "title": "Uncollected neighborhood garbage",
+            "description": "Household waste has remained uncollected since yesterday.",
+            "location_text": "Purok 2 near the community hall",
+            "photo_url": "/api/v1/uploads/first-report.jpg",
+        },
+        headers={"x-csrf-token": resident_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: resident_cookie},
+    )
+    assert create_response.status_code == 201
+    report_id = create_response.json()["id"]
+    resident_id = create_response.json()["resident_id"]
+
+    before_review = client.get(
+        "/api/v1/gamification/tasks",
+        cookies={settings.SESSION_COOKIE_NAME: resident_cookie},
+    )
+    assert next(t for t in before_review.json() if t["id"] == "first_report")["status"] == "AVAILABLE"
+
+    under_review = client.patch(
+        f"/api/v1/reports/{report_id}/status",
+        json={"status": "UNDER_REVIEW"},
+        headers={"x-csrf-token": staff_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: staff_cookie},
+    )
+    assert under_review.status_code == 200
+    assert db_session.scalars(
+        select(PointsLedger).where(PointsLedger.resident_id == resident_id)
+    ).all() == []
+
+    resolved = client.patch(
+        f"/api/v1/reports/{report_id}/status",
+        json={"status": "RESOLVED"},
+        headers={"x-csrf-token": staff_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: staff_cookie},
+    )
+    assert resolved.status_code == 200
+    awards = db_session.scalars(
+        select(PointsLedger).where(PointsLedger.resident_id == resident_id)
+    ).all()
+    first_report_awards = [
+        award for award in awards
+        if getattr(award, "task_key", None) == "first_report"
+    ]
+    assert len(first_report_awards) == 1
+    assert first_report_awards[0].points == 50
+    assert getattr(first_report_awards[0], "task_source_id", None) == str(report_id)
+
+    repeated_resolution = client.patch(
+        f"/api/v1/reports/{report_id}/status",
+        json={"status": "RESOLVED"},
+        headers={"x-csrf-token": staff_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: staff_cookie},
+    )
+    assert repeated_resolution.status_code == 200
+    assert len(
+        [
+            award
+            for award in db_session.scalars(
+                select(PointsLedger).where(PointsLedger.resident_id == resident_id)
+            ).all()
+            if getattr(award, "task_key", None) == "first_report"
+        ]
+    ) == 1
+
+
+def test_prelaunch_report_cannot_earn_task_awards_after_resolution(
+    client: TestClient, db_session
+):
+    resident = db_session.scalar(
+        select(User).where(User.email == "resident@sabtrack.test")
+    )
+    assert resident is not None
+    legacy_report = Report(
+        resident_id=resident.id,
+        category=ReportCategory.ILLEGAL_DUMPING,
+        title="Legacy report with complete evidence",
+        description="A pre-launch report with all required evidence fields.",
+        location_text="Purok 2 beside the basketball court",
+        latitude=13.9412,
+        longitude=121.1625,
+        photo_url="/api/v1/uploads/legacy-report.jpg",
+        status=ReportStatus.SUBMITTED,
+        is_demo_data=True,
+        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    db_session.add(legacy_report)
+    db_session.commit()
+
+    staff_csrf, staff_cookie = _login(client, "staff@sabtrack.test")
+    resolved = client.patch(
+        f"/api/v1/reports/{legacy_report.id}/status",
+        json={"status": "RESOLVED"},
+        headers={"x-csrf-token": staff_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: staff_cookie},
+    )
+
+    assert resolved.status_code == 200
+    awards = db_session.scalars(
+        select(PointsLedger).where(PointsLedger.resident_id == resident.id)
+    ).all()
+    assert awards == []
+
+
+def test_evidence_report_award_requires_photo_coordinates_and_location(
+    client: TestClient, db_session
+):
+    resident = db_session.scalar(
+        select(User).where(User.email == "resident@sabtrack.test")
+    )
+    assert resident is not None
+    invalid_evidence = [
+        {
+            "photo_url": None,
+            "latitude": 13.9412,
+            "longitude": 121.1625,
+            "location_text": "Purok 2 beside the basketball court",
+        },
+        {
+            "photo_url": "/api/v1/uploads/no-latitude.jpg",
+            "latitude": None,
+            "longitude": 121.1625,
+            "location_text": "Purok 2 beside the basketball court",
+        },
+        {
+            "photo_url": "/api/v1/uploads/no-longitude.jpg",
+            "latitude": 13.9412,
+            "longitude": None,
+            "location_text": "Purok 2 beside the basketball court",
+        },
+        {
+            "photo_url": "/api/v1/uploads/no-location.jpg",
+            "latitude": 13.9412,
+            "longitude": 121.1625,
+            "location_text": "   ",
+        },
+    ]
+    reports = [
+        Report(
+            resident_id=resident.id,
+            category=ReportCategory.ILLEGAL_DUMPING,
+            title=f"Evidence report {index}",
+            description="Waste was reported at this location for verification.",
+            status=ReportStatus.SUBMITTED,
+            is_demo_data=True,
+            civic_task_eligible=True,
+            **fields,
+        )
+        for index, fields in enumerate(invalid_evidence)
+    ]
+    valid_report = Report(
+        resident_id=resident.id,
+        category=ReportCategory.ILLEGAL_DUMPING,
+        title="Complete geotagged evidence report",
+        description="Waste was reported with complete geotagged evidence.",
+        location_text="Purok 2 beside the basketball court",
+        latitude=13.9412,
+        longitude=121.1625,
+        photo_url="/api/v1/uploads/complete-evidence.jpg",
+        status=ReportStatus.SUBMITTED,
+        is_demo_data=True,
+        civic_task_eligible=True,
+    )
+    reports.append(valid_report)
+    db_session.add_all(reports)
+    db_session.commit()
+
+    staff_csrf, staff_cookie = _login(client, "staff@sabtrack.test")
+    for report in reports:
+        response = client.patch(
+            f"/api/v1/reports/{report.id}/status",
+            json={"status": "RESOLVED"},
+            headers={"x-csrf-token": staff_csrf},
+            cookies={settings.SESSION_COOKIE_NAME: staff_cookie},
+        )
+        assert response.status_code == 200
+        evidence_awards = [
+            award
+            for award in db_session.scalars(
+                select(PointsLedger).where(PointsLedger.resident_id == resident.id)
+            ).all()
+            if getattr(award, "task_key", None) == "reporting_violations_with_evidence"
+        ]
+        if report is not valid_report:
+            assert evidence_awards == []
+        else:
+            assert [(award.points, getattr(award, "task_source_id", None)) for award in evidence_awards] == [
+                (100, str(valid_report.id))
+            ]
+
+
+def test_no_violation_task_is_unavailable_without_citation_records(client: TestClient):
+    _, resident_cookie = _login(client, "resident@sabtrack.test")
+
+    response = client.get(
+        "/api/v1/gamification/tasks",
+        cookies={settings.SESSION_COOKIE_NAME: resident_cookie},
+    )
+
+    assert response.status_code == 200
+    task = next(item for item in response.json() if item["id"] == "no_violation_record")
+    assert task["status"] == "UNAVAILABLE"
+    assert task["points_reward"] == 25
+    assert task["progress_current"] == 0
+    assert task["progress_target"] == 1

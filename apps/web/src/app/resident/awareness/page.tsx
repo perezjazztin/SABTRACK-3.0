@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   BookOpen,
   Video,
@@ -27,6 +27,17 @@ import {
   Flame,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  completeArticleReading,
+  getArticleReadingStatus,
+  getMyPointsSummary,
+  openArticleReading,
+} from '@/lib/api-client';
+import {
+  ArticleReadingCompletion,
+  ArticleReadingSession,
+  ArticleReadingStatus,
+} from '@/types/gamification';
 
 type TopicCategory = 'ALL' | 'VIDEOS' | 'SEGREGATION' | 'SUSTAINABLE_DEV' | 'COMPOSTING';
 
@@ -630,6 +641,20 @@ export default function AwarenessHubPage() {
             Welcome to the SABTRACK Awareness Hub Content Engine. Educating our community on Republic Act 9003, mandatory waste segregation at source, collection schedule discipline, and practical zero-waste living.
           </p>
 
+          <div className="space-y-1 text-xs text-emerald-100/95" aria-live="polite">
+            <p>Eligible articles earn 5 SAB-Points after at least 20 seconds.</p>
+            <p>Reach the end and select Mark as Read, up to three articles per day.</p>
+            <p>Each article can earn points only once.</p>
+            {readingStatus && (
+              <p className="font-semibold">
+                Today&apos;s article awards: {readingStatus.awards_today} / {readingStatus.daily_limit}
+              </p>
+            )}
+          </div>
+          {readingStatusError && (
+            <p role="alert" className="text-sm text-amber-100">{readingStatusError}</p>
+          )}
+
           <div className="pt-2 flex flex-wrap gap-2 text-xs">
             <span className="bg-black/25 px-2.5 py-1 rounded-lg border border-white/10 text-emerald-100 flex items-center">
               <Scale className="w-3 h-3 mr-1 text-emerald-300" />
@@ -1053,6 +1078,9 @@ export default function AwarenessHubPage() {
                     <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold border', item.badgeColor)}>
                       {item.badge}
                     </span>
+                    {item.type === 'article' && readingStatus?.completed_article_ids.includes(item.id) && (
+                      <span className="text-[10px] font-bold text-emerald-800">Read ✓</span>
+                    )}
                     <span className="text-[11px] font-mono text-slate-500 flex items-center">
                       {item.type === 'video' ? <Video className="w-3 h-3 mr-1 text-slate-400" /> : <BookOpen className="w-3 h-3 mr-1 text-slate-400" />}
                       {item.durationOrReadTime}
@@ -1112,7 +1140,7 @@ export default function AwarenessHubPage() {
                     </span>
                   )}
                   <button
-                    onClick={() => setActiveModalItem(item)}
+                    onClick={() => openResource(item)}
                     className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-civic-forest hover:bg-civic-forest hover:text-white transition-colors shadow-soft-raised"
                   >
                     View Details
@@ -1245,7 +1273,7 @@ export default function AwarenessHubPage() {
                 </p>
               </div>
               <button
-                onClick={() => setActiveModalItem(null)}
+                onClick={closeResource}
                 aria-label="Close modal"
                 className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
               >
@@ -1284,7 +1312,13 @@ export default function AwarenessHubPage() {
             )}
 
             {/* Reading Content */}
-            <div className="space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed">
+            <div
+              ref={articleContentRef}
+              role="region"
+              aria-label="Article content"
+              onScroll={handleArticleScroll}
+              className="max-h-60 overflow-y-auto space-y-3 text-xs sm:text-sm text-slate-700 leading-relaxed pr-2"
+            >
               {activeModalItem.content.map((p, idx) => (
                 <p key={idx}>{p}</p>
               ))}
@@ -1329,10 +1363,51 @@ export default function AwarenessHubPage() {
               </ul>
             </div>
 
+            {activeModalItem.type === 'article' && (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2">
+                {readingStatusError && <p role="alert">{readingStatusError}</p>}
+                {readingError && <p role="alert">{readingError}</p>}
+                {completionResult?.status === 'AWARDED' && (
+                  <div className="font-bold text-emerald-800">
+                    <p>+{completionResult.points_awarded} SAB-Points</p>
+                    {refreshedPoints !== null && <p>Current balance: {refreshedPoints} SAB-Points</p>}
+                  </div>
+                )}
+                {readingStatus?.completed_article_ids.includes(activeModalItem.id) ? (
+                  <p className="font-semibold text-emerald-800">Read ✓</p>
+                ) : (
+                  <>
+                    <p className="text-xs text-emerald-900">
+                      Reading progress: {Math.min(elapsedSeconds, readingStatus?.minimum_read_seconds ?? 20)} / {readingStatus?.minimum_read_seconds ?? 20} seconds
+                      {reachedArticleEnd ? ' • Article end reached' : ' • Scroll to the end'}
+                    </p>
+                    {completionResult?.status === 'DAILY_LIMIT_REACHED' && (
+                      <p className="text-sm font-semibold text-amber-800">
+                        You’ve reached today’s reading limit. Come back tomorrow to earn 5 SAB-Points for this article.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleMarkAsRead}
+                      disabled={
+                        !readingSession?.session_id ||
+                        !reachedArticleEnd ||
+                        elapsedSeconds < (readingStatus?.minimum_read_seconds ?? 20) ||
+                        isCompleting
+                      }
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-civic-forest text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isCompleting ? 'Submitting…' : 'Mark as Read'}
+                    </button>
+                  </>
+                )}
+              </section>
+            )}
+
             {/* Close action */}
             <div className="pt-2 flex justify-end">
               <button
-                onClick={() => setActiveModalItem(null)}
+                onClick={closeResource}
                 className="px-4 py-2 rounded-xl text-xs font-semibold bg-civic-forest text-white hover:bg-civic-forestHover transition-colors shadow-soft-raised"
               >
                 Close Guide
