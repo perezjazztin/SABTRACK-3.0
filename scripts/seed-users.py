@@ -51,9 +51,26 @@ DEMO_ACCOUNTS = [
 ]
 
 DEMO_AREAS = [
-    {"code": "DEMO_ZONE_NORTH", "name": "Demo Zone A - North Sector", "description": "Synthetic demonstration area for testing."},
-    {"code": "DEMO_ZONE_CENTRAL", "name": "Demo Zone B - Central Sector", "description": "Synthetic demonstration area for testing."},
-    {"code": "DEMO_ZONE_SOUTH", "name": "Demo Zone C - South Sector", "description": "Synthetic demonstration area for testing."},
+    {
+        "code": "GEN_LUNA_ST",
+        "name": "General Luna St.",
+        "description": "Main commercial and residential corridor of Barangay Sabang (Daily collection).",
+    },
+    {
+        "code": "SECTOR_MON_THU",
+        "name": "Sector 1 (Monday & Thursday)",
+        "description": "Centro, Cabal, Duhatan, South Valley, Sauz, Llamar, Liams, Ladeco, Lynville, Athenians.",
+    },
+    {
+        "code": "SECTOR_TUE_FRI",
+        "name": "Sector 2 (Tuesday & Friday)",
+        "description": "P. Laygo, GBLMIS, Monte Claro, Monte Flora, Monte Carlo, Silverlaz, Sona, Greenville, Mindanao, Malleta.",
+    },
+    {
+        "code": "SECTOR_WED_SAT",
+        "name": "Sector 3 (Wednesday & Saturday)",
+        "description": "City Park & 105, SVDL II Phase 1 to Phase 3, SVDL III, Lucky Homes, Golden Homes, Bahayang Pilipino.",
+    },
 ]
 
 
@@ -185,76 +202,59 @@ def seed_database() -> None:
             zone_a = all_areas[0]
             zone_b = all_areas[1] if len(all_areas) > 1 else all_areas[0]
 
+            area_map = {a.code: a for a in all_areas}
+            gen_luna = area_map.get("GEN_LUNA_ST", all_areas[0])
+            sec_mon_thu = area_map.get("SECTOR_MON_THU", all_areas[1] if len(all_areas) > 1 else all_areas[0])
+            sec_tue_fri = area_map.get("SECTOR_TUE_FRI", all_areas[2] if len(all_areas) > 2 else all_areas[0])
+            sec_wed_sat = area_map.get("SECTOR_WED_SAT", all_areas[3] if len(all_areas) > 3 else all_areas[0])
+
             demo_schedules = [
-                Schedule(
-                    area_id=zone_a.id,
-                    day_of_week=DayOfWeek.MONDAY,
-                    waste_type=WasteType.BIODEGRADABLE,
-                    start_time="06:00 AM",
-                    end_time="09:00 AM",
-                    notes="Kitchen scraps, garden waste, food leftovers in biodegradable green sacks.",
-                    is_active=True,
-                    is_demo_data=True,
-                ),
-                Schedule(
-                    area_id=zone_a.id,
-                    day_of_week=DayOfWeek.WEDNESDAY,
-                    waste_type=WasteType.NON_BIODEGRADABLE,
-                    start_time="06:00 AM",
-                    end_time="09:00 AM",
-                    notes="Residual waste, sanitized plastics, single-use containers in black sacks.",
-                    is_active=True,
-                    is_demo_data=True,
-                ),
-                Schedule(
-                    area_id=zone_a.id,
-                    day_of_week=DayOfWeek.SATURDAY,
-                    waste_type=WasteType.RECYCLABLE,
-                    start_time="08:00 AM",
-                    end_time="11:00 AM",
-                    notes="Cardboard, clean glass bottles, metal cans, and dry clean packaging.",
-                    is_active=True,
-                    is_demo_data=True,
-                ),
-                Schedule(
-                    area_id=zone_b.id,
-                    day_of_week=DayOfWeek.TUESDAY,
-                    waste_type=WasteType.BIODEGRADABLE,
-                    start_time="07:00 AM",
-                    end_time="10:00 AM",
-                    notes="Biodegradable waste pickup for Central Sector.",
-                    is_active=True,
-                    is_demo_data=True,
-                ),
-                Schedule(
-                    area_id=zone_b.id,
-                    day_of_week=DayOfWeek.THURSDAY,
-                    waste_type=WasteType.NON_BIODEGRADABLE,
-                    start_time="07:00 AM",
-                    end_time="10:00 AM",
-                    notes="Non-biodegradable residual pickup for Central Sector.",
-                    is_active=True,
-                    is_demo_data=True,
-                ),
+                # General Luna St. (Nabubulok: Mon, Wed, Fri, Sat, Sun)
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.MONDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Nabubulok (tirang pagkain at mga nabubulok na bagay). Ilabas bago ang 6:00 AM.", is_active=True, is_demo_data=False),
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.WEDNESDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Nabubulok (tirang pagkain at mga nabubulok na bagay). Ilabas bago ang 6:00 AM.", is_active=True, is_demo_data=False),
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.FRIDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Nabubulok (tirang pagkain at mga nabubulok na bagay). Ilabas bago ang 6:00 AM.", is_active=True, is_demo_data=False),
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.SATURDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Nabubulok (tirang pagkain at mga nabubulok na bagay). Ilabas bago ang 6:00 AM.", is_active=True, is_demo_data=False),
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.SUNDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Nabubulok (tirang pagkain at mga nabubulok na bagay). Ilabas bago ang 6:00 AM.", is_active=True, is_demo_data=False),
+                # General Luna St. (Hindi Nabubulok: Tue, Thu)
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.TUESDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Hindi Nabubulok (plastik, bote, papel, at lata). Mahigpit na ipinagbabawal ang hindi nakahiwalay.", is_active=True, is_demo_data=False),
+                Schedule(area_id=gen_luna.id, day_of_week=DayOfWeek.THURSDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="09:00 AM", notes="General Luna St. - Basurang Hindi Nabubulok (plastik, bote, papel, at lata). Mahigpit na ipinagbabawal ang hindi nakahiwalay.", is_active=True, is_demo_data=False),
+
+                # Sector 1 (Mon & Thu)
+                Schedule(area_id=sec_mon_thu.id, day_of_week=DayOfWeek.MONDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: Centro, Cabal, Duhatan, South Valley, Sauz, Llamar, Liams, Ladeco, Lynville, Athenians. Basurang Nabubulok (kitchen waste, tira-tirang pagkain). Alinsunod sa Ordinance No. 01-2022.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_mon_thu.id, day_of_week=DayOfWeek.MONDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: Centro, Cabal, Duhatan, South Valley, Sauz, Llamar, Liams, Ladeco, Lynville, Athenians. Basurang Hindi Nabubulok (plastik, bote, lata, papel). Dapat magkahiwalay sa selyadong lalagyan.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_mon_thu.id, day_of_week=DayOfWeek.THURSDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: Centro, Cabal, Duhatan, South Valley, Sauz, Llamar, Liams, Ladeco, Lynville, Athenians. Basurang Nabubulok (organic waste, food scraps). Nakabukod sa berdeng sako.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_mon_thu.id, day_of_week=DayOfWeek.THURSDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: Centro, Cabal, Duhatan, South Valley, Sauz, Llamar, Liams, Ladeco, Lynville, Athenians. Basurang Hindi Nabubulok (residual plastics, packaging). Mahigpit na ipinatutupad ang RA 9003.", is_active=True, is_demo_data=False),
+
+                # Sector 2 (Tue & Fri)
+                Schedule(area_id=sec_tue_fri.id, day_of_week=DayOfWeek.TUESDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: P. Laygo, GBLMIS, Monte Claro, Monte Flora, Monte Carlo, Silverlaz, Sona, Greenville, Mindanao, Malleta. Basurang Nabubulok (tirang pagkain, organic waste). Ihiwalay bago ilabas.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_tue_fri.id, day_of_week=DayOfWeek.TUESDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: P. Laygo, GBLMIS, Monte Claro, Monte Flora, Monte Carlo, Silverlaz, Sona, Greenville, Mindanao, Malleta. Basurang Hindi Nabubulok (residual, dry packaging, bote, lata). Mahigpit na ipinagbabawal ang paghalo ng basura.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_tue_fri.id, day_of_week=DayOfWeek.FRIDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: P. Laygo, GBLMIS, Monte Claro, Monte Flora, Monte Carlo, Silverlaz, Sona, Greenville, Mindanao, Malleta. Basurang Nabubulok (kitchen scraps, garden cuttings). Nakabukod sa berdeng lalagyan.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_tue_fri.id, day_of_week=DayOfWeek.FRIDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: P. Laygo, GBLMIS, Monte Claro, Monte Flora, Monte Carlo, Silverlaz, Sona, Greenville, Mindanao, Malleta. Basurang Hindi Nabubulok (plastik, bote, papel, lata). Ilabas bago dumating ang trak ng basura.", is_active=True, is_demo_data=False),
+
+                # Sector 3 (Wed & Sat)
+                Schedule(area_id=sec_wed_sat.id, day_of_week=DayOfWeek.WEDNESDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: City Park & 105, SVDL II Phase 1 to Phase 3, SVDL III, Lucky Homes, Golden Homes, Bahayang Pilipino. Basurang Nabubulok (kitchen scraps, food waste). Siguruhing nakahiwalay.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_wed_sat.id, day_of_week=DayOfWeek.WEDNESDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: City Park & 105, SVDL II Phase 1 to Phase 3, SVDL III, Lucky Homes, Golden Homes, Bahayang Pilipino. Basurang Hindi Nabubulok (bote, plastik, karton, lata). Ilabas sa curbside pickup point.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_wed_sat.id, day_of_week=DayOfWeek.SATURDAY, waste_type=WasteType.BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: City Park & 105, SVDL II Phase 1 to Phase 3, SVDL III, Lucky Homes, Golden Homes, Bahayang Pilipino. Basurang Nabubulok (organics, kitchen waste). Nakahiwalay alinsunod sa Ordinance No. 01-2022.", is_active=True, is_demo_data=False),
+                Schedule(area_id=sec_wed_sat.id, day_of_week=DayOfWeek.SATURDAY, waste_type=WasteType.NON_BIODEGRADABLE, start_time="06:00 AM", end_time="10:00 AM", notes="Covered Places: City Park & 105, SVDL II Phase 1 to Phase 3, SVDL III, Lucky Homes, Golden Homes, Bahayang Pilipino. Basurang Hindi Nabubulok at Mareresiklo (dry recyclables, residual). Ilabas bago dumating ang trak.", is_active=True, is_demo_data=False),
             ]
             db.add_all(demo_schedules)
 
             admin_user = db.scalar(select(User).where(User.email == "admin.demo@sabtrack.local"))
             if admin_user:
                 advisory = ScheduleAdvisory(
-                    area_id=zone_a.id,
-                    title="Collection Delay Notice: Truck 2 Maintenance",
-                    message="Garbage collection for Zone A scheduled for Monday morning will be delayed. Truck will arrive starting at 10:30 AM due to scheduled maintenance.",
-                    advisory_type=AdvisoryType.DELAY,
-                    effective_date="October 26, 2026",
+                    area_id=None,
+                    title="Bagong Schedule ng Hakot ng Basura — Ordinance No. 01-2022",
+                    message="Alinsunod sa RA 9003 at Ordinance No. 01-2022, ang ating barangay ay nagpapatupad ng bagong schedule para sa pagkolekta ng basura simula sa ika-3 ng Pebrero 2025. Ang paglalabas ng basura ay dapat magkahiwalay ang nabubulok at hindi nabubulok. Ang sinumang lalabag ay papatawan ng kaukulang parusa.",
+                    advisory_type=AdvisoryType.ROUTE_CHANGE,
+                    effective_date="Pebrero 3, 2025",
                     created_by_id=admin_user.id,
                     is_active=True,
-                    is_demo_data=True,
+                    is_demo_data=False,
                 )
                 db.add(advisory)
 
             db.commit()
-            print("  + Seeded 5 demonstration collection schedules and 1 advisory.")
+            print("  + Seeded 19 official collection schedules and 1 advisory.")
 
         # Seed announcements if none exist
         existing_announcements = db.scalars(select(Announcement)).all()
