@@ -12,6 +12,7 @@ from app.api.v1.endpoints import (
     uploads,
     realtime,
     chatbot,
+    notifications,
 )
 
 # Ensure all models are registered with SQLAlchemy's mapper registry
@@ -37,3 +38,4 @@ api_router.include_router(users.router, prefix="/users", tags=["User & Personnel
 api_router.include_router(uploads.router, tags=["Protected Evidence Uploads"])
 api_router.include_router(realtime.router, tags=["Real-Time Synchronization"])
 api_router.include_router(chatbot.router, prefix="/chatbot", tags=["EcoBot Civic AI"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["Email Notifications & Diagnostics"])

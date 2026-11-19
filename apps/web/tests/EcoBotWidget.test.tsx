@@ -119,6 +119,35 @@ describe('EcoBotWidget Component', () => {
     expect(screen.getByText('DIY Plastic Bottle Planters Guide')).toBeInTheDocument();
   });
 
+  it('displays "EcoBot is typing..." in English while waiting for a response', async () => {
+    let resolveQuery: (value: unknown) => void = () => {};
+    const queryPromise = new Promise((resolve) => {
+      resolveQuery = resolve;
+    });
+    vi.spyOn(apiClient, 'queryEcoBot').mockReturnValue(queryPromise as never);
+
+    render(<EcoBotWidget />);
+    fireEvent.click(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i }));
+
+    const input = screen.getByPlaceholderText(/Tanungin si EcoBot/i);
+    fireEvent.change(input, { target: { value: 'Test query' } });
+    fireEvent.click(screen.getByRole('button', { name: /Send message to EcoBot/i }));
+
+    expect(screen.getByText('EcoBot is typing...')).toBeInTheDocument();
+
+    resolveQuery({
+      reply: 'Test response',
+      is_from_cache: false,
+      is_fallback: false,
+      model_used: 'test',
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByText('EcoBot is typing...')).not.toBeInTheDocument();
+      expect(screen.getByText('Test response')).toBeInTheDocument();
+    });
+  });
+
   it('can minimize and close the chat drawer', () => {
     render(<EcoBotWidget />);
     fireEvent.click(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i }));
@@ -211,4 +240,100 @@ describe('EcoBotWidget Component', () => {
     expect(screen.queryByRole('dialog', { name: /EcoBot Chat Window/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i })).toBeInTheDocument();
   });
+
+  it('is movable via dragging and repositions on screen', () => {
+    render(<EcoBotWidget />);
+    const trigger = screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i });
+    const container = screen.getByTestId('ecobot-container');
+
+    // Default position uses bottom-5 right-5
+    expect(container).toHaveClass('bottom-5', 'right-5');
+
+    // Start drag
+    fireEvent.mouseDown(trigger, { clientX: 500, clientY: 500, button: 0 });
+
+    // Move pointer by 50px
+    fireEvent(window, new MouseEvent('mousemove', { clientX: 550, clientY: 560 }));
+    fireEvent(window, new MouseEvent('mouseup'));
+
+    // Container should now have custom left and top styling
+    expect(container.style.left).toBeDefined();
+    expect(container.style.top).toBeDefined();
+
+    // Double clicking resets to default position
+    fireEvent.doubleClick(trigger);
+    expect(container).toHaveClass('bottom-5', 'right-5');
+  });
+
+  it('allows dragging open chat window by header bar', () => {
+    render(<EcoBotWidget />);
+    fireEvent.click(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i }));
+
+    const container = screen.getByTestId('ecobot-container');
+    const headerTitle = screen.getByText('Barangay Sabang Civic Assistant');
+
+    // Drag from header
+    fireEvent.mouseDown(headerTitle, { clientX: 400, clientY: 400, button: 0 });
+    fireEvent(window, new MouseEvent('mousemove', { clientX: 300, clientY: 250 }));
+    fireEvent(window, new MouseEvent('mouseup'));
+
+    expect(container.style.left).toBeDefined();
+    expect(container.style.top).toBeDefined();
+
+    // Reset via double-click on header
+    fireEvent.doubleClick(headerTitle);
+    expect(container).toHaveClass('bottom-5', 'right-5');
+  });
+
+  it('resets to default position when user clicks close after moving the widget', () => {
+    render(<EcoBotWidget />);
+    fireEvent.click(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i }));
+
+    const container = screen.getByTestId('ecobot-container');
+    const headerTitle = screen.getByText('Barangay Sabang Civic Assistant');
+
+    // Drag from header to move it
+    fireEvent.mouseDown(headerTitle, { clientX: 400, clientY: 400, button: 0 });
+    fireEvent(window, new MouseEvent('mousemove', { clientX: 200, clientY: 150 }));
+    fireEvent(window, new MouseEvent('mouseup'));
+
+    // Container should have custom inline positioning and not have default bottom/right classes
+    expect(container).not.toHaveClass('bottom-5', 'right-5');
+    expect(container.style.left).toBeDefined();
+
+    // Click close button
+    const closeBtn = screen.getByRole('button', { name: /Close chat/i });
+    fireEvent.click(closeBtn);
+
+    // Chat dialog is closed and container resets to default place
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(container).toHaveClass('bottom-5', 'right-5');
+    expect(container.style.left).toBe('');
+    expect(container.style.top).toBe('');
+  });
+
+  it('resets to default position when user presses Escape key after moving the widget', () => {
+    render(<EcoBotWidget />);
+    fireEvent.click(screen.getByRole('button', { name: /Open EcoBot Chat Assistant/i }));
+
+    const container = screen.getByTestId('ecobot-container');
+    const headerTitle = screen.getByText('Barangay Sabang Civic Assistant');
+
+    // Drag to reposition
+    fireEvent.mouseDown(headerTitle, { clientX: 400, clientY: 400, button: 0 });
+    fireEvent(window, new MouseEvent('mousemove', { clientX: 250, clientY: 180 }));
+    fireEvent(window, new MouseEvent('mouseup'));
+
+    expect(container).not.toHaveClass('bottom-5', 'right-5');
+
+    // Press Escape
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    // Chat dialog is closed and container resets to default place
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(container).toHaveClass('bottom-5', 'right-5');
+    expect(container.style.left).toBe('');
+    expect(container.style.top).toBe('');
+  });
 });
+

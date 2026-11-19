@@ -16,9 +16,11 @@ import {
   SlidersHorizontal,
   X,
   Camera,
+  ZoomIn,
 } from 'lucide-react';
 import { getAllReports, updateReportStatus, resolveImageUrl } from '@/lib/api-client';
 import { WasteReport, ReportCategory, ReportStatus } from '@/types/reports';
+import { PhotoZoomModal } from '@/components/PhotoZoomModal';
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
   UNCOLLECTED_GARBAGE: 'Uncollected Garbage',
@@ -74,6 +76,11 @@ export default function AdminReportsPage() {
   const [adminNotes, setAdminNotes] = useState('');
   const [updating, setUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState<{
+    url: string;
+    title: string;
+    reportId: number | string;
+  } | null>(null);
 
   const fetchReports = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -266,7 +273,7 @@ export default function AdminReportsPage() {
       ) : (
         <div className="space-y-4">
           {reports.map((report) => {
-            const statusMeta = STATUS_CONFIG[report.status];
+            const statusMeta = STATUS_CONFIG[report.status] || STATUS_CONFIG.SUBMITTED;
             const StatusIcon = statusMeta.icon;
             const isExpanded = expandedId === report.id;
 
@@ -311,6 +318,41 @@ export default function AdminReportsPage() {
                     {report.description}
                   </p>
 
+                  {/* Photo Evidence Preview if present */}
+                  {report.photo_url && (
+                    <div className="pt-2 flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedPhoto({
+                            url: resolveImageUrl(report.photo_url),
+                            title: report.title,
+                            reportId: report.id,
+                          })
+                        }
+                        title="Click to zoom in on evidence photo"
+                        className="group relative flex items-center gap-2.5 rounded-xl border border-slate-200 bg-slate-50 p-1.5 pr-3 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all text-left"
+                      >
+                        <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={resolveImageUrl(report.photo_url)}
+                            alt={`Photo evidence for report #${report.id}`}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                            crossOrigin="use-credentials"
+                          />
+                        </div>
+                        <div className="text-left">
+                          <div className="flex items-center text-xs font-bold text-slate-700 group-hover:text-civic-forest">
+                            <ZoomIn className="w-3.5 h-3.5 mr-1 text-slate-400 group-hover:text-civic-forest" />
+                            View Attached Evidence Photo
+                          </div>
+                          <span className="text-[10px] text-slate-400">RA 10173 Sanitized &bull; Click to zoom in</span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 pt-2 border-t border-slate-100">
                     <span className="inline-flex items-center font-medium text-slate-700">
                       <User className="w-3.5 h-3.5 mr-1 text-slate-400" />
@@ -340,14 +382,20 @@ export default function AdminReportsPage() {
                       )}
                     </button>
                     {report.photo_url && (
-                      <a
-                        href={resolveImageUrl(report.photo_url)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedPhoto({
+                            url: resolveImageUrl(report.photo_url),
+                            title: report.title,
+                            reportId: report.id,
+                          })
+                        }
+                        className="text-xs text-slate-500 hover:text-civic-forest hover:underline flex items-center transition-colors cursor-pointer"
+                        title="Zoom in on attached evidence photo"
                       >
-                        <Camera className="w-3.5 h-3.5 mr-1" /> View Photo Evidence
-                      </a>
+                        <ZoomIn className="w-3.5 h-3.5 mr-1 text-slate-400 group-hover:text-civic-forest" /> View Photo Evidence
+                      </button>
                     )}
                   </div>
                 </div>
@@ -478,6 +526,18 @@ export default function AdminReportsPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Lightbox / Interactive Photo Zoom Viewer */}
+      {zoomedPhoto && (
+        <PhotoZoomModal
+          isOpen={!!zoomedPhoto}
+          onClose={() => setZoomedPhoto(null)}
+          imageUrl={zoomedPhoto.url}
+          title={zoomedPhoto.title}
+          subtitle={`Incident #${zoomedPhoto.reportId} Photo Evidence`}
+          altText={`Photo evidence for incident #${zoomedPhoto.reportId}`}
+        />
       )}
     </div>
   );

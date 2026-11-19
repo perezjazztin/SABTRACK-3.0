@@ -109,3 +109,17 @@ class AnalyticsOverviewResponse(BaseModel):
     generated_at: datetime
     descriptive: DescriptiveAnalytics
     predictive: PredictiveAnalytics
+
+
+# -------------------------------------------------------------
+# AI-Assisted Decision Support Narrative Briefing Schema
+# -------------------------------------------------------------
+class NarrativeSummaryResponse(BaseModel):
+    title: str
+    executive_summary: str
+    key_findings: List[str]
+    recommended_actions: List[str]
+    model_used: str
+    generated_at: datetime
+    governance_disclaimer: str
+    metrics_snapshot: dict

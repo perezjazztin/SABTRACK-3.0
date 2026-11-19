@@ -238,3 +238,72 @@ def test_subscribe_missing_or_invalid_email_and_nonexistent_schedule(client: Tes
     # 3. Valid email but schedule doesn't exist -> 404
     not_found_res = client.post("/api/v1/schedules/9999/notify", json={"email": "resident@example.com"})
     assert not_found_res.status_code == 404
+
+def test_admin_can_update_schedule(client: TestClient, test_area: Area):
+    csrf_token, session_cookie = _login(client, "admin@sabtrack.test")
+
+    # 1. Create schedule
+    create_res = client.post(
+        "/api/v1/schedules",
+        json={
+            "area_id": test_area.id,
+            "day_of_week": "MONDAY",
+            "waste_type": "BIODEGRADABLE",
+            "start_time": "06:00 AM",
+            "end_time": "09:00 AM",
+            "notes": "Original note",
+        },
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert create_res.status_code == 201
+    schedule_id = create_res.json()["id"]
+
+    # 2. Update schedule
+    update_res = client.put(
+        f"/api/v1/schedules/{schedule_id}",
+        json={
+            "day_of_week": "TUESDAY",
+            "waste_type": "RECYCLABLE",
+            "start_time": "07:00 AM",
+            "end_time": "10:00 AM",
+            "notes": "Updated note: dry recyclables only",
+        },
+        headers={"x-csrf-token": csrf_token},
+        cookies={settings.SESSION_COOKIE_NAME: session_cookie},
+    )
+    assert update_res.status_code == 200
+    data = update_res.json()
+    assert data["day_of_week"] == "TUESDAY"
+    assert data["waste_type"] == "RECYCLABLE"
+    assert data["start_time"] == "07:00 AM"
+    assert data["end_time"] == "10:00 AM"
+    assert data["notes"] == "Updated note: dry recyclables only"
+
+
+def test_resident_cannot_update_schedule(client: TestClient, test_area: Area):
+    # Admin creates schedule
+    admin_csrf, admin_session = _login(client, "admin@sabtrack.test")
+    create_res = client.post(
+        "/api/v1/schedules",
+        json={
+            "area_id": test_area.id,
+            "day_of_week": "WEDNESDAY",
+            "waste_type": "BIODEGRADABLE",
+            "start_time": "06:00 AM",
+            "end_time": "09:00 AM",
+        },
+        headers={"x-csrf-token": admin_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: admin_session},
+    )
+    schedule_id = create_res.json()["id"]
+
+    # Resident tries to update schedule
+    res_csrf, res_session = _login(client, "resident@sabtrack.test")
+    update_res = client.put(
+        f"/api/v1/schedules/{schedule_id}",
+        json={"day_of_week": "THURSDAY"},
+        headers={"x-csrf-token": res_csrf},
+        cookies={settings.SESSION_COOKIE_NAME: res_session},
+    )
+    assert update_res.status_code == 403

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Tuple
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
+from app.modules.notifications.service import email_service
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
@@ -113,6 +114,7 @@ def _reset_login_attempts(db: Session, ip: str, email: str) -> None:
 def register(
     payload: UserCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ) -> UserRead:
     clean_email = payload.email.lower().strip()
@@ -143,6 +145,13 @@ def register(
     )
     db.add(audit_entry)
     db.commit()
+
+    # Queue welcome email to resident
+    background_tasks.add_task(
+        email_service.send_welcome_email,
+        to_email=clean_email,
+        full_name=new_user.full_name,
+    )
 
     return new_user
 

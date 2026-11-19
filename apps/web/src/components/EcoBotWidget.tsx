@@ -16,6 +16,7 @@ import {
   ChevronUp,
   RotateCcw,
   HelpCircle,
+  GripHorizontal,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { queryEcoBot, getEcoBotPrompts } from '@/lib/api-client';
@@ -89,25 +90,156 @@ export const EcoBotWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const chatWindowRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Movable / draggable positioning state
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef<{
+    pointerX: number;
+    pointerY: number;
+    initialLeft: number;
+    initialTop: number;
+    hasMoved: boolean;
+  } | null>(null);
+
+  // Clamp position strictly within viewport boundaries
+  const clamp = (x: number, y: number, elWidth: number, elHeight: number) => {
+    if (typeof window === 'undefined') return { x, y };
+    const padding = 12;
+    const maxX = Math.max(padding, (window.innerWidth || 1024) - elWidth - padding);
+    const maxY = Math.max(padding, (window.innerHeight || 768) - elHeight - padding);
+    return {
+      x: Math.min(Math.max(padding, x), maxX),
+      y: Math.min(Math.max(padding, y), maxY),
+    };
+  };
+
+  // Re-clamp on window resize or when toggling between open/closed/minimized
+  useEffect(() => {
+    if (position && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const clamped = clamp(position.x, position.y, rect.width, rect.height);
+      if (clamped.x !== position.x || clamped.y !== position.y) {
+        setPosition(clamped);
+      }
+    }
+  }, [isOpen, isMinimized]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (position && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setPosition(clamp(position.x, position.y, rect.width, rect.height));
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [position]);
+
+  // Unified drag starter for mouse and touch
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+    if ('button' in e && e.button !== 0) return;
+
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button:not([data-drag-trigger])') ||
+      target.closest('input') ||
+      target.closest('textarea')
+    ) {
+      return;
+    }
+
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
+    dragStartRef.current = {
+      pointerX: clientX,
+      pointerY: clientY,
+      initialLeft: rect.left,
+      initialTop: rect.top,
+      hasMoved: false,
+    };
+    isDraggingRef.current = false;
+
+    const onPointerMove = (moveEvent: MouseEvent | TouchEvent) => {
+      if (!dragStartRef.current || !containerRef.current) return;
+      const curX = 'touches' in moveEvent ? moveEvent.touches[0].clientX : moveEvent.clientX;
+      const curY = 'touches' in moveEvent ? moveEvent.touches[0].clientY : moveEvent.clientY;
+
+      const deltaX = curX - dragStartRef.current.pointerX;
+      const deltaY = curY - dragStartRef.current.pointerY;
+
+      if (!dragStartRef.current.hasMoved && Math.hypot(deltaX, deltaY) > 4) {
+        dragStartRef.current.hasMoved = true;
+        isDraggingRef.current = true;
+      }
+
+      if (dragStartRef.current.hasMoved) {
+        const curRect = containerRef.current.getBoundingClientRect();
+        const newLeft = dragStartRef.current.initialLeft + deltaX;
+        const newTop = dragStartRef.current.initialTop + deltaY;
+        const clamped = clamp(newLeft, newTop, curRect.width, curRect.height);
+        setPosition(clamped);
+      }
+    };
+
+    const onPointerUp = () => {
+      window.removeEventListener('mousemove', onPointerMove);
+      window.removeEventListener('mouseup', onPointerUp);
+      window.removeEventListener('touchmove', onPointerMove);
+      window.removeEventListener('touchend', onPointerUp);
+
+      if (dragStartRef.current?.hasMoved) {
+        setTimeout(() => {
+          isDraggingRef.current = false;
+        }, 80);
+      } else {
+        isDraggingRef.current = false;
+      }
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener('mousemove', onPointerMove);
+    window.addEventListener('mouseup', onPointerUp);
+    window.addEventListener('touchmove', onPointerMove);
+    window.addEventListener('touchend', onPointerUp);
+  };
+
+  const handleCloseChat = () => {
+    setIsOpen(false);
+    setPosition(null);
+  };
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (isDraggingRef.current) return;
       if (
         chatWindowRef.current &&
         !chatWindowRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false);
+        handleCloseChat();
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleCloseChat();
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('touchstart', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('touchstart', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen]);
 
@@ -288,16 +420,38 @@ export const EcoBotWidget: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 font-sans select-none">
-      {/* Floating Trigger Button (When Closed) */}
+    <div
+      ref={containerRef}
+      data-testid="ecobot-container"
+      style={
+        position
+          ? {
+              left: `${position.x}px`,
+              top: `${position.y}px`,
+              bottom: 'auto',
+              right: 'auto',
+            }
+          : undefined
+      }
+      className={`fixed z-50 font-sans select-none ${
+        position ? '' : 'bottom-5 right-5'
+      }`}
+    >
+      {/* Floating Trigger Button (When Closed) — Draggable */}
       {!isOpen && (
         <button
+          data-drag-trigger="true"
           onClick={() => {
+            if (isDraggingRef.current) return;
             setIsOpen(true);
             setIsMinimized(false);
           }}
+          onMouseDown={handleDragStart}
+          onTouchStart={handleDragStart}
+          onDoubleClick={() => setPosition(null)}
           aria-label="Open EcoBot Chat Assistant"
-          className="neu-button flex items-center gap-2.5 pl-2.5 pr-4 py-2 rounded-full bg-gradient-to-r from-white to-white border border-slate-200/80 shadow-neu-raised hover:shadow-neu-raised-hover hover:scale-105 active:scale-95 transition-all group"
+          title="Drag to reposition • Click to chat • Double-click to reset"
+          className="neu-button flex items-center gap-2.5 pl-2.5 pr-4 py-2 rounded-full bg-gradient-to-r from-white to-white border border-slate-200/80 shadow-neu-raised hover:shadow-neu-raised-hover hover:scale-105 active:scale-95 transition-all group cursor-grab active:cursor-grabbing"
         >
           {/* Avatar with Pinned Online Indicator */}
           <div className="relative flex-shrink-0">
@@ -332,8 +486,14 @@ export const EcoBotWidget: React.FC = () => {
           role="dialog"
           aria-label="EcoBot Chat Window"
         >
-          {/* Header Bar */}
-          <div className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50/60 border-b border-slate-200/70 flex items-center justify-between shadow-neu-xs flex-shrink-0">
+          {/* Header Bar — Draggable Handle */}
+          <div
+            onMouseDown={handleDragStart}
+            onTouchStart={handleDragStart}
+            onDoubleClick={() => setPosition(null)}
+            title="Drag to reposition EcoBot • Double-click to reset"
+            className="px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50/60 border-b border-slate-200/70 flex items-center justify-between shadow-neu-xs flex-shrink-0 cursor-grab active:cursor-grabbing select-none"
+          >
             <div className="flex items-center space-x-3">
               <div className="relative">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-emerald-700 to-emerald-500 text-white flex items-center justify-center shadow-neu-green border border-white/40">
@@ -357,6 +517,11 @@ export const EcoBotWidget: React.FC = () => {
               </div>
             </div>
 
+            {/* Subtle Grip Drag Handle Indicator */}
+            <div className="hidden sm:flex items-center justify-center pointer-events-none opacity-40 hover:opacity-80 transition-opacity">
+              <GripHorizontal className="w-5 h-5 text-slate-400" />
+            </div>
+
             <div className="flex items-center space-x-1">
               <button
                 onClick={() => handleResetChat()}
@@ -375,7 +540,7 @@ export const EcoBotWidget: React.FC = () => {
                 <Minimize2 className="w-3.5 h-3.5" />
               </button>
               <button
-                onClick={() => setIsOpen(false)}
+                onClick={handleCloseChat}
                 className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                 title="Close chat"
                 aria-label="Close chat"
@@ -588,7 +753,7 @@ export const EcoBotWidget: React.FC = () => {
                         />
                       </div>
                       <span className="text-[11px] font-semibold text-slate-500">
-                        Nagsusulat si EcoBot...
+                        EcoBot is typing...
                       </span>
                     </div>
                   </div>

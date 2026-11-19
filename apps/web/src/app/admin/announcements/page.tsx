@@ -17,6 +17,7 @@ import {
   X,
   User,
   Clock,
+  CheckCircle2,
 } from 'lucide-react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import {
@@ -46,6 +47,8 @@ export default function AdminAnnouncementsPage() {
   // Modal & form state
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [form, setForm] = useState<AnnouncementCreatePayload>({
     title: '',
     content: '',
@@ -74,12 +77,46 @@ export default function AdminAnnouncementsPage() {
   // Automatic real-time background synchronization
   useRealtimeSync(loadData, { entity: 'announcements' });
 
+  const handleOpenModal = () => {
+    setModalError(null);
+    setForm({
+      title: '',
+      content: '',
+      category: 'GENERAL',
+      is_pinned: false,
+    });
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalError(null);
+  };
+
   // Handle Create
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    setModalError(null);
+
+    const cleanTitle = form.title.trim();
+    const cleanContent = form.content.trim();
+
+    if (cleanTitle.length < 5) {
+      setModalError('Announcement headline must be at least 5 characters long.');
+      return;
+    }
+    if (cleanContent.length < 10) {
+      setModalError('Full content & instructions must be at least 10 characters long.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await createAnnouncement(form);
+      await createAnnouncement({
+        ...form,
+        title: cleanTitle,
+        content: cleanContent,
+      });
       setShowModal(false);
       setForm({
         title: '',
@@ -87,9 +124,12 @@ export default function AdminAnnouncementsPage() {
         category: 'GENERAL',
         is_pinned: false,
       });
+      setSuccessMessage('Official notice published successfully to community bulletins.');
+      setTimeout(() => setSuccessMessage(null), 5000);
       await loadData();
     } catch (err: unknown) {
-      alert((err as Error).message || 'Failed to publish announcement.');
+      const errorMsg = (err as Error).message || 'Failed to publish announcement.';
+      setModalError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +172,7 @@ export default function AdminAnnouncementsPage() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setShowModal(true)}
+              onClick={handleOpenModal}
               className="flex items-center gap-2 px-5 py-2.5 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl transition-all shadow-neu-green"
             >
               <Plus className="w-4 h-4" />
@@ -148,6 +188,23 @@ export default function AdminAnnouncementsPage() {
             </button>
           </div>
         </div>
+
+        {/* Success Feedback */}
+        {successMessage && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs shadow-neu-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="font-medium">{successMessage}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMessage(null)}
+              className="text-emerald-600 hover:text-emerald-800 font-bold ml-2 text-base leading-none"
+              aria-label="Dismiss message"
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         {/* Error */}
         {error && (
@@ -179,8 +236,20 @@ export default function AdminAnnouncementsPage() {
               <tbody className="divide-y divide-slate-200/60 bg-white">
                 {announcements.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
-                      No announcements published yet. Click "Compose Notice" to create one.
+                    <td colSpan={6} className="px-4 py-12 text-center text-slate-500">
+                      <div className="max-w-xs mx-auto space-y-3">
+                        <Megaphone className="w-10 h-10 text-slate-300 mx-auto" />
+                        <p className="text-slate-600 font-medium">
+                          No announcements published yet. Click &ldquo;Compose Notice&rdquo; to create one.
+                        </p>
+                        <button
+                          onClick={handleOpenModal}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl shadow-neu-green transition-all"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Compose First Notice
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -235,38 +304,68 @@ export default function AdminAnnouncementsPage() {
 
         {/* Modal: Compose Announcement */}
         {showModal && (
-          <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
-            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-neu-raised">
-              <div className="flex items-center justify-between border-b pb-3">
-                <h3 className="font-bold text-slate-900 text-base">
-                  Compose Official Barangay Notice
-                </h3>
+          <div className="fixed inset-0 z-[70] bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="neu-modal rounded-3xl border border-slate-200/70 max-w-lg w-full p-6 sm:p-7 space-y-5 shadow-neu-raised my-auto max-h-[90vh] flex flex-col">
+              <div className="flex items-center justify-between border-b border-slate-200/70 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center text-civic-forest border border-emerald-200">
+                    <Megaphone className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-base">
+                      Compose Official Barangay Notice
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Dispatches to Barangay Sabang resident dashboards &amp; bulletins
+                    </p>
+                  </div>
+                </div>
                 <button
-                  onClick={() => setShowModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
+                  type="button"
+                  onClick={handleCloseModal}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors"
+                  aria-label="Close compose modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <form onSubmit={handleCreate} className="space-y-3.5 text-xs">
+              {/* Inline Modal Error */}
+              {modalError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-start gap-2 shadow-neu-xs">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <div className="flex-1 font-medium">{modalError}</div>
+                </div>
+              )}
+
+              <form onSubmit={handleCreate} className="space-y-4 text-xs overflow-y-auto pr-1">
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">
-                    Announcement Headline
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-700">
+                      Announcement Headline <span className="text-rose-500">*</span>
+                    </label>
+                    <span className={`text-[10px] ${form.title.trim().length >= 5 ? 'text-slate-400' : 'text-amber-600 font-medium'}`}>
+                      {form.title.trim().length}/200 {form.title.trim().length < 5 ? '(min. 5 chars)' : ''}
+                    </span>
+                  </div>
                   <input
                     type="text"
                     value={form.title}
-                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, title: e.target.value });
+                      if (modalError) setModalError(null);
+                    }}
                     placeholder="e.g. Barangay Sabang Clean-Up Drive this Saturday"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                    minLength={5}
+                    maxLength={200}
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">
-                    Advisory Category
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Advisory Category <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={form.category}
@@ -276,7 +375,7 @@ export default function AdminAnnouncementsPage() {
                         category: e.target.value as AnnouncementCategory,
                       })
                     }
-                    className="neu-input w-full px-3.5 py-2.5 rounded-xl focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                    className="neu-select w-full px-3.5 py-2.5 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-civic-forest"
                   >
                     {CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -287,44 +386,54 @@ export default function AdminAnnouncementsPage() {
                 </div>
 
                 <div>
-                  <label className="block font-medium text-slate-700 mb-1">
-                    Full Content &amp; Instructions
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-700">
+                      Full Content &amp; Instructions <span className="text-rose-500">*</span>
+                    </label>
+                    <span className={`text-[10px] ${form.content.trim().length >= 10 ? 'text-slate-400' : 'text-amber-600 font-medium'}`}>
+                      {form.content.trim().length}/5000 {form.content.trim().length < 10 ? '(min. 10 chars)' : ''}
+                    </span>
+                  </div>
                   <textarea
                     rows={4}
                     value={form.content}
-                    onChange={(e) => setForm({ ...form, content: e.target.value })}
+                    onChange={(e) => {
+                      setForm({ ...form, content: e.target.value });
+                      if (modalError) setModalError(null);
+                    }}
                     placeholder="Provide full details, meeting location, guidelines, and schedules for residents..."
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    className="neu-input w-full px-3.5 py-2.5 rounded-xl text-slate-800 focus:outline-none focus:ring-2 focus:ring-civic-forest"
+                    minLength={10}
+                    maxLength={5000}
                     required
                   />
                 </div>
 
-                <div className="flex items-center gap-2 pt-1">
+                <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100 flex items-center gap-2.5">
                   <input
                     type="checkbox"
                     id="is_pinned"
                     checked={form.is_pinned}
                     onChange={(e) => setForm({ ...form, is_pinned: e.target.checked })}
-                    className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-600"
+                    className="w-4 h-4 text-emerald-700 rounded border-slate-300 focus:ring-emerald-600 cursor-pointer"
                   />
-                  <label htmlFor="is_pinned" className="text-slate-700 font-medium">
+                  <label htmlFor="is_pinned" className="text-slate-700 font-medium cursor-pointer">
                     Pin this announcement to top of Resident bulletin
                   </label>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t">
+                <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200/70">
                   <button
                     type="button"
-                    onClick={() => setShowModal(false)}
-                    className="px-3.5 py-1.5 text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg"
+                    onClick={handleCloseModal}
+                    className="neu-button px-4 py-2 text-xs font-semibold rounded-xl text-slate-600 hover:text-slate-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="px-4 py-1.5 text-white bg-emerald-700 hover:bg-emerald-800 rounded-lg disabled:opacity-50"
+                    className="flex items-center gap-2 px-5 py-2 text-xs font-bold text-white bg-civic-forest hover:bg-civic-forestHover rounded-xl shadow-neu-green transition-all disabled:opacity-50"
                   >
                     {submitting ? 'Publishing...' : 'Publish Notice'}
                   </button>

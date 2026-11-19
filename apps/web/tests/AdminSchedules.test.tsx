@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import React from 'react';
 import AdminSchedulesPage from '@/app/admin/schedules/page';
 import * as authContext from '@/lib/auth-context';
@@ -104,6 +104,7 @@ describe('AdminSchedulesPage Component Role & View-Only Mode', () => {
     // Verify mutative action buttons are NOT rendered for staff
     expect(screen.queryByText('Add Collection Slot')).not.toBeInTheDocument();
     expect(screen.queryByText('Broadcast Advisory')).not.toBeInTheDocument();
+    expect(screen.queryByTitle('Edit schedule')).not.toBeInTheDocument();
     expect(screen.queryByTitle('Deactivate schedule')).not.toBeInTheDocument();
 
     // Verify table has "View Only" access chip in the action column
@@ -149,7 +150,75 @@ describe('AdminSchedulesPage Component Role & View-Only Mode', () => {
     // Admin action buttons MUST be present
     expect(screen.getByText('Add Collection Slot')).toBeInTheDocument();
     expect(screen.getByText('Broadcast Advisory')).toBeInTheDocument();
+    expect(screen.getByTitle('Edit schedule')).toBeInTheDocument();
     expect(screen.getByTitle('Deactivate schedule')).toBeInTheDocument();
     expect(screen.getByText('Actions')).toBeInTheDocument();
   });
+
+  it('allows BARANGAY_ADMIN to open edit modal, change schedule details, and submit updates', async () => {
+    const updateSpy = vi.spyOn(apiClient, 'updateSchedule').mockResolvedValue({
+      ...mockSchedules[0],
+      start_time: '07:00 AM',
+    });
+
+    vi.spyOn(authContext, 'useAuth').mockReturnValue({
+      user: {
+        id: 'admin-1',
+        email: 'admin.demo@sabtrack.local',
+        full_name: 'Barangay Captain Admin',
+        role: 'BARANGAY_ADMIN',
+        is_active: true,
+      },
+      permissions: ['schedules:manage'],
+      isAuthenticated: true,
+      loading: false,
+      isLoggingOut: false,
+      login: vi.fn(),
+      logout: vi.fn(),
+      hasRole: (roles) => {
+        const list = Array.isArray(roles) ? roles : [roles];
+        return list.includes('BARANGAY_ADMIN');
+      },
+      hasPermission: () => true,
+      refreshSession: vi.fn(),
+    });
+
+    render(<AdminSchedulesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Purok 1 Centro')).toBeInTheDocument();
+    });
+
+    // Click Edit schedule button
+    const editBtn = screen.getByTitle('Edit schedule');
+    fireEvent.click(editBtn);
+
+    // Check modal header
+    expect(screen.getByText('Edit Collection Schedule Slot')).toBeInTheDocument();
+
+    // Check prefilled start time
+    const startTimeInput = screen.getByPlaceholderText('06:00 AM') as HTMLInputElement;
+    expect(startTimeInput.value).toBe('06:00 AM');
+
+    // Change start time to 07:00 AM
+    fireEvent.change(startTimeInput, { target: { value: '07:00 AM' } });
+    expect(startTimeInput.value).toBe('07:00 AM');
+
+    // Submit the form
+    const saveBtn = screen.getByRole('button', { name: /Save Changes/i });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        101,
+        expect.objectContaining({
+          start_time: '07:00 AM',
+          area_id: 1,
+          day_of_week: 'MONDAY',
+          waste_type: 'BIODEGRADABLE',
+        })
+      );
+    });
+  });
+
 });

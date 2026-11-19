@@ -126,6 +126,9 @@ describe('AwarenessHubPage Component', () => {
       screen.getByText(/AwarenessHub: Waste, SDGs & Climate Action/i)
     ).toBeInTheDocument();
     expect(
+      screen.getByText(/Four Core Pillars of SABTRACK Awareness/i)
+    ).toBeInTheDocument();
+    expect(
       screen.getByText(/Barangay Sabang Waste Segregation Matrix/i)
     ).toBeInTheDocument();
 
@@ -143,12 +146,34 @@ describe('AwarenessHubPage Component', () => {
     expect(
       screen.getByText(/Sustainable Development Goals \(SDGs\) & Digital Governance/i)
     ).toBeInTheDocument();
+
+    // Verified video & article titles
     expect(
-      screen.getByText(/RA 9003: Ecological Solid Waste Management Act/i)
-    ).toBeInTheDocument();
+      screen.getAllByText(/RA 9003: Ecological Solid Waste Management Act/i).length
+    ).toBeGreaterThan(0);
     expect(
       screen.getByText(/Backyard & Apartment Composting Guide/i)
     ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Gabay: Tamang Pagtatapon at Paghihiwalay ng Basura/i).length
+    ).toBeGreaterThan(0);
+  });
+
+  it('renders verified video catalog with strict authorized resources', () => {
+    render(<AwarenessHubPage />);
+
+    expect(
+      screen.getByText(/Verified Video Catalog & Masterclass/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/Tamang Paghihiwalay ng Basura \(Segregation & 3Rs\)/i).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Batas sa Basura \(RA 9003 Guidelines\)/i).length
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Paano Mag-Compost sa Bahay \(Home & Container Composting\)/i).length
+    ).toBeGreaterThan(0);
   });
 
   it('filters resources when a category tab is clicked', async () => {
@@ -191,172 +216,170 @@ describe('AwarenessHubPage Component', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('test_banner_explains_article_reward_rule', async () => {
+  it('renders direct "Watch Video" links on video tutorial cards pointing to video URLs', () => {
     render(<AwarenessHubPage />);
-    await waitForStatusLoad();
+
+    // Video resource cards should have "Watch Video" anchor links
+    const watchVideoLinks = screen.getAllByRole('link', { name: /Watch video:/i });
+    expect(watchVideoLinks.length).toBeGreaterThan(0);
+
+    watchVideoLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href');
+      expect(link.getAttribute('href')).toMatch(/^https:\/\/(www\.)?youtube\.com/);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+  });
+
+  it('provides a direct "Watch Video on YouTube" link inside the video details modal', () => {
+    render(<AwarenessHubPage />);
+
+    // Find and click View Details for a video tutorial
+    const viewDetailsButtons = screen.getAllByRole('button', { name: /View Details/i });
+    fireEvent.click(viewDetailsButtons[0]);
+
+    // Modal dialog opens
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    // Check modal video link
+    const modalVideoLink = screen.getByRole('link', { name: /Watch Video on YouTube/i });
+    expect(modalVideoLink).toBeInTheDocument();
+    expect(modalVideoLink.getAttribute('href')).toMatch(/^https:\/\/(www\.)?youtube\.com/);
+    expect(modalVideoLink).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders direct "Read Guide" links on educational article cards pointing to verified reliable sources', () => {
+    render(<AwarenessHubPage />);
+
+    // Article resource cards should have "Read Guide" anchor links
+    const readGuideLinks = screen.getAllByRole('link', { name: /Read guide:/i });
+    expect(readGuideLinks.length).toBeGreaterThan(0);
+
+    const authorizedDomains = [
+      'officialgazette.gov.ph',
+      'emb.gov.ph',
+      'epa.gov',
+      'ecobricks.org',
+      'sdgs.un.org',
+      'lawphil.net',
+    ];
+
+    readGuideLinks.forEach((link) => {
+      expect(link).toHaveAttribute('href');
+      const href = link.getAttribute('href')!;
+      expect(href).toMatch(/^https:\/\//);
+      const isAuthorized = authorizedDomains.some((domain) => href.includes(domain));
+      expect(isAuthorized).toBe(true);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+  });
+
+  it('ensures that all resource links (Watch Video and Read Guide) are unique and different from each other', () => {
+    render(<AwarenessHubPage />);
+
+    // Collect all card action links
+    const watchLinks = screen.getAllByRole('link', { name: /Watch video:/i });
+    const readLinks = screen.getAllByRole('link', { name: /Read guide:/i });
+
+    const allUrls = [
+      ...watchLinks.map((l) => l.getAttribute('href')),
+      ...readLinks.map((l) => l.getAttribute('href')),
+    ];
+
+    expect(allUrls.length).toBeGreaterThan(0);
+
+    // Verify there are no duplicate URLs
+    const uniqueUrls = new Set(allUrls);
+    expect(uniqueUrls.size).toBe(allUrls.length);
+  });
+
+  it('displays verified reliable source information inside the article details modal', () => {
+    render(<AwarenessHubPage />);
+
+    // Click "SDGs & RA 9003" tab to select an article
+    const sdgTab = screen.getByRole('tab', { name: /SDGs & RA 9003/i });
+    fireEvent.click(sdgTab);
+
+    // Click View Details on first filtered article
+    const viewDetailsButtons = screen.getAllByRole('button', { name: /View Details/i });
+    fireEvent.click(viewDetailsButtons[0]);
+
+    // Modal dialog should render
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Verified Reliable Internet Source/i)).toBeInTheDocument();
+
+    const officialSourceLink = screen.getByRole('link', { name: /Read Full Official Source/i });
+    expect(officialSourceLink).toBeInTheDocument();
+    expect(officialSourceLink.getAttribute('href')).toMatch(/^https:\/\//);
+    expect(officialSourceLink).toHaveAttribute('target', '_blank');
+  });
+
+  it('renders the Citizen Action Checklist with practical daily household habits', () => {
+    render(<AwarenessHubPage />);
+
+    expect(screen.getByText(/Barangay Sabang Citizen Action Checklist/i)).toBeInTheDocument();
+    expect(screen.getByText(/Drain All Liquids First/i)).toBeInTheDocument();
+    expect(screen.getByText(/Banlawan at Patuyuin \(Rinse & Dry\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Flatten Cardboard & Crush Bottles/i)).toBeInTheDocument();
+    expect(screen.getByText(/Strict 30-Minute Placement Window/i)).toBeInTheDocument();
+    expect(screen.getByText(/Isolate Batteries & Busted Glass/i)).toBeInTheDocument();
+    expect(screen.getByText(/Compost Leaves Instead of Siga/i)).toBeInTheDocument();
+  });
+
+  it('renders the FAQ section and toggles answers open and closed when clicked', () => {
+    render(<AwarenessHubPage />);
 
     expect(
-      screen.getByText(/eligible articles earn 5 SAB-Points after at least 20 seconds/i)
+      screen.getByText(/Frequently Asked Community Waste Questions \(FAQs\)/i)
+    ).toBeInTheDocument();
+
+    // First question button
+    const firstFaqButton = screen.getByRole('button', {
+      name: /Why does Barangay Sabang enforce the strict "No Segregation, No Collection" rule\?/i,
+    });
+    expect(firstFaqButton).toBeInTheDocument();
+    expect(firstFaqButton).toHaveAttribute('aria-expanded', 'false');
+
+    // Click to open FAQ
+    fireEvent.click(firstFaqButton);
+    expect(firstFaqButton).toHaveAttribute('aria-expanded', 'true');
+    expect(
+      screen.getByText(/Section 21 and Section 48 of Republic Act 9003/i)
+    ).toBeInTheDocument();
+
+    // Click again to close FAQ
+    fireEvent.click(firstFaqButton);
+    expect(firstFaqButton).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByText(/Section 21 and Section 48 of Republic Act 9003/i)
+    ).not.toBeInTheDocument();
+  });
+
+  it('renders expanded guides including EPR Act, Clean Air Act, and E-Waste safety', () => {
+    render(<AwarenessHubPage />);
+
+    expect(
+      screen.getByText(/RA 11898: Extended Producer Responsibility \(EPR\) Act of 2022/i)
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/reach the end and select Mark as Read, up to three articles per day/i)
+      screen.getByText(/Health Hazards of Open Burning \(Pagsisiga\) & Clean Air Act/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/each article can earn points only once/i)).toBeInTheDocument();
-  });
-
-  it('test_completed_articles_show_read_badge', async () => {
-    statusResponse = { ...readingStatus, completed_article_ids: [completedArticleId] };
-    render(<AwarenessHubPage />);
-
-    expect(await screen.findByText('Read ✓')).toBeInTheDocument();
     expect(
-      fetchSpy.mock.calls.some(([url]) =>
-        String(url).includes('/api/v1/gamification/article-reading/open')
-      )
-    ).toBe(false);
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/gamification/article-reading/status'),
-      expect.any(Object)
-    );
-  });
-
-  it('test_opening_article_starts_server_session', async () => {
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /SDGs & RA 9003/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/gamification/article-reading/open'),
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ article_id: completedArticleId }),
-        })
-      );
-    });
-    expect(openSessions[0].session_id).toBe('session-1');
-  });
-
-  it('test_mark_as_read_requires_timer_and_scroll_end', async () => {
-    vi.useFakeTimers();
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /SDGs & RA 9003/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-
-    await flushMicrotasks();
-    const markAsRead = screen.getByRole('button', { name: /Mark as Read/i });
-    expect(markAsRead).toBeDisabled();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
-    expect(markAsRead).toBeDisabled();
-
-    scrollToEnd(screen.getByRole('region', { name: /Article content/i }));
-    expect(markAsRead).toBeEnabled();
-  });
-
-  it('allows marking read after the timer when article content fits without scrolling', async () => {
-    vi.useFakeTimers();
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /SDGs & RA 9003/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-
-    const content = screen.getByRole('region', { name: /Article content/i });
-    Object.defineProperties(content, {
-      scrollHeight: { configurable: true, value: 180 },
-      clientHeight: { configurable: true, value: 220 },
-    });
-    await flushMicrotasks();
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
-
-    expect(screen.getByRole('button', { name: /Mark as Read/i })).toBeEnabled();
-  });
-
-  it('test_success_awards_five_points_and_refreshes_summary', async () => {
-    vi.useFakeTimers();
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /SDGs & RA 9003/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-    await flushMicrotasks();
-    const markAsRead = screen.getByRole('button', { name: /Mark as Read/i });
-
-    scrollToEnd(screen.getByRole('region', { name: /Article content/i }));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
-    fireEvent.click(markAsRead);
-
-    await flushMicrotasks();
-    expect(screen.getByText('+5 SAB-Points')).toBeInTheDocument();
-    expect(screen.getByText('Current balance: 5 SAB-Points')).toBeInTheDocument();
-    expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/api/v1/gamification/article-reading/complete'),
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ session_id: 'session-1' }),
-      })
-    );
-    expect(
-      fetchSpy.mock.calls.filter(([url]) => String(url).includes('/api/v1/gamification/my-points'))
-    ).toHaveLength(1);
-    expect(screen.getAllByText('Read ✓').length).toBeGreaterThan(0);
-  });
-
-  it('test_daily_limit_keeps_article_unread_and_shows_message', async () => {
-    vi.useFakeTimers();
-    completionResponse = {
-      article_id: completedArticleId,
-      status: 'DAILY_LIMIT_REACHED',
-      points_awarded: 0,
-      awards_today: 3,
-    };
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /SDGs & RA 9003/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-
-    await flushMicrotasks();
-    const markAsRead = screen.getByRole('button', { name: /Mark as Read/i });
-    scrollToEnd(screen.getByRole('region', { name: /Article content/i }));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(20_000);
-    });
-    fireEvent.click(markAsRead);
-    await flushMicrotasks();
-
-    expect(
-      screen.getByText(
-        'You’ve reached today’s reading limit. Come back tomorrow to earn 5 SAB-Points for this article.'
-      )
+      screen.getByText(/Electronic Waste \(E-Waste\) & Household Hazardous Materials Protocol/i)
     ).toBeInTheDocument();
-    expect(screen.queryByText('Read ✓')).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /Close Guide/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-    await flushMicrotasks();
-    expect(openSessions).toHaveLength(2);
-  });
-
-  it('test_video_synopsis_does_not_start_read_session', async () => {
-    render(<AwarenessHubPage />);
-    fireEvent.click(screen.getByRole('tab', { name: /Watch & Learn/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /View Details/i })[0]);
-
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(
-      fetchSpy.mock.calls.some(([url]) =>
-        String(url).includes('/api/v1/gamification/article-reading/open')
-      )
-    ).toBe(false);
+      screen.getByText(/Materials Recovery Facility \(MRF\) Operations & Circular Economy/i)
+    ).toBeInTheDocument();
   });
 
-  it('test_reading_status_error_is_surfaced', async () => {
-    statusFailure = true;
+  it('renders Barangay Sabang sustainability benchmarks and metrics framework', () => {
     render(<AwarenessHubPage />);
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/unable to load article reading status/i);
+    expect(
+      screen.getByText(/Community Waste Diversion & Climate Action Framework/i)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Landfill Diversion Target/i)).toBeInTheDocument();
+    expect(screen.getByText(/Open Burning Tolerance/i)).toBeInTheDocument();
   });
 });

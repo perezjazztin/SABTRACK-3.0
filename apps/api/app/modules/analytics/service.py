@@ -20,7 +20,12 @@ from app.modules.analytics.schemas import (
     AreaRiskForecastItem,
     PredictiveAnalytics,
     AnalyticsOverviewResponse,
+    NarrativeSummaryResponse,
 )
+from app.core.config import settings
+from app.core.logging import logger
+import httpx
+import json
 
 
 class AnalyticsService:
@@ -442,4 +447,131 @@ class AnalyticsService:
             generated_at=now,
             descriptive=descriptive,
             predictive=predictive,
+        )
+
+
+    @classmethod
+    def generate_narrative_summary(cls, db: Session) -> NarrativeSummaryResponse:
+        """Generates AI-assisted executive decision-support narrative summary from aggregated telemetry.
+        Strictly zero resident PII is processed or transmitted."""
+        overview = cls.get_overview_analytics(db)
+        now = datetime.now(timezone.utc)
+
+        total_reports = overview.total_reports
+        open_count = overview.open_reports
+        resolved_count = overview.resolved_reports
+        resolution_rate = overview.resolution_rate_pct
+        avg_res_days = overview.resolution_performance.avg_resolution_days
+        
+        top_hotspots = [f"{h.area_name} ({h.report_count} reports, {h.percentage}%)" for h in overview.area_hotspots[:3]]
+        primary_hotspot = overview.area_hotspots[0].area_name if overview.area_hotspots else "All Puroks"
+
+        if overview.category_distribution:
+            top_cat = overview.category_distribution[0].category.replace("_", " ").title()
+            top_cat_pct = overview.category_distribution[0].percentage
+        else:
+            top_cat = "General Waste"
+            top_cat_pct = 0.0
+
+        trend_dir = overview.predictive.trend_direction if overview.predictive else "STABLE"
+        projected_weekly = overview.predictive.projected_weekly_reports if overview.predictive else 0.0
+        backlog_clearance_eta = overview.predictive.backlog_clearance_eta_days if overview.predictive else 0.0
+
+        total_claims = overview.community_engagement.total_claims_awarded
+        total_points = overview.community_engagement.total_points_distributed
+
+        metrics_snapshot = {
+            "total_reports": total_reports,
+            "open_reports": open_count,
+            "resolved_reports": resolved_count,
+            "resolution_rate_pct": resolution_rate,
+            "avg_resolution_days": avg_res_days,
+            "primary_hotspot": primary_hotspot,
+            "dominant_category": top_cat,
+            "trend_direction": trend_dir,
+            "projected_weekly_reports": projected_weekly,
+            "backlog_clearance_eta_days": backlog_clearance_eta,
+            "total_claims_awarded": total_claims,
+            "total_points_distributed": total_points,
+        }
+
+        # Deterministic Municipal Synthesis Engine (Default / Fallback)
+        hotspot_narrative = (
+            f"Geographic concentration analysis indicates that {primary_hotspot} is the primary operational hotspot, "
+            f"contributing the highest density of community feedback. "
+            if overview.area_hotspots else
+            "Geographic report distribution remains balanced across all monitored Purok routes. "
+        )
+
+        exec_summary = (
+            f"During the current operational assessment cycle, Barangay Sabang recorded a total of {total_reports} citizen "
+            f"solid waste reports, with {resolved_count} incidents successfully resolved, establishing an operational resolution "
+            f"efficiency rate of {resolution_rate}%. The sanitation and enforcement teams maintain an average incident "
+            f"turnaround time of {avg_res_days:.1f} days. Currently, {open_count} active reports remain in the operational triage queue, "
+            f"with an estimated backlog clearance timeline of {backlog_clearance_eta:.1f} days.\n\n"
+            f"{hotspot_narrative}"
+            f"The dominant complaint classification is {top_cat}, comprising {top_cat_pct}% of verified incidents. "
+            f"The 7-day predictive linear model projects a {trend_dir.lower()} operational trajectory, forecasting approximately "
+            f"{projected_weekly} incoming reports in the subsequent cycle. Civic engagement initiatives continue to record positive "
+            f"participation, with {total_claims} verified resident claims awarding a cumulative {total_points} SAB-Points to encourage "
+            f"segregation at source."
+        )
+
+        key_findings = [
+            f"Operational Resolution Rate stands at {resolution_rate}% ({resolved_count} resolved out of {total_reports} total incidents).",
+            f"Primary Activity Hotspot: {primary_hotspot} accounts for the highest volume of community reports.",
+            f"Dominant Complaint Category: {top_cat} ({top_cat_pct}% of total community submissions).",
+            f"Operational Outlook: 7-day forecasting indicates a {trend_dir.lower()} incident volume ({projected_weekly} projected reports).",
+            f"Civic Ledger Impact: {total_claims} participation claims verified, distributing {total_points} SAB-Points to residents.",
+        ]
+
+        recommended_actions = [
+            f"Dispatch focused sanitation and eco-patrol inspections to {primary_hotspot} to address local recurring complaints.",
+            f"Publish public advisory bulletins regarding proper {top_cat} handling and disposal timetables.",
+            f"Maintain administrative follow-through on the {open_count} open triage cases to sustain the {backlog_clearance_eta:.1f}-day clearance SLA.",
+            f"Schedule community engagement drives in elevated sectors to expand SAB-Points segregation incentive uptake.",
+        ]
+
+        model_used = "deterministic-municipal-synthesis-engine"
+
+        # Optional Gemini API synthesis if key is present
+        if settings.GEMINI_API_KEY:
+            try:
+                prompt_text = (
+                    "You are an executive municipal administrative analyst for Barangay Sabang, Lipa City. "
+                    "Analyze these pre-computed, privacy-safe solid waste management aggregates and produce an official executive briefing:\n"
+                    f"Aggregates: {metrics_snapshot}\n"
+                    "Respond with JSON formatted strictly as: "
+                    '{"executive_summary": "...", "key_findings": ["...", ...], "recommended_actions": ["...", ...]}'
+                )
+                endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key={settings.GEMINI_API_KEY}"
+                resp = httpx.post(
+                    endpoint,
+                    json={
+                        "contents": [{"parts": [{"text": prompt_text}]}],
+                        "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json"}
+                    },
+                    timeout=8.0,
+                )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw_content = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
+                    parsed = json.loads(raw_content)
+                    if "executive_summary" in parsed and "key_findings" in parsed:
+                        exec_summary = parsed["executive_summary"]
+                        key_findings = parsed["key_findings"]
+                        recommended_actions = parsed.get("recommended_actions", recommended_actions)
+                        model_used = "gemini-flash-lite-latest"
+            except Exception as exc:
+                logger.warning("Gemini narrative synthesis fallback to deterministic engine: %s", exc)
+
+        return NarrativeSummaryResponse(
+            title="Official Solid Waste Governance Executive Decision-Support Memorandum",
+            executive_summary=exec_summary,
+            key_findings=key_findings,
+            recommended_actions=recommended_actions,
+            model_used=model_used,
+            generated_at=now,
+            governance_disclaimer="Draft Decision-Support Aid • Prepared for Barangay Sabang Solid Waste Management Committee • Generated exclusively from aggregated statistical telemetry without PII pursuant to RA 10173.",
+            metrics_snapshot=metrics_snapshot,
         )

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import React from 'react';
 import ResidentReportsPage from '@/app/resident/reports/page';
 import * as apiClient from '@/lib/api-client';
@@ -57,6 +57,40 @@ describe('ResidentReportsPage Mandatory Photo Upload', () => {
     await waitFor(() => {
       expect(screen.getByText('Uncollected Bags on Corner')).toBeInTheDocument();
       expect(screen.getByText('View Attached Evidence Photo')).toBeInTheDocument();
+      expect(screen.getByText('View Full Photo')).toBeInTheDocument();
+    });
+  });
+
+  it('opens interactive photo zoom modal when View Full Photo is clicked', async () => {
+    render(<ResidentReportsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('View Full Photo')).toBeInTheDocument();
+    });
+
+    // Clicking "View Full Photo" opens the PhotoZoomModal rather than downloading
+    fireEvent.click(screen.getByText('View Full Photo'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.getAllByText('Uncollected Bags on Corner').length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText('Report #1 Evidence Photo')).toBeInTheDocument();
+      expect(screen.getByText('100%')).toBeInTheDocument();
+    });
+
+    const dialog = screen.getByRole('dialog');
+
+    // Zooming in works in the modal
+    const zoomInBtn = within(dialog).getByRole('button', { name: /Zoom In/i });
+    fireEvent.click(zoomInBtn);
+    expect(within(dialog).getByText('150%')).toBeInTheDocument();
+
+    // Closing the modal
+    const closeBtn = within(dialog).getByRole('button', { name: /Close photo viewer/i });
+    fireEvent.click(closeBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     });
   });
 

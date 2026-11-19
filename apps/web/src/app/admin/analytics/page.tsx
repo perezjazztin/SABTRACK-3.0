@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { getAnalyticsOverview } from '@/lib/api-client';
+import { getAnalyticsOverview, getReportNarrativeSummary } from '@/lib/api-client';
 import { useRealtimeSync } from '@/lib/use-realtime-sync';
 import {
   AnalyticsOverviewResponse,
@@ -11,6 +11,7 @@ import {
   DecisionSupportInsight,
   AreaRiskForecastItem,
   TrendDataPoint,
+  NarrativeSummaryResponse,
 } from '@/types/analytics';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -34,6 +35,9 @@ import {
   Activity,
   Calendar,
   Compass,
+  Printer,
+  Copy,
+  Check,
 } from 'lucide-react';
 
 const SEVERITY_BADGES = {
@@ -114,6 +118,35 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'descriptive' | 'predictive'>('all');
+  const [narrative, setNarrative] = useState<NarrativeSummaryResponse | null>(null);
+  const [narrativeLoading, setNarrativeLoading] = useState(false);
+  const [narrativeError, setNarrativeError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleGenerateNarrative = async () => {
+    setNarrativeLoading(true);
+    setNarrativeError(null);
+    try {
+      const res = await getReportNarrativeSummary();
+      setNarrative(res);
+    } catch (err: any) {
+      setNarrativeError(err?.message || 'Failed to synthesize narrative summary');
+    } finally {
+      setNarrativeLoading(false);
+    }
+  };
+
+  const handlePrintPDF = () => {
+    window.print();
+  };
+
+  const handleCopyText = () => {
+    if (!narrative) return;
+    const text = `${narrative.title}\nGenerated: ${new Date(narrative.generated_at).toLocaleString()}\nModel: ${narrative.model_used}\n\nEXECUTIVE SUMMARY:\n${narrative.executive_summary}\n\nKEY FINDINGS:\n${narrative.key_findings.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nRECOMMENDED ACTIONS:\n${narrative.recommended_actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\n${narrative.governance_disclaimer}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const fetchAnalytics = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -220,6 +253,18 @@ export default function AdminAnalyticsPage() {
                 Predictive (Forecast)
               </button>
             </div>
+
+            {isAdmin && (
+              <button
+                onClick={handleGenerateNarrative}
+                disabled={narrativeLoading}
+                className="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 transition-colors shadow-sm disabled:opacity-50"
+                title="Generate AI-Assisted Narrative Decision Support Briefing (Admin Exclusive)"
+              >
+                <Sparkles className={`w-3.5 h-3.5 mr-1.5 ${narrativeLoading ? 'animate-spin' : 'text-emerald-300'}`} />
+                <span>{narrativeLoading ? 'Summarizing...' : 'Summarize Reports'}</span>
+              </button>
+            )}
 
             <button
               onClick={() => fetchAnalytics()}
@@ -435,7 +480,7 @@ export default function AdminAnalyticsPage() {
                       const badge = SEVERITY_BADGES[spot.severity_level] || SEVERITY_BADGES.NORMAL;
                       return (
                         <div
-                          key={spot.area_id ?? idx}
+                          key={`hotspot-${spot.area_id ?? "na"}-${idx}`}
                           className="p-3.5 rounded-xl border border-slate-200/70 hover:border-slate-300 bg-slate-50/50 flex items-center justify-between gap-3 transition-colors"
                         >
                           <div className="space-y-0.5">
@@ -628,7 +673,7 @@ export default function AdminAnalyticsPage() {
                       predictive.area_risk_forecasts.map((forecast, i) => {
                         const badge = RISK_BADGES[forecast.risk_level] || RISK_BADGES.LOW_RISK;
                         return (
-                          <tr key={forecast.area_id ?? i} className="hover:bg-slate-50/70 transition-colors">
+                          <tr key={`forecast-${forecast.area_id ?? "na"}-${i}`} className="hover:bg-slate-50/70 transition-colors">
                             <td className="px-5 py-3.5 font-bold text-slate-900">
                               {forecast.area_name}
                             </td>
@@ -673,6 +718,286 @@ export default function AdminAnalyticsPage() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Admin AI Decision Support Executive Narrative Briefing */}
+        {isAdmin && (
+          <div className="bg-white rounded-2xl border border-emerald-200/80 p-5 sm:p-7 shadow-sm space-y-5 print:hidden">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+              <div className="flex items-center space-x-3">
+                <div className="p-2.5 bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200/60">
+                  <Sparkles className="w-5 h-5 text-emerald-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                      AI-Assisted Decision Support &bull; Executive Narrative
+                    </h2>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      Admin Only
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Generates draft narrative summaries from aggregated and validated analytics results (Zero Resident PII).
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleGenerateNarrative}
+                  disabled={narrativeLoading}
+                  className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 transition-colors shadow-sm disabled:opacity-50"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 mr-1.5 ${narrativeLoading ? 'animate-spin' : 'text-emerald-300'}`} />
+                  {narrativeLoading ? 'Synthesizing...' : narrative ? 'Regenerate Summary' : 'Summarize Reports'}
+                </button>
+
+                {narrative && (
+                  <>
+                    <button
+                      onClick={handlePrintPDF}
+                      className="inline-flex items-center px-3.5 py-2 rounded-xl text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 transition-colors border border-slate-200 shadow-sm"
+                      title="Download or Print Official Memorandum as PDF"
+                    >
+                      <Printer className="w-3.5 h-3.5 mr-1.5 text-slate-600" />
+                      Download / Print PDF
+                    </button>
+                    <button
+                      onClick={handleCopyText}
+                      className="inline-flex items-center px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors border border-slate-200"
+                      title="Copy memo text to clipboard"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                          <span className="text-emerald-700 font-bold">Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 mr-1 text-slate-500" />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {narrativeError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700">
+                {narrativeError}
+              </div>
+            )}
+
+            {!narrative && !narrativeLoading && (
+              <div className="p-6 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center space-y-2">
+                <p className="text-xs font-semibold text-slate-700">
+                  Ready to draft executive decision-support memo
+                </p>
+                <p className="text-[11px] text-slate-500 max-w-lg mx-auto">
+                  Click &ldquo;Summarize Reports&rdquo; to synthesize all descriptive indicators, hotspot rankings, and predictive volume trajectories into a council-ready briefing memo.
+                </p>
+              </div>
+            )}
+
+            {narrativeLoading && (
+              <div className="py-10 text-center space-y-3">
+                <div className="inline-block p-3 bg-emerald-50 rounded-full animate-pulse">
+                  <Sparkles className="w-6 h-6 text-emerald-700 animate-spin" />
+                </div>
+                <p className="text-xs font-semibold text-slate-700">
+                  Analyzing validated statistical telemetry and synthesizing narrative briefing...
+                </p>
+              </div>
+            )}
+
+            {narrative && !narrativeLoading && (
+              <div className="space-y-4">
+                {/* Meta Bar */}
+                <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/60 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-700">Document:</span>
+                    <span>{narrative.title}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                      Engine: {narrative.model_used}
+                    </span>
+                    <span>
+                      Generated: {new Date(narrative.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Executive Summary */}
+                <div className="p-4 sm:p-5 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-2">
+                  <h3 className="text-xs font-bold text-emerald-950 uppercase tracking-wider">
+                    Executive Narrative Overview
+                  </h3>
+                  <div className="text-xs sm:text-sm text-slate-800 leading-relaxed space-y-2 text-justify">
+                    {narrative.executive_summary.split('\n\n').map((paragraph, pIdx) => (
+                      <p key={pIdx}>{paragraph}</p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Findings & Actions Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                      Key Telemetry Findings
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-slate-700">
+                      {narrative.key_findings.map((f, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 flex-shrink-0" />
+                          <span>{f}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2.5">
+                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <ArrowRight className="w-3.5 h-3.5 text-emerald-700" />
+                      Prioritized Council Actions
+                    </h4>
+                    <ul className="space-y-1.5 text-xs text-slate-700">
+                      {narrative.recommended_actions.map((a, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 mt-1.5 flex-shrink-0" />
+                          <span>{a}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="text-[10px] text-slate-500 italic">
+                  {narrative.governance_disclaimer}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Printable Official Memorandum (Rendered only on window.print()) */}
+        {narrative && (
+          <div id="printable-memo" className="hidden print:block font-serif text-black p-8 bg-white max-w-4xl mx-auto">
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                body * {
+                  visibility: hidden !important;
+                }
+                #printable-memo, #printable-memo * {
+                  visibility: visible !important;
+                }
+                #printable-memo {
+                  position: absolute !important;
+                  left: 0 !important;
+                  top: 0 !important;
+                  width: 100% !important;
+                  padding: 24px !important;
+                  margin: 0 !important;
+                  background: white !important;
+                  color: black !important;
+                }
+              }
+            ` }} />
+            
+            <div className="text-center border-b-2 border-black pb-4 mb-6">
+              <p className="text-[11px] uppercase tracking-widest text-slate-700">Republic of the Philippines &bull; Province of Batangas</p>
+              <p className="text-sm font-bold uppercase tracking-wider text-black">City of Lipa &bull; Barangay Sabang</p>
+              <p className="text-xs font-semibold text-slate-800 mt-0.5">OFFICE OF THE BARANGAY COUNCIL &bull; SOLID WASTE MANAGEMENT COMMITTEE</p>
+              <h1 className="text-base font-black uppercase tracking-wide mt-4 border-t border-b border-black py-2">
+                Executive Decision-Support Memorandum &bull; Solid Waste Analytics Briefing
+              </h1>
+              <div className="flex justify-between text-[11px] mt-2 text-slate-700">
+                <span>Date: {new Date(narrative.generated_at).toLocaleDateString()}</span>
+                <span>Security: OFFICIAL GOVERNANCE MEMO (ZERO RESIDENT PII)</span>
+              </div>
+            </div>
+
+            {/* Metrics Snapshot Table */}
+            <div className="mb-6">
+              <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-black">I. Operational Telemetry Snapshot</h2>
+              <table className="w-full text-xs border border-collapse border-black">
+                <thead>
+                  <tr className="bg-slate-100 border-b border-black text-left">
+                    <th className="p-2 border-r border-black">Total Reports</th>
+                    <th className="p-2 border-r border-black">Open Triage</th>
+                    <th className="p-2 border-r border-black">Resolved Cases</th>
+                    <th className="p-2 border-r border-black">Resolution Rate</th>
+                    <th className="p-2 border-r border-black">Turnaround (Days)</th>
+                    <th className="p-2">Primary Hotspot</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="p-2 border-r border-black font-mono font-bold text-center">{narrative.metrics_snapshot.total_reports}</td>
+                    <td className="p-2 border-r border-black font-mono font-bold text-center">{narrative.metrics_snapshot.open_reports}</td>
+                    <td className="p-2 border-r border-black font-mono font-bold text-center">{narrative.metrics_snapshot.resolved_reports}</td>
+                    <td className="p-2 border-r border-black font-mono font-bold text-center">{narrative.metrics_snapshot.resolution_rate_pct}%</td>
+                    <td className="p-2 border-r border-black font-mono font-bold text-center">{narrative.metrics_snapshot.avg_resolution_days.toFixed(1)}</td>
+                    <td className="p-2 font-bold text-center">{narrative.metrics_snapshot.primary_hotspot}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Executive Summary Narrative */}
+            <div className="mb-6">
+              <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-black">II. Executive Narrative Summary</h2>
+              <div className="text-xs leading-relaxed text-justify space-y-2">
+                {narrative.executive_summary.split('\n\n').map((paragraph, pIdx) => (
+                  <p key={pIdx}>{paragraph}</p>
+                ))}
+              </div>
+            </div>
+
+            {/* Key Findings */}
+            <div className="mb-6">
+              <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-black">III. Key Operational Telemetry Findings</h2>
+              <ul className="text-xs list-disc pl-5 space-y-1">
+                {narrative.key_findings.map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Recommended Actions */}
+            <div className="mb-6">
+              <h2 className="text-xs font-bold uppercase tracking-wider mb-2 text-black">IV. Prioritized Action Plan &amp; Recommendations</h2>
+              <ul className="text-xs list-disc pl-5 space-y-1">
+                {narrative.recommended_actions.map((a, i) => (
+                  <li key={i}>{a}</li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Sign-off */}
+            <div className="mt-12 pt-6 border-t border-slate-400 grid grid-cols-2 gap-8 text-xs">
+              <div>
+                <p className="font-bold">Prepared for:</p>
+                <div className="mt-8 border-b border-black w-48"></div>
+                <p className="mt-1 font-bold">Barangay Solid Waste Management Committee</p>
+                <p className="text-slate-600">Barangay Sabang, Lipa City, Batangas</p>
+              </div>
+              <div>
+                <p className="font-bold">Noted by:</p>
+                <div className="mt-8 border-b border-black w-48"></div>
+                <p className="mt-1 font-bold">Hon. Punong Barangay</p>
+                <p className="text-slate-600">Barangay Sabang, Lipa City, Batangas</p>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center text-[10px] text-slate-500 border-t border-slate-200 pt-3">
+              SABTRACK 3.0 &bull; Batangas State University &ndash; The National Engineering University &bull; IT 313 Academic Mandate &bull; RA 10173 Protected
             </div>
           </div>
         )}

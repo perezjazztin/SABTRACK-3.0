@@ -24,6 +24,8 @@ async def lifespan(app: FastAPI):
     try:
         settings.STORAGE_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         logger.info("Storage uploads directory verified: %s", settings.STORAGE_UPLOAD_DIR)
+        settings.STORAGE_EMAIL_DIR.mkdir(parents=True, exist_ok=True)
+        logger.info("Storage email directory verified: %s", settings.STORAGE_EMAIL_DIR)
     except Exception as exc:
         logger.error("Failed to initialize storage directory: %s", exc)
     yield

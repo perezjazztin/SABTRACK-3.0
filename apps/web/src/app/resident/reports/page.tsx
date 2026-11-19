@@ -15,10 +15,12 @@ import {
   ChevronUp,
   RefreshCw,
   Camera,
+  ZoomIn,
 } from 'lucide-react';
 import { createReport, getMyReports, resolveImageUrl } from '@/lib/api-client';
 import { WasteReport, ReportCategory, ReportStatus } from '@/types/reports';
 import { ImageUpload } from '@/components/ImageUpload';
+import { PhotoZoomModal } from '@/components/PhotoZoomModal';
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
   UNCOLLECTED_GARBAGE: 'Uncollected Garbage',
@@ -68,6 +70,11 @@ export default function ResidentReportsPage() {
   const [expandedReportId, setExpandedReportId] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [zoomedPhoto, setZoomedPhoto] = useState<{
+    url: string;
+    title: string;
+    reportId: number | string;
+  } | null>(null);
 
   // Form state
   const [category, setCategory] = useState<ReportCategory>('UNCOLLECTED_GARBAGE');
@@ -161,12 +168,24 @@ export default function ResidentReportsPage() {
             Submit waste violations, uncollected garbage reports, and track their resolution by Barangay Sabang staff in real-time.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center px-5 py-3 bg-civic-forest text-white rounded-xl text-xs font-bold shadow-neu-green hover:bg-civic-forestHover transition-all flex-shrink-0"
-        >
-          {showForm ? 'Cancel Submission' : <><Plus className="w-4 h-4 mr-2" /> Submit New Report</>}
-        </button>
+        <div className="flex items-center gap-2.5 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => fetchReports()}
+            disabled={loading}
+            className="neu-button inline-flex items-center px-4 py-3 text-slate-700 rounded-xl text-xs font-bold shadow-neu-xs hover:text-civic-forest transition-all disabled:opacity-50"
+            title="Refresh reports list"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin text-civic-forest' : ''}`} />
+            Refresh
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center px-5 py-3 bg-civic-forest text-white rounded-xl text-xs font-bold shadow-neu-green hover:bg-civic-forestHover transition-all flex-shrink-0"
+          >
+            {showForm ? 'Cancel Submission' : <><Plus className="w-4 h-4 mr-2" /> Submit New Report</>}
+          </button>
+        </div>
       </div>
 
       {/* Notifications */}
@@ -282,7 +301,7 @@ export default function ResidentReportsPage() {
                 }
               }}
               label="Incident Photo Evidence *"
-              helperText="Upload or take a photo of the waste or violation (JPEG, PNG, WebP up to 5MB). Photo attachment is required for verification."
+              helperText="Upload or take a photo of the waste or violation (JPEG, PNG, WebP up to 30MB). Photo attachment is required for verification."
             />
             {!photoUrl && (
               <p className="text-[11px] text-amber-700 font-medium">
@@ -318,7 +337,7 @@ export default function ResidentReportsPage() {
 
       {/* Filter Tabs */}
       <div className="neu-card p-2 rounded-2xl border border-slate-200/70 shadow-neu-xs flex items-center space-x-2 overflow-x-auto text-xs">
-        {['ALL', 'SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS', 'RESOLVED'].map((sKey) => {
+        {['ALL', 'SUBMITTED', 'UNDER_REVIEW', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'].map((sKey) => {
           const count =
             sKey === 'ALL'
               ? reports.length
@@ -369,7 +388,7 @@ export default function ResidentReportsPage() {
       ) : (
         <div className="space-y-5 sm:space-y-6">
           {filteredReports.map((report) => {
-            const statusMeta = STATUS_CONFIG[report.status];
+            const statusMeta = STATUS_CONFIG[report.status] || STATUS_CONFIG.SUBMITTED;
             const StatusIcon = statusMeta.icon;
             const isExpanded = expandedReportId === report.id;
 
@@ -409,11 +428,17 @@ export default function ResidentReportsPage() {
                   {/* Photo Evidence Preview if present */}
                   {report.photo_url && (
                     <div className="pt-2 flex items-center gap-3">
-                      <a
-                        href={resolveImageUrl(report.photo_url)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="group relative flex items-center gap-2.5 rounded-xl border border-slate-200/70 bg-slate-50 p-1.5 pr-3 hover:bg-emerald-50/50 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedPhoto({
+                            url: resolveImageUrl(report.photo_url),
+                            title: report.title,
+                            reportId: report.id,
+                          })
+                        }
+                        title="Click to zoom in on evidence photo"
+                        className="group relative flex items-center gap-2.5 rounded-xl border border-slate-200/70 bg-slate-50 p-1.5 pr-3 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all text-left"
                       >
                         <div className="relative h-12 w-12 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 flex-shrink-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -426,12 +451,12 @@ export default function ResidentReportsPage() {
                         </div>
                         <div className="text-left">
                           <div className="flex items-center text-xs font-bold text-slate-700 group-hover:text-civic-forest">
-                            <Camera className="w-3.5 h-3.5 mr-1 text-slate-400 group-hover:text-civic-forest" />
+                            <ZoomIn className="w-3.5 h-3.5 mr-1 text-slate-400 group-hover:text-civic-forest" />
                             View Attached Evidence Photo
                           </div>
-                          <span className="text-[10px] text-slate-400">RA 10173 Sanitized &bull; Click to open</span>
+                          <span className="text-[10px] text-slate-400">RA 10173 Sanitized &bull; Click to zoom in</span>
                         </div>
-                      </a>
+                      </button>
                     </div>
                   )}
 
@@ -462,14 +487,20 @@ export default function ResidentReportsPage() {
                       )}
                     </button>
                     {report.photo_url && (
-                      <a
-                        href={resolveImageUrl(report.photo_url)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-slate-500 hover:text-slate-800 underline flex items-center"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setZoomedPhoto({
+                            url: resolveImageUrl(report.photo_url),
+                            title: report.title,
+                            reportId: report.id,
+                          })
+                        }
+                        className="text-xs text-slate-500 hover:text-civic-forest hover:underline flex items-center transition-colors cursor-pointer"
+                        title="Zoom in on attached evidence photo"
                       >
-                        <Camera className="w-3.5 h-3.5 mr-1" /> View Full Photo
-                      </a>
+                        <ZoomIn className="w-3.5 h-3.5 mr-1 text-slate-400 group-hover:text-civic-forest" /> View Full Photo
+                      </button>
                     )}
                   </div>
                 </div>
@@ -509,6 +540,18 @@ export default function ResidentReportsPage() {
             );
           })}
         </div>
+      )}
+
+      {/* Lightbox / Interactive Photo Zoom Viewer */}
+      {zoomedPhoto && (
+        <PhotoZoomModal
+          isOpen={!!zoomedPhoto}
+          onClose={() => setZoomedPhoto(null)}
+          imageUrl={zoomedPhoto.url}
+          title={zoomedPhoto.title}
+          subtitle={`Report #${zoomedPhoto.reportId} Evidence Photo`}
+          altText={`Evidence photo for report #${zoomedPhoto.reportId}`}
+        />
       )}
     </div>
   );
