@@ -17,6 +17,11 @@ import {
   AdvisoryCreatePayload,
   ScheduleNotificationResponse,
 } from '@/types/schedules';
+import {
+  SupportedIdType,
+  ScanIdResponse,
+  VerifyFaceResponse,
+} from '@/types/verification';
 
 export class ApiClientError extends Error {
   constructor(
@@ -208,6 +213,54 @@ export async function registerResident(payload: RegisterPayload): Promise<User> 
     method: 'POST',
     body: JSON.stringify(payload),
   });
+}
+
+/**
+ * Upload and scan government ID (Step 1 & 2).
+ */
+export async function scanGovernmentId(
+  file: File,
+  idType: SupportedIdType
+): Promise<ScanIdResponse> {
+  const formData = new FormData();
+  formData.append('id_type', idType);
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/identity-verification/scan-id`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || data?.detail || 'Failed to scan government ID.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+  return data as ScanIdResponse;
+}
+
+/**
+ * Verify live camera face snapshot against ID portrait (Step 3 & 4).
+ */
+export async function verifyFaceBiometrics(
+  tempVerificationId: string,
+  liveFaceBlob: Blob
+): Promise<VerifyFaceResponse> {
+  const formData = new FormData();
+  formData.append('temp_verification_id', tempVerificationId);
+  formData.append('live_face', liveFaceBlob, 'live_face.jpg');
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/identity-verification/verify-face`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || data?.detail || 'Face biometric verification failed.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+  return data as VerifyFaceResponse;
 }
 
 export async function login(credentials: LoginCredentials): Promise<SessionUserResponse> {
@@ -414,10 +467,26 @@ import {
   ArticleReadingStatus,
   ArticleReadingSession,
   ArticleReadingCompletion,
+  AwarenessHeartbeatResponse,
+  AwarenessStatusResponse,
 } from '@/types/gamification';
 
 export async function getArticleReadingStatus(): Promise<ArticleReadingStatus> {
   return apiFetch<ArticleReadingStatus>('/api/v1/gamification/article-reading/status');
+}
+
+export async function getAwarenessStatus(): Promise<AwarenessStatusResponse> {
+  return apiFetch<AwarenessStatusResponse>('/api/v1/gamification/awareness/status');
+}
+
+export async function submitAwarenessHeartbeat(
+  resourceId: string,
+  sessionId?: string | null
+): Promise<AwarenessHeartbeatResponse> {
+  return apiFetch<AwarenessHeartbeatResponse>('/api/v1/gamification/awareness/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({ resource_id: resourceId, session_id: sessionId || null }),
+  });
 }
 
 export async function openArticleReading(articleId: string): Promise<ArticleReadingSession> {
