@@ -13,16 +13,19 @@ import {
   Eye,
   EyeOff,
   FileCheck2,
+  Image as ImageIcon,
   Loader2,
   Recycle,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   Upload,
   UserCheck,
 } from 'lucide-react';
 import { registerResident, scanGovernmentId, verifyFaceBiometrics } from '@/lib/api-client';
 import { SupportedIdType, ExtractedIdData } from '@/types/verification';
 import FaceCaptureModal from '@/components/verification/FaceCaptureModal';
+import IdCaptureModal from '@/components/verification/IdCaptureModal';
 
 const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
@@ -209,11 +212,16 @@ export default function RegisterPage() {
   // Verification state
   const [selectedIdType, setSelectedIdType] = useState<SupportedIdType>('PHILIPPINE_NATIONAL_ID');
   const [idFile, setIdFile] = useState<File | null>(null);
+  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
   const [isScanningId, setIsScanningId] = useState(false);
   const [tempVerificationId, setTempVerificationId] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedIdData | null>(null);
+  const [scanSuccessBanner, setScanSuccessBanner] = useState<string | null>(null);
 
-  // Facial Biometrics state
+  // Camera modal states
+  const [isIdCameraModalOpen, setIsIdCameraModalOpen] = useState(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isMatchingFace, setIsMatchingFace] = useState(false);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
@@ -258,8 +266,11 @@ export default function RegisterPage() {
   useEffect(() => {
     return () => {
       if (redirectTimer.current) clearTimeout(redirectTimer.current);
+      if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(idPreviewUrl);
+      }
     };
-  }, []);
+  }, [idPreviewUrl]);
 
   useEffect(() => {
     if (errorMessage && typeof errorRef.current?.scrollIntoView === 'function') {
@@ -267,18 +278,53 @@ export default function RegisterPage() {
     }
   }, [errorMessage]);
 
-  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSetIdFile = (file: File | null) => {
+    if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(idPreviewUrl);
+    }
+    setScanSuccessBanner(null);
     setErrorMessage(null);
-    const file = e.target.files?.[0];
+
     if (file) {
       setIdFile(file);
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        setIdPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setIdPreviewUrl('mock-preview-url');
+      }
+    } else {
+      setIdFile(null);
+      setIdPreviewUrl(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
+
+    // Reset temporary session if a new ID image is selected/deleted
+    setTempVerificationId(null);
+    setExtractedData(null);
+    setVerificationToken(null);
+    setMatchScore(null);
+  };
+
+  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    handleSetIdFile(file);
+  };
+
+  const handleDeleteIdImage = () => {
+    handleSetIdFile(null);
+  };
+
+  const handleIdCameraCaptured = (capturedFile: File) => {
+    setIsIdCameraModalOpen(false);
+    handleSetIdFile(capturedFile);
   };
 
   // Scan & OCR Government ID
   const handleScanId = async () => {
     if (!idFile) {
-      setErrorMessage('Please select a clear photo of your government-issued ID.');
+      setErrorMessage('Please select or capture a photo of your government-issued ID.');
       return;
     }
     setErrorMessage(null);
@@ -288,13 +334,28 @@ export default function RegisterPage() {
       setTempVerificationId(res.temp_verification_id);
       setExtractedData(res.extracted_data);
 
-      // Auto-populate extracted identity fields
+      // Auto-populate extracted identity fields directly into form below
       if (res.extracted_data.full_name) {
         setFullName(res.extracted_data.full_name);
       }
       if (res.extracted_data.id_number_masked) {
         setResidentIdNum(res.extracted_data.id_number_masked);
       }
+
+      // Smart auto-detection of Purok if present in address
+      if (res.extracted_data.address) {
+        const addr = res.extracted_data.address.toUpperCase();
+        const matchedPurok = PUROK_OPTIONS.find((p) =>
+          addr.includes(`PUROK ${p.id}`) || addr.includes(`ZONE ${p.id}`)
+        );
+        if (matchedPurok) {
+          setAreaId(matchedPurok.id);
+        }
+      }
+
+      setScanSuccessBanner(
+        `ID details extracted successfully! Legal name and ID number have been populated in the form below.`
+      );
     } catch (err) {
       setErrorMessage(
         err instanceof Error
@@ -334,11 +395,8 @@ export default function RegisterPage() {
   };
 
   const handleResetVerification = () => {
-    setTempVerificationId(null);
-    setExtractedData(null);
-    setVerificationToken(null);
-    setMatchScore(null);
-    setIdFile(null);
+    handleSetIdFile(null);
+    setScanSuccessBanner(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -521,13 +579,17 @@ export default function RegisterPage() {
                     </select>
                   </div>
 
-                  {/* Upload ID File */}
+                  {/* ID Image Selection: Upload File or Direct Camera Scan */}
                   <div>
-                    <label htmlFor="idUploadInput" className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Upload ID Document Photo
+                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Government ID Image (Upload Photo or Direct Camera Scan)
                     </label>
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+
+                    {/* Options to Choose File or Open Camera */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-3">
+                      {/* Hidden file input with explicit label button */}
                       <input
+                        ref={fileInputRef}
                         type="file"
                         id="idUploadInput"
                         name="idUploadInput"
@@ -535,31 +597,106 @@ export default function RegisterPage() {
                         accept="image/jpeg,image/png,image/webp"
                         disabled={locked || isScanningId || isMatchingFace}
                         onChange={handleIdFileChange}
-                        className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer"
+                        className="sr-only"
                       />
+                      <label
+                        htmlFor="idUploadInput"
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-emerald-800 bg-white border border-emerald-300 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer shadow-sm transition"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Choose ID File</span>
+                      </label>
 
+                      {/* Direct camera scanner button */}
+                      <button
+                        type="button"
+                        onClick={() => setIsIdCameraModalOpen(true)}
+                        disabled={locked || isScanningId || isMatchingFace}
+                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>Scan with Camera</span>
+                      </button>
+                    </div>
+
+                    {/* When ID image is selected/captured: Preview card with Delete button */}
+                    {idFile && (
+                      <div className="p-3 bg-white rounded-xl border border-emerald-200/90 shadow-sm flex items-center justify-between gap-3 mb-3 animate-in fade-in">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          {idPreviewUrl ? (
+                            <img
+                              src={idPreviewUrl}
+                              alt="ID Preview"
+                              className="w-14 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
+                            />
+                          ) : (
+                            <div className="w-14 h-10 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
+                              <ImageIcon className="w-5 h-5 text-emerald-600" />
+                            </div>
+                          )}
+
+                          <div className="truncate">
+                            <p className="text-xs font-bold text-slate-800 truncate">
+                              {idFile.name}
+                            </p>
+                            <p className="text-[11px] text-slate-500">
+                              {(idFile.size / 1024).toFixed(0)} KB &bull; Ready to scan
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Delete ID Image button */}
+                        <button
+                          type="button"
+                          onClick={handleDeleteIdImage}
+                          disabled={locked || isScanningId}
+                          aria-label="Delete ID image"
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/70 transition shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Scan trigger button */}
+                    <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={handleScanId}
                         disabled={locked || !idFile || isScanningId || Boolean(tempVerificationId)}
-                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition shrink-0"
+                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition"
                       >
                         {isScanningId ? (
                           <>
                             <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                            Scanning ID…
+                            Extracting details…
                           </>
                         ) : tempVerificationId ? (
                           <>
                             <Check className="w-3.5 h-3.5 mr-1.5" />
-                            ID Scanned
+                            Details Extracted
                           </>
                         ) : (
                           'Scan & Process ID'
                         )}
                       </button>
+
+                      {tempVerificationId && (
+                        <span className="text-[11px] text-emerald-700 font-medium">
+                          ✓ ID processed. Extracted details pasted below.
+                        </span>
+                      )}
                     </div>
                   </div>
+
+                  {/* Feedback banner when ID scan finishes and pastes details */}
+                  {scanSuccessBanner && (
+                    <div className="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 animate-in fade-in">
+                      <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>{scanSuccessBanner}</span>
+                    </div>
+                  )}
 
                   {/* Trigger Face Biometrics Verification */}
                   {tempVerificationId && (
@@ -569,7 +706,7 @@ export default function RegisterPage() {
                           Step 2: Facial Biometric Verification
                         </p>
                         <p className="text-[11px] text-slate-500">
-                          Liveness check will prompt for head turns and blink to verify your identity.
+                          Liveness check will prompt for head turns and blink to verify your identity against the ID photo.
                         </p>
                       </div>
 
@@ -627,9 +764,16 @@ export default function RegisterPage() {
 
             {/* Full legal name */}
             <div>
-              <label htmlFor="fullName" className={labelClass}>
-                Full legal name
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="fullName" className={labelClass}>
+                  Full legal name
+                </label>
+                {tempVerificationId && (
+                  <span className="text-[11px] font-semibold text-emerald-700">
+                    Extracted from ID (editable)
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   id="fullName"
@@ -650,9 +794,16 @@ export default function RegisterPage() {
             {/* Resident ID + Purok */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
               <div>
-                <label htmlFor="residentIdNum" className={labelClass}>
-                  Resident ID number
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="residentIdNum" className={labelClass}>
+                    Resident ID number
+                  </label>
+                  {tempVerificationId && (
+                    <span className="text-[11px] font-semibold text-emerald-700">
+                      Extracted from ID
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     id="residentIdNum"
@@ -858,6 +1009,13 @@ export default function RegisterPage() {
           </form>
         </div>
       </section>
+
+      {/* Direct Camera Scanner Modal for Government ID */}
+      <IdCaptureModal
+        isOpen={isIdCameraModalOpen}
+        onCapture={handleIdCameraCaptured}
+        onClose={() => setIsIdCameraModalOpen(false)}
+      />
 
       {/* Active Liveness Face Capture Modal */}
       <FaceCaptureModal
