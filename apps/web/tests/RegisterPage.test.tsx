@@ -9,47 +9,53 @@ const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
+    replace: vi.fn(),
   }),
 }));
 
-describe('RegisterPage Component with Resident ID Number', () => {
+describe('RegisterPage Component with Integrated Identity Verification', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
-  it('renders all registration form fields including Resident ID Number without Auto-Generate button', () => {
+  it('renders Step 1 with supported government ID options', () => {
     render(<RegisterPage />);
 
-    expect(screen.getByRole('heading', { name: /Register as a Resident/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/Full Legal Name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Resident ID Number/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Email Address/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Purok \/ Barangay Zone/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Confirm Password/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Create Resident Account/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Resident Account Registration/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Select Government ID Type/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Philippine National ID/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('button', { name: /Scan & Process ID/i })).toBeInTheDocument();
 
-    // Auto-Generate ID button must NOT be present as residents already have their own ID
-    expect(screen.queryByRole('button', { name: /Auto-Generate ID/i })).not.toBeInTheDocument();
+    // Personal details form should be locked in Step 1
+    expect(screen.queryByLabelText(/Create Password/i)).not.toBeInTheDocument();
   });
 
-  it('allows residents to manually enter their existing Barangay Resident ID number and capitalizes it', () => {
-    render(<RegisterPage />);
-
-    const residentIdInput = screen.getByLabelText(/Resident ID Number/i) as HTMLInputElement;
-    fireEvent.change(residentIdInput, {
-      target: { value: 'sab-2026-0912' },
+  it('completes verified registration after ID and face match', async () => {
+    vi.spyOn(apiClient, 'scanGovernmentId').mockResolvedValue({
+      temp_verification_id: 'temp_sess_999',
+      extracted_data: {
+        full_name: 'JUAN DELA CRUZ',
+        dob: '1995-08-15',
+        age: 31,
+        address: 'BARANGAY SABANG',
+        id_number_masked: '****-****-0842',
+        id_type: 'PHILIPPINE_NATIONAL_ID',
+      },
+      message: 'ID scanned successfully.',
     });
 
-    expect(residentIdInput.value).toBe('SAB-2026-0912');
-  });
+    vi.spyOn(apiClient, 'verifyFaceBiometrics').mockResolvedValue({
+      verification_token: 'valid_token_0842',
+      match_score: 0.95,
+      status: 'VERIFIED',
+      message: 'Face verified successfully.',
+    });
 
-  it('successfully submits registration with custom Resident ID number and stores in localStorage', async () => {
     const mockRegister = vi.spyOn(apiClient, 'registerResident').mockResolvedValue({
       id: 99,
       email: 'juan.delacruz@sabtrack.local',
-      full_name: 'Juan Dela Cruz',
+      full_name: 'JUAN DELA CRUZ',
       role: 'RESIDENT',
       area_id: 1,
       is_active: true,
@@ -58,43 +64,58 @@ describe('RegisterPage Component with Resident ID Number', () => {
 
     render(<RegisterPage />);
 
-    fireEvent.change(screen.getByLabelText(/Full Legal Name/i), {
-      target: { value: 'Juan Dela Cruz' },
+    // Step 1 & 2: Upload and scan ID
+    const fileInput = screen.getByTestId('id-upload-input');
+    const dummyFile = new File(['mock_id_content'], 'id.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [dummyFile] } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Scan & Process ID/i }));
+
+    // Step 3 & 4: Start face verification & capture
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Start Face Verification/i })).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByLabelText(/Resident ID Number/i), {
-      target: { value: 'SAB-2026-0842' },
+    fireEvent.click(screen.getByRole('button', { name: /Start Face Verification/i }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Capture Face Photo/i })).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole('button', { name: /Capture Face Photo/i }));
+
+    // Step 5: Fill in required credentials on unlocked review form
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Create Password/i)).toBeInTheDocument();
+    });
+
     fireEvent.change(screen.getByLabelText(/Email Address/i), {
       target: { value: 'juan.delacruz@sabtrack.local' },
     });
-    fireEvent.change(screen.getByLabelText(/Purok \/ Barangay Zone/i), {
+    fireEvent.change(screen.getByLabelText(/Barangay Sabang Purok \/ Zone/i), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText(/^Password$/i), {
+    fireEvent.change(screen.getByLabelText(/Create Password/i), {
       target: { value: 'ValidResidentPass2026!' },
     });
     fireEvent.change(screen.getByLabelText(/Confirm Password/i), {
       target: { value: 'ValidResidentPass2026!' },
     });
 
-    // Check privacy checkbox
+    // Accept privacy
     const privacyCheckbox = screen.getByRole('checkbox');
     fireEvent.click(privacyCheckbox);
 
-    // Submit form
-    fireEvent.click(screen.getByRole('button', { name: /Create Resident Account/i }));
+    // Complete registration
+    fireEvent.click(screen.getByRole('button', { name: /Complete Verified Registration/i }));
 
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith({
         email: 'juan.delacruz@sabtrack.local',
-        full_name: 'Juan Dela Cruz',
+        full_name: 'JUAN DELA CRUZ',
         password: 'ValidResidentPass2026!',
         area_id: 1,
-        resident_id_num: 'SAB-2026-0842',
+        resident_id_num: '****-****-0842',
+        verification_token: 'valid_token_0842',
       });
     });
-
-    expect(localStorage.getItem('sabtrack_registered_resident_id')).toBe('SAB-2026-0842');
-    expect(screen.getByText(/Resident account registered successfully/i)).toBeInTheDocument();
   });
 });
