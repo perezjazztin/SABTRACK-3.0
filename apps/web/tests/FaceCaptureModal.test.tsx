@@ -1,0 +1,53 @@
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import FaceCaptureModal from '@/components/verification/FaceCaptureModal';
+
+describe('FaceCaptureModal Component', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // Mock navigator.mediaDevices
+    Object.defineProperty(navigator, 'mediaDevices', {
+      writable: true,
+      value: {
+        getUserMedia: vi.fn().mockResolvedValue({
+          getTracks: () => [{ stop: vi.fn() }],
+        }),
+      },
+    });
+  });
+
+  it('renders interactive pose instructions and liveness checklist', () => {
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(<FaceCaptureModal isOpen={true} onCapture={handleCapture} onClose={handleClose} />);
+
+    expect(screen.getByText(/Look straight at the camera/i)).toBeInTheDocument();
+    expect(screen.getByText(/Look to the left/i)).toBeInTheDocument();
+    expect(screen.getByText(/Look to the right/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blink naturally/i)).toBeInTheDocument();
+  });
+
+  it('triggers onCapture when liveness capture is executed', async () => {
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(<FaceCaptureModal isOpen={true} onCapture={handleCapture} onClose={handleClose} />);
+
+    const captureBtn = screen.getByRole('button', { name: /Capture Face Photo/i });
+    expect(captureBtn).toBeInTheDocument();
+    fireEvent.click(captureBtn);
+
+    await waitFor(() => {
+      expect(handleCapture).toHaveBeenCalled();
+    });
+  });
+
+  it('calls onClose when Cancel button is clicked', () => {
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(<FaceCaptureModal isOpen={true} onCapture={handleCapture} onClose={handleClose} />);
+
+    const cancelBtn = screen.getByRole('button', { name: /Cancel/i });
+    fireEvent.click(cancelBtn);
+    expect(handleClose).toHaveBeenCalled();
+  });
+});
