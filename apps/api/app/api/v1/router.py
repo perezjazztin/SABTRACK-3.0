@@ -13,12 +13,14 @@ from app.api.v1.endpoints import (
     realtime,
     chatbot,
     notifications,
+    identity_verification,
 )
 
 # Ensure all models are registered with SQLAlchemy's mapper registry
 # before any endpoint attempts to resolve string-based relationships.
 import app.modules.areas.models  # noqa: F401  (registers Area)
 import app.modules.identity.models  # noqa: F401  (registers User, Session, SecurityAuditLog)
+import app.modules.identity_verification.models  # noqa: F401  (registers IdentityVerification)
 import app.modules.reports.models  # noqa: F401  (registers Report, ReportStatusHistory)
 import app.modules.schedules.models  # noqa: F401  (registers Schedule, ScheduleAdvisory)
 import app.modules.announcements.models  # noqa: F401  (registers Announcement)
@@ -39,3 +41,4 @@ api_router.include_router(uploads.router, tags=["Protected Evidence Uploads"])
 api_router.include_router(realtime.router, tags=["Real-Time Synchronization"])
 api_router.include_router(chatbot.router, prefix="/chatbot", tags=["EcoBot Civic AI"])
 api_router.include_router(notifications.router, prefix="/notifications", tags=["Email Notifications & Diagnostics"])
+api_router.include_router(identity_verification.router, tags=["Integrated Identity Verification"])

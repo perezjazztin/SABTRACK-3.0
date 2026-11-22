@@ -124,8 +124,8 @@ class IdOcrService:
         address = None
         id_number = ""
 
-        # Extract Name
-        name_match = re.search(r"(?:NAME|FULL NAME|APELYIDO|PANGALAN)[:\s]+([A-Z\s,.-]+)", text, re.IGNORECASE)
+        # Extract Name (stopping before newline)
+        name_match = re.search(r"(?:NAME|FULL NAME|APELYIDO|PANGALAN)[:\s]+([^\r\n]+)", text, re.IGNORECASE)
         if name_match:
             full_name = name_match.group(1).strip()
 
@@ -140,7 +140,7 @@ class IdOcrService:
             id_number = id_num_match.group(1).strip()
 
         # Extract Address
-        addr_match = re.search(r"(?:ADDRESS|TIRAHAN)[:\s]+([A-Z0-9\s,.-]+)", text, re.IGNORECASE)
+        addr_match = re.search(r"(?:ADDRESS|TIRAHAN)[:\s]+([^\r\n]+)", text, re.IGNORECASE)
         if addr_match:
             address = addr_match.group(1).strip()
 
