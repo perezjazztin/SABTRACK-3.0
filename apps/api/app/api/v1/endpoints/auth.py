@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from difflib import SequenceMatcher
 from typing import Dict, Tuple
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response, status
 from app.modules.notifications.service import email_service
@@ -27,6 +28,10 @@ from app.modules.identity.models import (
     User,
     SecurityAuditLog,
     LoginThrottling,
+)
+from app.modules.identity_verification.models import (
+    IdentityVerification,
+    VerificationStatus,
 )
 from app.core.security import UserRole
 from app.modules.identity.schemas import (
@@ -59,6 +64,7 @@ def _check_rate_limit(db: Session, ip: str, email: str) -> None:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Too many failed login attempts. Please wait {remaining_secs} seconds before retrying.",
+                headers={"Retry-After": str(remaining_secs)},
             )
         else:
             # Lockout window passed, reset attempts
@@ -125,6 +131,51 @@ def register(
             detail="A user with this email address already exists.",
         )
 
+    # Validate identity verification token if provided
+    verification_record = None
+    if payload.verification_token:
+        token_hash = hash_token(payload.verification_token)
+        verification_record = db.execute(
+            select(IdentityVerification).where(IdentityVerification.verification_token_hash == token_hash)
+        ).scalar_one_or_none()
+
+        if not verification_record:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired identity verification token.",
+            )
+
+        if verification_record.status != VerificationStatus.VERIFIED or verification_record.user_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Identity verification token has already been consumed or is not verified.",
+            )
+
+        now = datetime.now(timezone.utc)
+        expires = verification_record.token_expires_at
+        if expires and expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires and now > expires:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Identity verification token has expired. Please verify your ID again.",
+            )
+
+        # Enforce name similarity guardrail (>= 80% similarity against raw OCR name)
+        similarity = SequenceMatcher(
+            None,
+            payload.full_name.strip().upper(),
+            verification_record.ocr_full_name.strip().upper(),
+        ).ratio()
+        if similarity < 0.80:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Submitted full name differs significantly ({similarity:.0%}) from verified "
+                    f"government ID ({verification_record.ocr_full_name}). Please rescan your ID."
+                ),
+            )
+
     new_user = User(
         email=clean_email,
         hashed_password=hash_password(payload.password),
@@ -136,6 +187,14 @@ def register(
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    if verification_record:
+        verification_record.user_id = new_user.id
+        verification_record.submitted_full_name = payload.full_name.strip()
+        verification_record.is_user_corrected = (
+            payload.full_name.strip().upper() != verification_record.ocr_full_name.strip().upper()
+        )
+        db.commit()
 
     audit_entry = SecurityAuditLog(
         actor_id=new_user.id,

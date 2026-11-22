@@ -42,6 +42,7 @@ class UserCreate(BaseModel):
     role: UserRole = Field(default=UserRole.RESIDENT)
     area_id: int | None = Field(default=None)
     resident_id_num: str | None = Field(default=None, max_length=50)
+    verification_token: str | None = Field(default=None, description="Signed single-use identity verification token")
 
 
 class UserStatusUpdate(BaseModel):
