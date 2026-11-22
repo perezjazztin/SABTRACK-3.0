@@ -530,7 +530,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* ========================================================= */}
-            {/* Integrated Modern Identity & Face Biometrics Verification */}
+            {/* 2-Step Government ID & Facial Biometric Verification      */}
             {/* ========================================================= */}
             <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/50 p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between">
@@ -540,10 +540,10 @@ export default function RegisterPage() {
                   </div>
                   <div>
                     <h2 className="text-xs sm:text-sm font-bold text-slate-900">
-                      Government ID &amp; Biometric Verification
+                      Government ID &amp; Facial Biometric Verification
                     </h2>
                     <p className="text-[11px] text-slate-500">
-                      Automated verification via PhilSys, Driver&apos;s License, Passport, or UMID
+                      Two-step verification: Official ID OCR extraction &amp; Live Face Liveness Match
                     </p>
                   </div>
                 </div>
@@ -558,135 +558,153 @@ export default function RegisterPage() {
 
               {!isVerified ? (
                 <div className="space-y-3.5 pt-1">
-                  {/* Select ID Type */}
-                  <div>
-                    <label htmlFor="idType" className="block text-xs font-semibold text-slate-700 mb-1">
-                      Select Government ID Type
-                    </label>
-                    <select
-                      id="idType"
-                      name="idType"
-                      value={selectedIdType}
-                      onChange={(e) => setSelectedIdType(e.target.value as SupportedIdType)}
-                      disabled={locked || isScanningId || isMatchingFace}
-                      className={`${underlineInput} cursor-pointer text-xs`}
-                    >
-                      {SUPPORTED_IDS.map((id) => (
-                        <option key={id.type} value={id.type}>
-                          {id.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* ID Image Selection: Upload File or Direct Camera Scan */}
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Government ID Image (Upload Photo or Direct Camera Scan)
-                    </label>
-
-                    {/* Options to Choose File or Open Camera */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-3">
-                      {/* Hidden file input with explicit label button */}
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        id="idUploadInput"
-                        name="idUploadInput"
-                        data-testid="id-upload-input"
-                        accept="image/jpeg,image/png,image/webp"
-                        disabled={locked || isScanningId || isMatchingFace}
-                        onChange={handleIdFileChange}
-                        className="sr-only"
-                      />
-                      <label
-                        htmlFor="idUploadInput"
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-emerald-800 bg-white border border-emerald-300 hover:bg-emerald-50 hover:border-emerald-500 cursor-pointer shadow-sm transition"
-                      >
-                        <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Choose ID File</span>
-                      </label>
-
-                      {/* Direct camera scanner button */}
-                      <button
-                        type="button"
-                        onClick={() => setIsIdCameraModalOpen(true)}
-                        disabled={locked || isScanningId || isMatchingFace}
-                        className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>Scan with Camera</span>
-                      </button>
-                    </div>
-
-                    {/* When ID image is selected/captured: Preview card with Delete button */}
-                    {idFile && (
-                      <div className="p-3 bg-white rounded-xl border border-emerald-200/90 shadow-sm flex items-center justify-between gap-3 mb-3 animate-in fade-in">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          {idPreviewUrl ? (
-                            <img
-                              src={idPreviewUrl}
-                              alt="ID Preview"
-                              className="w-14 h-10 object-cover rounded-lg border border-slate-200 shrink-0"
-                            />
-                          ) : (
-                            <div className="w-14 h-10 bg-emerald-50 rounded-lg flex items-center justify-center shrink-0">
-                              <ImageIcon className="w-5 h-5 text-emerald-600" />
-                            </div>
-                          )}
-
-                          <div className="truncate">
-                            <p className="text-xs font-bold text-slate-800 truncate">
-                              {idFile.name}
-                            </p>
-                            <p className="text-[11px] text-slate-500">
-                              {(idFile.size / 1024).toFixed(0)} KB &bull; Ready to scan
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Delete ID Image button */}
-                        <button
-                          type="button"
-                          onClick={handleDeleteIdImage}
-                          disabled={locked || isScanningId}
-                          aria-label="Delete ID image"
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/70 transition shrink-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Scan trigger button */}
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleScanId}
-                        disabled={locked || !idFile || isScanningId || Boolean(tempVerificationId)}
-                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition"
-                      >
-                        {isScanningId ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                            Extracting details…
-                          </>
-                        ) : tempVerificationId ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 mr-1.5" />
-                            Details Extracted
-                          </>
-                        ) : (
-                          'Scan & Process ID'
-                        )}
-                      </button>
-
+                  {/* ---------------------------------------------------- */}
+                  {/* Step 1: Government ID Document (Upload or Camera)    */}
+                  {/* ---------------------------------------------------- */}
+                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center justify-center">1</span>
+                        Step 1: Government ID Document
+                      </span>
                       {tempVerificationId && (
-                        <span className="text-[11px] text-emerald-700 font-medium">
-                          ✓ ID processed. Extracted details pasted below.
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          ID Scanned &amp; Details Extracted
                         </span>
                       )}
+                    </div>
+
+                    {/* Select ID Type */}
+                    <div>
+                      <label htmlFor="idType" className="block text-xs font-semibold text-slate-700 mb-1">
+                        Select Government ID Type
+                      </label>
+                      <select
+                        id="idType"
+                        name="idType"
+                        value={selectedIdType}
+                        onChange={(e) => setSelectedIdType(e.target.value as SupportedIdType)}
+                        disabled={locked || isScanningId || isMatchingFace}
+                        className={`${underlineInput} cursor-pointer text-xs`}
+                      >
+                        {SUPPORTED_IDS.map((id) => (
+                          <option key={id.type} value={id.type}>
+                            {id.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* ID Image Selection: Upload File or Direct Camera Scan */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                        Government ID Image (Upload Photo or Direct Camera Scan)
+                      </label>
+
+                      {/* Options to Choose File or Open Camera */}
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-2.5">
+                        {/* Hidden file input with explicit label button */}
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          id="idUploadInput"
+                          name="idUploadInput"
+                          data-testid="id-upload-input"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={locked || isScanningId || isMatchingFace}
+                          onChange={handleIdFileChange}
+                          className="sr-only"
+                        />
+                        <label
+                          htmlFor="idUploadInput"
+                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50/70 border border-emerald-300 hover:bg-emerald-100/70 hover:border-emerald-500 cursor-pointer shadow-sm transition"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Choose ID File</span>
+                        </label>
+
+                        {/* Direct camera scanner button */}
+                        <button
+                          type="button"
+                          onClick={() => setIsIdCameraModalOpen(true)}
+                          disabled={locked || isScanningId || isMatchingFace}
+                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
+                        >
+                          <Camera className="w-3.5 h-3.5" />
+                          <span>Scan with Camera</span>
+                        </button>
+                      </div>
+
+                      {/* When ID image is selected/captured: Preview card with Delete button */}
+                      {idFile && (
+                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/90 flex items-center justify-between gap-3 mb-2.5 animate-in fade-in">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            {idPreviewUrl ? (
+                              <img
+                                src={idPreviewUrl}
+                                alt="ID Preview"
+                                className="w-12 h-9 object-cover rounded-md border border-slate-200 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-12 h-9 bg-emerald-100 rounded-md flex items-center justify-center shrink-0">
+                                <ImageIcon className="w-4 h-4 text-emerald-600" />
+                              </div>
+                            )}
+
+                            <div className="truncate">
+                              <p className="text-xs font-bold text-slate-800 truncate">
+                                {idFile.name}
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                {(idFile.size / 1024).toFixed(0)} KB &bull; Ready to scan
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Delete ID Image button */}
+                          <button
+                            type="button"
+                            onClick={handleDeleteIdImage}
+                            disabled={locked || isScanningId}
+                            aria-label="Delete ID image"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/70 transition shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Scan trigger button */}
+                      <div className="flex items-center gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleScanId}
+                          disabled={locked || !idFile || isScanningId || Boolean(tempVerificationId)}
+                          className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition"
+                        >
+                          {isScanningId ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              Extracting details…
+                            </>
+                          ) : tempVerificationId ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 mr-1.5" />
+                              Details Extracted
+                            </>
+                          ) : (
+                            'Scan & Process ID'
+                          )}
+                        </button>
+
+                        {tempVerificationId && (
+                          <span className="text-[11px] text-emerald-700 font-medium">
+                            ✓ ID processed. Extracted details pasted below.
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -698,23 +716,44 @@ export default function RegisterPage() {
                     </div>
                   )}
 
-                  {/* Trigger Face Biometrics Verification */}
-                  {tempVerificationId && (
-                    <div className="p-3.5 rounded-xl bg-white border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">
-                          Step 2: Facial Biometric Verification
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Liveness check will prompt for head turns and blink to verify your identity against the ID photo.
+                  {/* ---------------------------------------------------- */}
+                  {/* Step 2: Facial Biometric Verification (Always Visible)*/}
+                  {/* ---------------------------------------------------- */}
+                  <div
+                    className={`p-3.5 rounded-xl border transition-all ${
+                      tempVerificationId
+                        ? 'bg-white border-emerald-300 shadow-sm ring-2 ring-emerald-500/10'
+                        : 'bg-slate-50/80 border-slate-200/80 opacity-80'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                              tempVerificationId
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            2
+                          </span>
+                          <p className="text-xs font-bold text-slate-800">
+                            Step 2: Live Facial Biometric Verification
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 pl-7">
+                          {tempVerificationId
+                            ? 'Camera active liveness: Follow prompts (head turns & blink) to match your live face with the ID portrait.'
+                            : 'Complete Step 1 (Scan Government ID) above to unlock live facial recognition.'}
                         </p>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => setIsCameraModalOpen(true)}
-                        disabled={locked || isMatchingFace}
-                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-700/20 transition shrink-0"
+                        disabled={locked || !tempVerificationId || isMatchingFace}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-700/20 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
                       >
                         {isMatchingFace ? (
                           <>
@@ -729,7 +768,7 @@ export default function RegisterPage() {
                         )}
                       </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               ) : (
                 /* Verified Summary */

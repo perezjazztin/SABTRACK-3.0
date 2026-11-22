@@ -28,11 +28,13 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
     expect(screen.getByRole('heading', { name: /SABTRACK 3\.0/i })).toBeInTheDocument();
 
     // ID & Biometric Verification Section
-    expect(screen.getByRole('heading', { name: /Government ID & Biometric Verification/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Government ID &.*Biometric Verification/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Select Government ID Type/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Philippine National ID/i).length).toBeGreaterThan(0);
     expect(screen.getByTestId('id-upload-input')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Scan & Process ID/i })).toBeInTheDocument();
+    expect(screen.getByText(/Step 2: Live Facial Biometric Verification/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Start Face Verification/i })).toBeInTheDocument();
 
     // Core Form Fields
     expect(screen.getByLabelText(/Full legal name/i)).toBeInTheDocument();

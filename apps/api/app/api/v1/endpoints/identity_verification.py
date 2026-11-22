@@ -64,7 +64,7 @@ async def scan_government_id(
         )
 
     # Check for existing verified account with the same ID hash
-    existing = db.execute(
+    verified_existing = db.execute(
         select(IdentityVerification).where(
             IdentityVerification.id_number_hash == extracted.id_number_hash,
             IdentityVerification.status == VerificationStatus.VERIFIED,
@@ -72,7 +72,7 @@ async def scan_government_id(
         )
     ).scalar_one_or_none()
 
-    if existing:
+    if verified_existing:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This government ID number is already registered to an existing resident account.",
@@ -89,21 +89,42 @@ async def scan_government_id(
         except Exception:
             pass
 
-    # Record pending verification entry
-    verification = IdentityVerification(
-        id_type=id_type,
-        id_number_hash=extracted.id_number_hash,
-        id_number_masked=extracted.id_number_masked,
-        ocr_full_name=extracted.full_name,
-        submitted_full_name=extracted.full_name,
-        dob_extracted=dob_val,
-        address_extracted=extracted.address,
-        status=VerificationStatus.PENDING,
-        verification_token_hash=hash_token(temp_verification_id),
-        token_expires_at=expires_at,
-        is_demo_data=True,
-    )
-    db.add(verification)
+    # Check if there is an unconsumed/pending verification record with the same ID hash
+    pending_record = db.execute(
+        select(IdentityVerification).where(
+            IdentityVerification.id_number_hash == extracted.id_number_hash,
+            IdentityVerification.user_id.is_(None),
+        )
+    ).scalar_one_or_none()
+
+    if pending_record:
+        verification = pending_record
+        verification.id_type = id_type
+        verification.id_number_masked = extracted.id_number_masked
+        verification.ocr_full_name = extracted.full_name
+        verification.submitted_full_name = extracted.full_name
+        verification.dob_extracted = dob_val
+        verification.address_extracted = extracted.address
+        verification.status = VerificationStatus.PENDING
+        verification.verification_token_hash = hash_token(temp_verification_id)
+        verification.token_expires_at = expires_at
+        verification.match_score = None
+    else:
+        # Record pending verification entry
+        verification = IdentityVerification(
+            id_type=id_type,
+            id_number_hash=extracted.id_number_hash,
+            id_number_masked=extracted.id_number_masked,
+            ocr_full_name=extracted.full_name,
+            submitted_full_name=extracted.full_name,
+            dob_extracted=dob_val,
+            address_extracted=extracted.address,
+            status=VerificationStatus.PENDING,
+            verification_token_hash=hash_token(temp_verification_id),
+            token_expires_at=expires_at,
+            is_demo_data=True,
+        )
+        db.add(verification)
     db.commit()
 
     # Cache cleaned ID image ephemerally for face matching
