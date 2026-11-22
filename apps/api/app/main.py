@@ -15,6 +15,15 @@ from app.core.errors import (
 )
 from app.api.v1.router import api_router
 
+# Ensure all database models are registered in Base.metadata upon application initialization
+import app.modules.areas.models  # noqa: F401
+import app.modules.identity.models  # noqa: F401
+import app.modules.identity_verification.models  # noqa: F401
+import app.modules.reports.models  # noqa: F401
+import app.modules.schedules.models  # noqa: F401
+import app.modules.gamification.models  # noqa: F401
+import app.modules.announcements.models  # noqa: F401
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

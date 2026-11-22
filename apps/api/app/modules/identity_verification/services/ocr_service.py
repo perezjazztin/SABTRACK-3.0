@@ -7,6 +7,7 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageOps
 import cv2
 import numpy as np
+from fastapi import HTTPException, status
 
 from app.modules.identity_verification.models import SupportedIdType
 
@@ -30,24 +31,30 @@ class IdOcrService:
     @staticmethod
     def strip_exif_metadata(image_bytes: bytes) -> bytes:
         """Strips EXIF GPS and camera telemetry from uploaded image bytes complying with RA 10173."""
-        with Image.open(io.BytesIO(image_bytes)) as img:
-            transposed = ImageOps.exif_transpose(img)
-            output = io.BytesIO()
-            format_to_save = transposed.format if transposed.format in ("PNG", "JPEG") else "PNG"
-            
-            # Create a clean copy devoid of EXIF
-            clean_img = transposed.copy()
-            clean_img.info.pop("exif", None)
-            
-            if format_to_save == "PNG":
-                from PIL.PngImagePlugin import PngInfo
-                png_info = PngInfo()
-                if "comment" in transposed.info:
-                    png_info.add_text("comment", transposed.info["comment"])
-                clean_img.save(output, format="PNG", pnginfo=png_info)
-            else:
-                clean_img.save(output, format="JPEG")
-            return output.getvalue()
+        try:
+            with Image.open(io.BytesIO(image_bytes)) as img:
+                transposed = ImageOps.exif_transpose(img)
+                output = io.BytesIO()
+                format_to_save = transposed.format if transposed.format in ("PNG", "JPEG") else "PNG"
+                
+                # Create a clean copy devoid of EXIF
+                clean_img = transposed.copy()
+                clean_img.info.pop("exif", None)
+                
+                if format_to_save == "PNG":
+                    from PIL.PngImagePlugin import PngInfo
+                    png_info = PngInfo()
+                    if "comment" in transposed.info:
+                        png_info.add_text("comment", transposed.info["comment"])
+                    clean_img.save(output, format="PNG", pnginfo=png_info)
+                else:
+                    clean_img.save(output, format="JPEG")
+                return output.getvalue()
+        except Exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Uploaded file is not a valid or readable image. Please upload a clear JPG or PNG image.",
+            )
 
     @staticmethod
     def check_readability(image_bytes: bytes) -> tuple[bool, str]:
