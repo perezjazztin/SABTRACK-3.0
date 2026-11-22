@@ -5,11 +5,12 @@ import RegisterPage from '@/app/register/page';
 import * as apiClient from '@/lib/api-client';
 
 const mockPush = vi.fn();
+const mockReplace = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
-    replace: vi.fn(),
+    replace: mockReplace,
   }),
 }));
 
@@ -19,19 +20,47 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
     localStorage.clear();
   });
 
-  it('renders Step 1 with supported government ID options', () => {
+  it('renders original registration UI layout with form fields and ID verification section', () => {
     render(<RegisterPage />);
 
-    expect(screen.getByRole('heading', { name: /Resident Account Registration/i })).toBeInTheDocument();
+    // Brand and Page Headings
+    expect(screen.getByRole('heading', { name: /Register as a Resident/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /SABTRACK 3\.0/i })).toBeInTheDocument();
+
+    // ID & Biometric Verification Section
+    expect(screen.getByRole('heading', { name: /Government ID & Biometric Verification/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/Select Government ID Type/i)).toBeInTheDocument();
     expect(screen.getAllByText(/Philippine National ID/i).length).toBeGreaterThan(0);
+    expect(screen.getByTestId('id-upload-input')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Scan & Process ID/i })).toBeInTheDocument();
 
-    // Personal details form should be locked in Step 1
-    expect(screen.queryByLabelText(/Create Password/i)).not.toBeInTheDocument();
+    // Core Form Fields
+    expect(screen.getByLabelText(/Full legal name/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Resident ID number/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email address/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Purok \/ Barangay Zone/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Password$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Confirm password/i)).toBeInTheDocument();
+
+    // Submit & Navigation Buttons
+    const submitBtn = screen.getByRole('button', { name: /Create Resident Account/i });
+    expect(submitBtn).toBeInTheDocument();
+    expect(submitBtn).toBeDisabled(); // Disabled until verified & filled
+    expect(screen.getByRole('link', { name: /Sign in/i })).toBeInTheDocument();
   });
 
-  it('completes verified registration after ID and face match', async () => {
+  it('allows entering resident details and auto-capitalizes Resident ID number', () => {
+    render(<RegisterPage />);
+
+    const residentIdInput = screen.getByLabelText(/Resident ID number/i) as HTMLInputElement;
+    fireEvent.change(residentIdInput, {
+      target: { value: 'sab-2026-0912' },
+    });
+
+    expect(residentIdInput.value).toBe('SAB-2026-0912');
+  });
+
+  it('completes verified registration after ID scan and face biometric match', async () => {
     vi.spyOn(apiClient, 'scanGovernmentId').mockResolvedValue({
       temp_verification_id: 'temp_sess_999',
       extracted_data: {
@@ -64,17 +93,21 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
 
     render(<RegisterPage />);
 
-    // Step 1 & 2: Upload and scan ID
+    // Step 1: Upload and scan ID
     const fileInput = screen.getByTestId('id-upload-input');
     const dummyFile = new File(['mock_id_content'], 'id.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [dummyFile] } });
 
     fireEvent.click(screen.getByRole('button', { name: /Scan & Process ID/i }));
 
-    // Step 3 & 4: Start face verification & capture
+    // Auto-populates extracted name and masked ID from scanGovernmentId
     await waitFor(() => {
+      expect(screen.getByDisplayValue('JUAN DELA CRUZ')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('****-****-0842')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Start Face Verification/i })).toBeInTheDocument();
     });
+
+    // Step 2: Start face verification & capture
     fireEvent.click(screen.getByRole('button', { name: /Start Face Verification/i }));
 
     await waitFor(() => {
@@ -82,21 +115,22 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
     });
     fireEvent.click(screen.getByRole('button', { name: /Capture Face Photo/i }));
 
-    // Step 5: Fill in required credentials on unlocked review form
+    // Verified badge should appear
     await waitFor(() => {
-      expect(screen.getByLabelText(/Create Password/i)).toBeInTheDocument();
+      expect(screen.getByText(/Verified \(95%\)/i)).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText(/Email Address/i), {
+    // Step 3: Complete remaining fields
+    fireEvent.change(screen.getByLabelText(/Email address/i), {
       target: { value: 'juan.delacruz@sabtrack.local' },
     });
-    fireEvent.change(screen.getByLabelText(/Barangay Sabang Purok \/ Zone/i), {
+    fireEvent.change(screen.getByLabelText(/Purok \/ Barangay Zone/i), {
       target: { value: '1' },
     });
-    fireEvent.change(screen.getByLabelText(/Create Password/i), {
+    fireEvent.change(screen.getByLabelText(/^Password$/i), {
       target: { value: 'ValidResidentPass2026!' },
     });
-    fireEvent.change(screen.getByLabelText(/Confirm Password/i), {
+    fireEvent.change(screen.getByLabelText(/Confirm password/i), {
       target: { value: 'ValidResidentPass2026!' },
     });
 
@@ -104,8 +138,10 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
     const privacyCheckbox = screen.getByRole('checkbox');
     fireEvent.click(privacyCheckbox);
 
-    // Complete registration
-    fireEvent.click(screen.getByRole('button', { name: /Complete Verified Registration/i }));
+    // Step 4: Submit form
+    const submitBtn = screen.getByRole('button', { name: /Create Resident Account/i });
+    expect(submitBtn).not.toBeDisabled();
+    fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(mockRegister).toHaveBeenCalledWith({
@@ -117,5 +153,8 @@ describe('RegisterPage Component with Integrated Identity Verification', () => {
         verification_token: 'valid_token_0842',
       });
     });
+
+    expect(localStorage.getItem('sabtrack_registered_resident_id')).toBe('****-****-0842');
+    expect(screen.getByText(/Resident identity verified and account registered successfully/i)).toBeInTheDocument();
   });
 });

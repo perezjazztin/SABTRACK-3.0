@@ -9,18 +9,15 @@ import {
   Camera,
   Check,
   CheckCircle,
-  CheckCircle2,
   Circle,
   Eye,
   EyeOff,
   FileCheck2,
-  FileText,
   Loader2,
-  Lock,
   Recycle,
   RefreshCw,
   ShieldCheck,
-  UploadCloud,
+  Upload,
   UserCheck,
 } from 'lucide-react';
 import { registerResident, scanGovernmentId, verifyFaceBiometrics } from '@/lib/api-client';
@@ -39,30 +36,16 @@ const PUROK_OPTIONS = [
   { id: 7, name: 'Purok 7 - Agricultural Perimeter' },
 ];
 
-const SUPPORTED_IDS: { type: SupportedIdType; label: string; desc: string }[] = [
-  {
-    type: 'PHILIPPINE_NATIONAL_ID',
-    label: 'Philippine National ID (PhilSys)',
-    desc: 'Digital or physical PhilSys national ID card',
-  },
-  {
-    type: 'DRIVERS_LICENSE',
-    label: "Driver's License (LTO)",
-    desc: 'Official Land Transportation Office driver license card',
-  },
-  {
-    type: 'PASSPORT',
-    label: 'Philippine Passport (DFA)',
-    desc: 'Biometric DFA passport bio-page',
-  },
-  {
-    type: 'UMID',
-    label: 'UMID Card',
-    desc: 'Unified Multi-Purpose Identification (SSS / GSIS)',
-  },
+const SUPPORTED_IDS: { type: SupportedIdType; label: string }[] = [
+  { type: 'PHILIPPINE_NATIONAL_ID', label: 'Philippine National ID (PhilSys)' },
+  { type: 'DRIVERS_LICENSE', label: "Driver's License (LTO)" },
+  { type: 'PASSPORT', label: 'Philippine Passport (DFA)' },
+  { type: 'UMID', label: 'UMID Card (SSS / GSIS)' },
 ];
 
 const MIN_PASSWORD_LENGTH = 8;
+
+/* ---------- Password helpers ---------- */
 
 function getPasswordChecks(password: string) {
   return {
@@ -77,7 +60,8 @@ function getPasswordChecks(password: string) {
 function getStrength(password: string) {
   if (!password) return { score: 0, label: '', barClass: '', textClass: '' };
   const checks = getPasswordChecks(password);
-  const score = Object.values(checks).filter(Boolean).length;
+  const score = Object.values(checks).filter(Boolean).length; // 0-5
+
   if (!checks.length || score <= 2) {
     return { score: 1, label: 'Weak', barClass: 'bg-rose-500', textClass: 'text-rose-700' };
   }
@@ -90,47 +74,163 @@ function getStrength(password: string) {
   return { score: 4, label: 'Strong', barClass: 'bg-emerald-600', textClass: 'text-emerald-800' };
 }
 
-const labelClass = 'block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5';
+/* ---------- Shared styles ---------- */
+
+const labelClass = 'block text-sm font-semibold text-slate-800 mb-1';
 const underlineInput =
-  'w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 ' +
-  'placeholder:text-slate-400 outline-none focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 transition-all ' +
-  'disabled:opacity-60 disabled:bg-slate-100';
+  'w-full bg-transparent border-0 border-b-2 border-emerald-200 px-0 pt-1.5 pb-2 pr-8 text-sm text-slate-900 ' +
+  'placeholder:text-slate-400 outline-none focus:outline-none focus-visible:outline-none transition-colors focus:border-emerald-600 focus:ring-0 ' +
+  'disabled:opacity-60 aria-[invalid=true]:border-rose-400';
+
+/* ---------- Reusable pieces ---------- */
+
+function ValidTick({ show }: { show: boolean }) {
+  return (
+    <Check
+      className={`pointer-events-none absolute right-0 bottom-3 w-4 h-4 text-emerald-500 transition-opacity ${
+        show ? 'opacity-100' : 'opacity-0'
+      }`}
+      aria-hidden="true"
+    />
+  );
+}
+
+interface PasswordFieldProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  disabled?: boolean;
+  invalid?: boolean;
+  describedBy?: string;
+}
+
+function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  invalid,
+  describedBy,
+}: PasswordFieldProps) {
+  const [show, setShow] = useState(false);
+
+  return (
+    <div>
+      <label htmlFor={id} className={labelClass}>
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          name={id}
+          type={show ? 'text' : 'password'}
+          autoComplete="new-password"
+          required
+          minLength={MIN_PASSWORD_LENGTH}
+          disabled={disabled}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          aria-invalid={invalid ? true : undefined}
+          aria-describedby={describedBy}
+          placeholder={placeholder}
+          className={underlineInput}
+        />
+        <button
+          type="button"
+          onClick={() => setShow((v) => !v)}
+          disabled={disabled}
+          aria-label={show ? 'Hide entry' : 'Show entry'}
+          aria-pressed={show}
+          className="absolute right-0 bottom-2 p-1 text-slate-400 hover:text-emerald-700 focus-visible:text-emerald-700 outline-none rounded transition-colors"
+        >
+          {show ? (
+            <EyeOff className="w-4 h-4" aria-hidden="true" />
+          ) : (
+            <Eye className="w-4 h-4" aria-hidden="true" />
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function Requirement({ met, children }: { met: boolean; children: React.ReactNode }) {
+  return (
+    <li className={`flex items-center gap-1.5 ${met ? 'text-emerald-700' : 'text-slate-500'}`}>
+      {met ? (
+        <CheckCircle className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+      ) : (
+        <Circle className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+      )}
+      <span>
+        {children}
+        <span className="sr-only">{met ? ' (met)' : ' (not met yet)'}</span>
+      </span>
+    </li>
+  );
+}
+
+/* Layered organic wave edge between the green panel and the white form panel. */
+function CloudEdge() {
+  return (
+    <svg
+      className="hidden md:block absolute inset-y-0 -right-px h-full w-24 lg:w-32 pointer-events-none z-20"
+      viewBox="0 0 100 600"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        fill="#ffffff"
+        fillOpacity="0.18"
+        d="M100,0 L18,0 C-2,45 40,75 14,120 C-8,160 36,200 12,245 C-10,290 34,325 10,372 C-8,415 36,455 14,500 C-2,540 30,572 18,600 L100,600 Z"
+      />
+      <path
+        fill="#ffffff"
+        fillOpacity="0.35"
+        d="M100,0 L40,0 C18,42 62,78 36,122 C12,165 58,205 34,250 C12,295 56,330 32,375 C12,420 58,458 36,503 C20,540 52,574 40,600 L100,600 Z"
+      />
+      <path
+        fill="#ffffff"
+        d="M100,0 L66,0 C44,38 86,72 62,116 C40,158 82,198 60,242 C40,286 80,324 58,368 C40,410 82,448 62,494 C48,530 76,568 66,600 L100,600 Z"
+      />
+    </svg>
+  );
+}
+
+/* ---------- Main Component ---------- */
 
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Verification State (Steps 1 to 6)
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  // Verification state
   const [selectedIdType, setSelectedIdType] = useState<SupportedIdType>('PHILIPPINE_NATIONAL_ID');
   const [idFile, setIdFile] = useState<File | null>(null);
-  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
-
-  const [isScanningId, setIsScanningId] = useState<boolean>(false);
+  const [isScanningId, setIsScanningId] = useState(false);
   const [tempVerificationId, setTempVerificationId] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedIdData | null>(null);
 
-  // Step 3 & 4 (Face Registration & Matching)
-  const [isCameraModalOpen, setIsCameraModalOpen] = useState<boolean>(false);
-  const [isMatchingFace, setIsMatchingFace] = useState<boolean>(false);
-  const [matchScore, setMatchScore] = useState<number | null>(null);
+  // Facial Biometrics state
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isMatchingFace, setIsMatchingFace] = useState(false);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
 
-  // Step 5 (Personal Info Review)
+  // Form inputs
   const [fullName, setFullName] = useState('');
-  const [dob, setDob] = useState('');
-  const [age, setAge] = useState<number | string>('');
-  const [address, setAddress] = useState('');
   const [residentIdNum, setResidentIdNum] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [areaId, setAreaId] = useState<number | ''>('');
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Submission & Notifications
+  // Flow & error tracking
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDone, setIsDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -140,6 +240,21 @@ export default function RegisterPage() {
   const checks = useMemo(() => getPasswordChecks(password), [password]);
   const strength = useMemo(() => getStrength(password), [password]);
 
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
+
+  const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const isVerified = Boolean(verificationToken);
+
+  const canSubmit =
+    isVerified &&
+    fullName.trim().length > 0 &&
+    residentIdNum.trim().length > 0 &&
+    email.trim().length > 0 &&
+    checks.length &&
+    password === confirmPassword &&
+    acceptedPrivacy;
+
   useEffect(() => {
     return () => {
       if (redirectTimer.current) clearTimeout(redirectTimer.current);
@@ -147,8 +262,8 @@ export default function RegisterPage() {
   }, []);
 
   useEffect(() => {
-    if (errorMessage) {
-      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (errorMessage && typeof errorRef.current?.scrollIntoView === 'function') {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [errorMessage]);
 
@@ -157,19 +272,13 @@ export default function RegisterPage() {
     const file = e.target.files?.[0];
     if (file) {
       setIdFile(file);
-      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
-        const url = URL.createObjectURL(file);
-        setIdPreviewUrl(url);
-      } else {
-        setIdPreviewUrl('mock-preview-url');
-      }
     }
   };
 
-  // Step 2: Trigger ID Scanning & OCR
+  // Scan & OCR Government ID
   const handleScanId = async () => {
     if (!idFile) {
-      setErrorMessage('Please upload a clear government ID document image.');
+      setErrorMessage('Please select a clear photo of your government-issued ID.');
       return;
     }
     setErrorMessage(null);
@@ -179,31 +288,29 @@ export default function RegisterPage() {
       setTempVerificationId(res.temp_verification_id);
       setExtractedData(res.extracted_data);
 
-      // Pre-fill fields for Step 5
-      setFullName(res.extracted_data.full_name);
-      setDob(res.extracted_data.dob || '');
-      setAge(res.extracted_data.age || '');
-      setAddress(res.extracted_data.address || '');
-      setResidentIdNum(res.extracted_data.id_number_masked);
-
-      setCurrentStep(3); // Advance to Face Capture Prompt
+      // Auto-populate extracted identity fields
+      if (res.extracted_data.full_name) {
+        setFullName(res.extracted_data.full_name);
+      }
+      if (res.extracted_data.id_number_masked) {
+        setResidentIdNum(res.extracted_data.id_number_masked);
+      }
     } catch (err) {
       setErrorMessage(
         err instanceof Error
           ? err.message
-          : 'ID scanning failed. Please ensure the photo is readable with good lighting and retry.'
+          : 'Failed to scan ID. Ensure the image is sharp, clear, and well-lit.'
       );
     } finally {
       setIsScanningId(false);
     }
   };
 
-  // Step 4: Face Biometric Capture & Verification
+  // Face biometrics captured from FaceCaptureModal
   const handleFaceCaptured = async (faceBlob: Blob) => {
     if (!tempVerificationId) {
-      setErrorMessage('Verification session expired. Please rescan your government ID.');
+      setErrorMessage('Verification session expired. Please scan your government ID again.');
       setIsCameraModalOpen(false);
-      setCurrentStep(1);
       return;
     }
 
@@ -215,27 +322,34 @@ export default function RegisterPage() {
       const res = await verifyFaceBiometrics(tempVerificationId, faceBlob);
       setVerificationToken(res.verification_token);
       setMatchScore(res.match_score);
-      setCurrentStep(5); // Unlock Step 5 Personal Information Review
     } catch (err) {
       setErrorMessage(
         err instanceof Error
           ? err.message
-          : 'Face recognition could not confirm a match with the photograph on the uploaded ID. Please retry.'
+          : 'Facial recognition did not match the photo on your uploaded ID. Please try again with good lighting.'
       );
     } finally {
       setIsMatchingFace(false);
     }
   };
 
-  // Step 6: Final Submission
-  const handleFinalSubmit = async (e: React.FormEvent) => {
+  const handleResetVerification = () => {
+    setTempVerificationId(null);
+    setExtractedData(null);
+    setVerificationToken(null);
+    setMatchScore(null);
+    setIdFile(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || currentStep === 6) return;
+    if (isSubmitting || isDone) return;
 
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     if (!verificationToken) {
-      setErrorMessage('Identity verification is required before completing registration.');
+      setErrorMessage('Identity verification is required. Please verify your Government ID and Face Biometrics.');
       return;
     }
     if (password.length < MIN_PASSWORD_LENGTH) {
@@ -243,7 +357,7 @@ export default function RegisterPage() {
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match. Please check both password entries.');
+      setErrorMessage('Passwords do not match. Please check both entries.');
       return;
     }
     if (!acceptedPrivacy) {
@@ -254,559 +368,503 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
+      const normalizedResidentId = residentIdNum.trim().toUpperCase();
+
       await registerResident({
         email: email.trim().toLowerCase(),
         password,
         full_name: fullName.trim(),
         area_id: areaId ? Number(areaId) : null,
-        resident_id_num: residentIdNum || undefined,
+        resident_id_num: normalizedResidentId || undefined,
         verification_token: verificationToken,
       });
 
-      setCurrentStep(6);
-      setSuccessMessage('Resident identity verified and account registered successfully! Redirecting to login…');
+      if (typeof window !== 'undefined' && normalizedResidentId) {
+        try {
+          localStorage.setItem('sabtrack_registered_resident_id', normalizedResidentId);
+        } catch {
+          // Ignore storage unavailability in private browsing
+        }
+      }
+
+      setIsDone(true);
+      setSuccessMessage('Resident identity verified and account registered successfully! Redirecting to sign in…');
       redirectTimer.current = setTimeout(() => {
         router.replace('/login');
-      }, 2000);
+      }, 1500);
     } catch (err) {
       setErrorMessage(
-        err instanceof Error ? err.message : 'Registration failed. Please check your details and try again.'
+        err instanceof Error && err.message
+          ? err.message
+          : 'Registration failed. Please try again.'
       );
       setIsSubmitting(false);
     }
   };
 
+  const locked = isSubmitting || isDone;
+  const errorId = 'register-error';
+  const mismatchId = 'confirm-password-status';
+  const requirementsId = 'password-requirements';
+
   return (
     <div className={`${raleway.className} w-full min-h-screen flex flex-col md:flex-row relative bg-white overflow-x-hidden`}>
-      {/* Left Brand Panel */}
-      <aside className="relative w-full md:w-[38%] lg:w-[34%] bg-gradient-to-b from-[#064e3b] via-[#047857] to-[#022c22] text-white px-8 sm:px-12 pt-24 pb-12 flex flex-col justify-between items-center text-center shrink-0 z-10">
-        <div className="flex flex-col items-center gap-4 max-w-xs mx-auto">
+      {/* ---------- Left: full-height brand panel ---------- */}
+      <aside className="relative w-full md:w-[38%] lg:w-[34%] bg-gradient-to-b from-[#064e3b] via-[#047857] to-[#022c22] text-white px-8 sm:px-12 pt-28 sm:pt-32 md:pt-36 pb-12 flex flex-col justify-between items-center text-center shrink-0 z-10">
+        <div className="flex flex-col items-center gap-4 md:flex-1 md:justify-center md:pr-6 max-w-xs mx-auto">
           <p className="text-lg font-semibold tracking-wide text-emerald-100">Welcome to</p>
-          <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-xl shadow-emerald-950/40 my-1">
-            <Recycle className="w-10 h-10 text-emerald-700" />
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white">SABTRACK 3.0</h2>
-          <p className="text-xs sm:text-sm leading-relaxed text-emerald-100/90 font-normal">
-            Barangay Sabang Digital Governance Platform &bull; Integrated Identity Verification
-          </p>
 
-          {/* Verification Step Indicator */}
-          <div className="w-full mt-6 bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 text-left space-y-2.5">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-200">
-              Verification Workflow:
-            </p>
-            <div className="space-y-1.5 text-xs">
-              <div className={`flex items-center gap-2 ${currentStep >= 1 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep > 1 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>1. Valid ID Upload</span>
-              </div>
-              <div className={`flex items-center gap-2 ${currentStep >= 2 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep > 2 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>2. OCR Information Extraction</span>
-              </div>
-              <div className={`flex items-center gap-2 ${currentStep >= 3 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep > 4 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>3. Live Face Registration</span>
-              </div>
-              <div className={`flex items-center gap-2 ${currentStep >= 4 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep >= 5 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>4. Face Recognition Matching</span>
-              </div>
-              <div className={`flex items-center gap-2 ${currentStep >= 5 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep >= 6 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>5. Personal Information Review</span>
-              </div>
-              <div className={`flex items-center gap-2 ${currentStep >= 6 ? 'text-white font-semibold' : 'text-emerald-300/60'}`}>
-                <CheckCircle2 className={`w-3.5 h-3.5 ${currentStep >= 6 ? 'text-emerald-300' : 'text-white'}`} />
-                <span>6. Final Verification Result</span>
-              </div>
-            </div>
+          <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center shadow-xl shadow-emerald-950/40 my-1">
+            <Recycle className="w-12 h-12 text-emerald-700" aria-hidden="true" />
           </div>
+
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight -mt-1 text-white">SABTRACK 3.0</h2>
+
+          <p className="text-xs sm:text-sm leading-relaxed text-emerald-100/90 font-normal max-w-[16rem]">
+            Join SABTRACK 3.0 to access collection schedules, submit violation reports, and earn
+            civic SAB-Points.
+          </p>
         </div>
 
-        <div className="flex items-start gap-2.5 text-left text-xs leading-relaxed text-emerald-100/80 mt-8 max-w-[17rem]">
-          <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-200" />
+        <div className="flex items-start gap-2.5 text-left text-xs leading-relaxed text-emerald-100/80 md:pr-6 mt-8 max-w-[17rem]">
+          <ShieldCheck className="w-4 h-4 flex-shrink-0 mt-0.5 text-emerald-200" aria-hidden="true" />
           <p>
-            <span className="font-bold text-white">RA 10173 Protected.</span> Ephemeral facial recognition ensures live biometric frames are purged immediately upon verification.
+            <span className="font-bold text-white">Privacy-first.</span> EXIF GPS metadata is
+            removed from report evidence, and your identity is never shown on public feeds.
           </p>
         </div>
+
+        <CloudEdge />
       </aside>
 
-      {/* Right Form / Wizard Section */}
-      <section className="flex-1 w-full bg-white flex flex-col justify-center px-6 sm:px-12 md:px-14 lg:px-20 pt-16 pb-16 relative z-10 overflow-y-auto">
+      {/* ---------- Right: full-height form panel ---------- */}
+      <section className="flex-1 w-full bg-white flex flex-col justify-center px-6 sm:px-12 md:px-14 lg:px-20 pt-28 sm:pt-32 md:pt-36 pb-16 relative z-10 overflow-y-auto">
         <div className="max-w-xl w-full mx-auto">
-          {/* Header */}
-          <div className="mb-6">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold mb-2">
-              <FileCheck2 className="w-3.5 h-3.5" />
-              Integrated Identity Verification
-            </span>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-800">
-              Resident Account Registration
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Complete the automated 6-step identity check to register for Barangay Sabang waste services
-            </p>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 text-left mb-2">
+            Register as a Resident
+          </h1>
+          <p className="text-sm text-slate-500 text-left mb-6">
+            Create your resident account to access schedules and earn SAB-Points
+          </p>
 
-          {/* Error & Success Messages */}
+          {/* Alerts */}
           {errorMessage && (
             <div
+              id={errorId}
               ref={errorRef}
-              className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start gap-3 mb-6 animate-in fade-in"
               role="alert"
+              className="mb-5 p-3.5 rounded-2xl bg-rose-50 text-rose-800 text-xs flex items-start gap-2.5 border border-rose-200"
             >
-              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Verification Alert</p>
-                <p className="text-xs mt-0.5">{errorMessage}</p>
-              </div>
+              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-3 mb-6 animate-in fade-in">
-              <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-emerald-600" />
-              <div>
-                <p className="font-semibold">Success!</p>
-                <p className="text-xs mt-0.5">{successMessage}</p>
-              </div>
+            <div
+              role="status"
+              className="mb-5 p-3.5 rounded-2xl bg-emerald-50 text-emerald-800 text-xs flex items-start gap-2.5 border border-emerald-200"
+            >
+              <CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <span>{successMessage}</span>
             </div>
           )}
 
-          {/* ============================================================== */}
-          {/* STEP 1 & 2: VALID ID UPLOAD & OCR SCANNING                     */}
-          {/* ============================================================== */}
-          {currentStep <= 2 && (
-            <div className="space-y-6">
-              {/* Supported ID Guidance Box */}
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
-                <p className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Supported Government-Issued IDs (IT-312 Requirement):
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {SUPPORTED_IDS.map((id) => (
-                    <button
-                      key={id.type}
-                      type="button"
-                      onClick={() => setSelectedIdType(id.type)}
-                      className={`p-3 rounded-xl text-left border transition-all ${
-                        selectedIdType === id.type
-                          ? 'border-emerald-600 bg-white shadow-sm ring-2 ring-emerald-500/20'
-                          : 'border-slate-200 bg-white/70 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-slate-800">{id.label}</span>
-                        {selectedIdType === id.type && (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-slate-500">{id.desc}</p>
-                    </button>
-                  ))}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ========================================================= */}
+            {/* Integrated Modern Identity & Face Biometrics Verification */}
+            {/* ========================================================= */}
+            <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/50 p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-bold text-slate-900">
+                      Government ID &amp; Biometric Verification
+                    </h2>
+                    <p className="text-[11px] text-slate-500">
+                      Automated verification via PhilSys, Driver&apos;s License, Passport, or UMID
+                    </p>
+                  </div>
                 </div>
+
+                {isVerified && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Verified ({Math.round((matchScore || 0) * 100)}%)
+                  </span>
+                )}
               </div>
 
-              {/* ID Selector Dropdown */}
+              {!isVerified ? (
+                <div className="space-y-3.5 pt-1">
+                  {/* Select ID Type */}
+                  <div>
+                    <label htmlFor="idType" className="block text-xs font-semibold text-slate-700 mb-1">
+                      Select Government ID Type
+                    </label>
+                    <select
+                      id="idType"
+                      name="idType"
+                      value={selectedIdType}
+                      onChange={(e) => setSelectedIdType(e.target.value as SupportedIdType)}
+                      disabled={locked || isScanningId || isMatchingFace}
+                      className={`${underlineInput} cursor-pointer text-xs`}
+                    >
+                      {SUPPORTED_IDS.map((id) => (
+                        <option key={id.type} value={id.type}>
+                          {id.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Upload ID File */}
+                  <div>
+                    <label htmlFor="idUploadInput" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      Upload ID Document Photo
+                    </label>
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      <input
+                        type="file"
+                        id="idUploadInput"
+                        name="idUploadInput"
+                        data-testid="id-upload-input"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={locked || isScanningId || isMatchingFace}
+                        onChange={handleIdFileChange}
+                        className="text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-800 hover:file:bg-emerald-200 cursor-pointer"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleScanId}
+                        disabled={locked || !idFile || isScanningId || Boolean(tempVerificationId)}
+                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition shrink-0"
+                      >
+                        {isScanningId ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            Scanning ID…
+                          </>
+                        ) : tempVerificationId ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 mr-1.5" />
+                            ID Scanned
+                          </>
+                        ) : (
+                          'Scan & Process ID'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Trigger Face Biometrics Verification */}
+                  {tempVerificationId && (
+                    <div className="p-3.5 rounded-xl bg-white border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">
+                          Step 2: Facial Biometric Verification
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Liveness check will prompt for head turns and blink to verify your identity.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCameraModalOpen(true)}
+                        disabled={locked || isMatchingFace}
+                        className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-700/20 transition shrink-0"
+                      >
+                        {isMatchingFace ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            Matching Biometrics…
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-3.5 h-3.5 mr-1.5" />
+                            Start Face Verification
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Verified Summary */
+                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-emerald-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                      <UserCheck className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-900">
+                        {extractedData?.full_name || fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {SUPPORTED_IDS.find((i) => i.type === selectedIdType)?.label} &bull;{' '}
+                        {extractedData?.id_number_masked || residentIdNum}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleResetVerification}
+                    disabled={locked}
+                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    Re-verify
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Full legal name */}
+            <div>
+              <label htmlFor="fullName" className={labelClass}>
+                Full legal name
+              </label>
+              <div className="relative">
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  autoComplete="name"
+                  required
+                  disabled={locked}
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Juan Dela Cruz"
+                  className={underlineInput}
+                />
+                <ValidTick show={fullName.trim().length > 1} />
+              </div>
+            </div>
+
+            {/* Resident ID + Purok */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
               <div>
-                <label htmlFor="id-type-select" className={labelClass}>
-                  Select Government ID Type
+                <label htmlFor="residentIdNum" className={labelClass}>
+                  Resident ID number
+                </label>
+                <div className="relative">
+                  <input
+                    id="residentIdNum"
+                    name="residentIdNum"
+                    type="text"
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    required
+                    disabled={locked}
+                    value={residentIdNum}
+                    onChange={(e) => setResidentIdNum(e.target.value.toUpperCase())}
+                    aria-describedby="residentIdHelp"
+                    placeholder="e.g. SAB-2026-0042"
+                    className={`${underlineInput} uppercase font-mono tracking-wide`}
+                  />
+                  <ValidTick show={residentIdNum.trim().length > 3} />
+                </div>
+                <p id="residentIdHelp" className="text-[11px] text-slate-500 mt-1">
+                  Your official Barangay Sabang or verified government ID number.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="purok" className={labelClass}>
+                  Purok / Barangay Zone{' '}
+                  <span className="font-medium text-slate-400 text-xs">(optional)</span>
                 </label>
                 <select
-                  id="id-type-select"
-                  value={selectedIdType}
-                  onChange={(e) => setSelectedIdType(e.target.value as SupportedIdType)}
-                  className={underlineInput}
+                  id="purok"
+                  name="purok"
+                  disabled={locked}
+                  value={areaId}
+                  onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
+                  className={`${underlineInput} pr-0 cursor-pointer ${
+                    areaId === '' ? 'text-slate-400' : ''
+                  }`}
                 >
-                  {SUPPORTED_IDS.map((id) => (
-                    <option key={id.type} value={id.type}>
-                      {id.label}
+                  <option value="">Select your Purok</option>
+                  {PUROK_OPTIONS.map((purok) => (
+                    <option key={purok.id} value={purok.id} className="text-slate-900">
+                      {purok.name}
                     </option>
                   ))}
                 </select>
               </div>
-
-              {/* File Upload Zone */}
-              <div>
-                <label className={labelClass}>Upload ID Document Photograph</label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-200 border-dashed rounded-2xl hover:border-emerald-500 transition-colors bg-slate-50/50">
-                  <div className="space-y-2 text-center">
-                    <UploadCloud className="mx-auto h-10 w-10 text-slate-400" />
-                    <div className="flex text-sm text-slate-600 justify-center">
-                      <label
-                        htmlFor="id-upload"
-                        className="relative cursor-pointer rounded-md font-semibold text-emerald-600 hover:text-emerald-500 focus-within:outline-none"
-                      >
-                        <span>Upload a clear ID photo</span>
-                        <input
-                          id="id-upload"
-                          name="id-upload"
-                          data-testid="id-upload-input"
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="sr-only"
-                          onChange={handleIdFileChange}
-                        />
-                      </label>
-                    </div>
-                    <p className="text-[11px] text-slate-500">PNG, JPG, or WEBP up to 10MB</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview */}
-              {idPreviewUrl && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={idPreviewUrl}
-                      alt="Uploaded ID preview"
-                      className="w-16 h-12 object-cover rounded-lg border border-slate-300"
-                    />
-                    <div>
-                      <p className="text-xs font-bold text-slate-800">{idFile?.name}</p>
-                      <p className="text-[11px] text-slate-500">
-                        {((idFile?.size || 0) / 1024).toFixed(1)} KB &bull; Ready for OCR Scan
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIdFile(null);
-                      setIdPreviewUrl(null);
-                    }}
-                    className="text-xs text-rose-600 hover:underline"
-                  >
-                    Remove
-                  </button>
-                </div>
-              )}
-
-              {/* Action Button */}
-              <button
-                type="button"
-                onClick={handleScanId}
-                disabled={!idFile || isScanningId}
-                className="w-full py-3 px-4 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isScanningId ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Scanning Document via OCR...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4" />
-                    Scan & Process ID
-                  </>
-                )}
-              </button>
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* STEP 3 & 4: FACE REGISTRATION & BIOMETRIC MATCHING PROMPT      */}
-          {/* ============================================================== */}
-          {(currentStep === 3 || currentStep === 4) && (
-            <div className="space-y-6 animate-in fade-in">
-              <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200 text-emerald-900 space-y-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-bold text-sm">Step 2 Complete: Government ID Scanned</h3>
-                </div>
-                <p className="text-xs text-emerald-800/80 leading-relaxed">
-                  Extracted Identity: <span className="font-bold">{extractedData?.full_name}</span> (ID: {extractedData?.id_number_masked}).
-                  Next, activate your device camera for real-time facial liveness capture.
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className={labelClass}>
+                Email address
+              </label>
+              <div className="relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  disabled={locked}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEmail((v) => v.trim().toLowerCase())}
+                  placeholder="e.g. resident@example.com"
+                  className={underlineInput}
+                />
+                <ValidTick show={emailLooksValid} />
+              </div>
+            </div>
+
+            {/* Passwords */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+              <PasswordField
+                id="password"
+                label="Password"
+                value={password}
+                onChange={setPassword}
+                placeholder={`Min ${MIN_PASSWORD_LENGTH} characters`}
+                disabled={locked}
+                describedBy={requirementsId}
+              />
+              <div>
+                <PasswordField
+                  id="confirmPassword"
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={setConfirmPassword}
+                  placeholder="Re-enter password"
+                  disabled={locked}
+                  invalid={passwordsMismatch}
+                  describedBy={mismatchId}
+                />
+                <p
+                  id={mismatchId}
+                  role="status"
+                  className={`mt-1 text-[11px] min-h-[1rem] ${
+                    passwordsMismatch ? 'text-rose-700' : 'text-emerald-700'
+                  }`}
+                >
+                  {passwordsMismatch && 'Passwords do not match'}
+                  {passwordsMatch && 'Passwords match'}
                 </p>
               </div>
-
-              <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50 text-center space-y-4">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-sm">
-                  <Camera className="w-8 h-8" />
-                </div>
-                <div className="max-w-sm mx-auto">
-                  <h4 className="font-bold text-slate-800 text-base">Face Registration & Capture</h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Follow the on-screen prompts: look center, turn left, turn right, and blink to confirm live human presence.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsCameraModalOpen(true)}
-                  disabled={isMatchingFace}
-                  className="w-full py-3 px-4 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isMatchingFace ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Matching Face Against ID Photo...
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-4 h-4" />
-                      Start Face Verification
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <FaceCaptureModal
-                isOpen={isCameraModalOpen}
-                onCapture={handleFaceCaptured}
-                onClose={() => setIsCameraModalOpen(false)}
-              />
             </div>
-          )}
 
-          {/* ============================================================== */}
-          {/* STEP 5: PERSONAL INFORMATION REVIEW & ACCOUNT CREATION        */}
-          {/* ============================================================== */}
-          {currentStep === 5 && (
-            <form onSubmit={handleFinalSubmit} className="space-y-5 animate-in fade-in">
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
+            {/* Strength meter + requirements */}
+            {password.length > 0 && (
+              <div id={requirementsId} className="space-y-2 -mt-2">
                 <div className="flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                  <span>
-                    Biometric match confirmed ({((matchScore || 0.9) * 100).toFixed(0)}% confidence).
-                  </span>
-                </div>
-                <span className="font-bold text-emerald-700 uppercase tracking-wider text-[10px]">
-                  Verified
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Full Name (Extracted) */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="fullName" className={labelClass}>
-                    Full Name (Auto-Extracted from ID)
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className={underlineInput}
-                  />
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Review and correct minor OCR typos if needed.
-                  </p>
-                </div>
-
-                {/* Date of Birth */}
-                <div>
-                  <label htmlFor="dob" className={labelClass}>
-                    Date of Birth
-                  </label>
-                  <input
-                    id="dob"
-                    type="text"
-                    value={dob}
-                    onChange={(e) => setDob(e.target.value)}
-                    className={underlineInput}
-                    placeholder="YYYY-MM-DD"
-                  />
-                </div>
-
-                {/* Calculated Age */}
-                <div>
-                  <label htmlFor="age" className={labelClass}>
-                    Age (Calculated)
-                  </label>
-                  <input
-                    id="age"
-                    type="text"
-                    readOnly
-                    value={age}
-                    className={`${underlineInput} bg-slate-100 font-bold`}
-                  />
-                </div>
-
-                {/* Address */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="address" className={labelClass}>
-                    Address (from ID)
-                  </label>
-                  <input
-                    id="address"
-                    type="text"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    className={underlineInput}
-                  />
-                </div>
-
-                {/* ID Number Masked */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="residentId" className={labelClass}>
-                    Verified Government ID Number
-                  </label>
-                  <input
-                    id="residentId"
-                    type="text"
-                    readOnly
-                    value={residentIdNum}
-                    className={`${underlineInput} bg-slate-100 font-mono`}
-                  />
-                </div>
-
-                {/* Purok / Area */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="areaId" className={labelClass}>
-                    Barangay Sabang Purok / Zone
-                  </label>
-                  <select
-                    id="areaId"
-                    value={areaId}
-                    onChange={(e) => setAreaId(e.target.value ? Number(e.target.value) : '')}
-                    className={underlineInput}
-                  >
-                    <option value="">Select your Purok</option>
-                    {PUROK_OPTIONS.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
+                  <div className="flex flex-1 gap-1" aria-hidden="true">
+                    {[1, 2, 3, 4].map((segment) => (
+                      <div
+                        key={segment}
+                        className={`h-1.5 flex-1 rounded-full transition-colors ${
+                          segment <= strength.score ? strength.barClass : 'bg-slate-200'
+                        }`}
+                      />
                     ))}
-                  </select>
-                </div>
-
-                {/* Account Email */}
-                <div className="sm:col-span-2">
-                  <label htmlFor="email" className={labelClass}>
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className={underlineInput}
-                  />
-                </div>
-
-                {/* Password */}
-                <div>
-                  <label htmlFor="password" className={labelClass}>
-                    Create Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      minLength={MIN_PASSWORD_LENGTH}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className={underlineInput}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
                   </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div>
-                  <label htmlFor="confirmPassword" className={labelClass}>
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={underlineInput}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Data Privacy Consent (RA 10173) */}
-              <div className="pt-2">
-                <label className="flex items-start gap-2.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={acceptedPrivacy}
-                    onChange={(e) => setAcceptedPrivacy(e.target.checked)}
-                    className="mt-1 w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-xs text-slate-600 leading-relaxed">
-                    I acknowledge that my identity data is verified pursuant to Republic Act No. 10173 (Data Privacy Act of 2012) for Barangay Sabang municipal waste governance.
+                  <span
+                    className={`text-[11px] font-bold w-12 text-right ${strength.textClass}`}
+                    aria-live="polite"
+                  >
+                    {strength.label}
                   </span>
-                </label>
+                </div>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                  <Requirement met={checks.length}>At least {MIN_PASSWORD_LENGTH} characters</Requirement>
+                  <Requirement met={checks.mixedCase}>Upper &amp; lowercase letters</Requirement>
+                  <Requirement met={checks.number}>At least one number</Requirement>
+                  <Requirement met={checks.symbol}>At least one symbol</Requirement>
+                </ul>
               </div>
+            )}
 
-              {/* Final Submit Button */}
+            {/* Privacy consent */}
+            <label className="flex items-start gap-2.5 text-xs text-slate-600 cursor-pointer pt-1">
+              <input
+                type="checkbox"
+                required
+                disabled={locked}
+                checked={acceptedPrivacy}
+                onChange={(e) => setAcceptedPrivacy(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>
+                I agree to the processing of my civic data under the{' '}
+                <strong className="text-emerald-800">Philippine Data Privacy Act (RA 10173)</strong>{' '}
+                and Ecological Solid Waste Management guidelines.
+              </span>
+            </label>
+
+            {/* Verification Status Guidance */}
+            {!isVerified && (
+              <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 rounded-xl p-2.5 text-center">
+                Please complete the Government ID and Face Biometrics verification above to enable account creation.
+              </p>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting || !fullName || !email || !acceptedPrivacy}
-                className="w-full py-3.5 px-4 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-lg shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                disabled={locked || !canSubmit}
+                aria-label="Create Resident Account"
+                aria-busy={isSubmitting}
+                className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-bold text-white
+                  bg-gradient-to-b from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-700/30
+                  transition hover:from-emerald-500 hover:to-emerald-800 hover:shadow-emerald-700/40
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2
+                  disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Completing Verification & Registration...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-4 h-4" />
-                    Complete Verified Registration
-                  </>
-                )}
+                {isDone ? (
+                  <CheckCircle className="w-4 h-4 mr-2" aria-hidden="true" />
+                ) : isSubmitting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
+                ) : null}
+                {isDone ? 'Account created' : isSubmitting ? 'Creating account…' : 'Create Resident Account'}
               </button>
-            </form>
-          )}
 
-          {/* ============================================================== */}
-          {/* STEP 6: FINAL VERIFICATION RESULT                             */}
-          {/* ============================================================== */}
-          {currentStep === 6 && (
-            <div className="p-8 rounded-2xl border border-emerald-200 bg-emerald-50/50 text-center space-y-4 animate-in fade-in">
-              <div className="w-16 h-16 rounded-full bg-emerald-600 text-white flex items-center justify-center mx-auto shadow-lg shadow-emerald-700/30">
-                <Check className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900">Identity Verification Complete!</h3>
-              <p className="text-sm text-slate-600 max-w-md mx-auto">
-                Your government ID and facial biometrics were verified successfully. Your resident account is now active.
-              </p>
-              <div className="pt-2">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md transition-colors"
-                >
-                  Sign In to SABTRACK Portal
-                </Link>
-              </div>
+              <Link
+                href="/login"
+                aria-disabled={locked}
+                className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold
+                  text-emerald-800 border-2 border-emerald-200 bg-white transition
+                  hover:border-emerald-500 hover:bg-emerald-50
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2"
+              >
+                Sign in
+              </Link>
             </div>
-          )}
 
-          {/* Footer link to Sign In */}
-          <p className="text-xs text-slate-500 text-center mt-8">
-            Already have an accredited resident account?{' '}
-            <Link href="/login" className="font-semibold text-emerald-700 hover:text-emerald-800 hover:underline">
-              Sign In
-            </Link>
-          </p>
+            {/* Mobile-only privacy note */}
+            <p className="md:hidden flex items-start gap-2 text-[11px] text-slate-500 leading-relaxed pt-2">
+              <ShieldCheck className="w-4 h-4 flex-shrink-0 text-emerald-700" aria-hidden="true" />
+              EXIF GPS metadata is removed from report evidence, and your identity is never shown on
+              public feeds.
+            </p>
+          </form>
         </div>
       </section>
+
+      {/* Active Liveness Face Capture Modal */}
+      <FaceCaptureModal
+        isOpen={isCameraModalOpen}
+        onCapture={handleFaceCaptured}
+        onClose={() => setIsCameraModalOpen(false)}
+      />
     </div>
   );
 }

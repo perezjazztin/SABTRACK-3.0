@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import React from 'react';
 import RegisterPage from '@/app/register/page';
 import * as apiClient from '@/lib/api-client';
 
@@ -7,25 +8,46 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
 }));
 
-describe('RegisterPage Multi-Step Gated Flow', () => {
+describe('RegisterPage Integrated Identity Verification Flow', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    localStorage.clear();
   });
 
-  it('displays supported government IDs and keeps personal info form locked initially', () => {
+  it('displays supported government IDs in verification section and requires verification before submission', () => {
     render(<RegisterPage />);
-    
-    // Supported government IDs from IT-312 guidelines
+
+    // Supported government IDs
     expect(screen.getAllByText(/Philippine National ID/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Driver's License/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/Passport/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/UMID/i).length).toBeGreaterThan(0);
 
-    // Password field should not be present in Step 1
-    expect(screen.queryByLabelText(/Create Password/i)).not.toBeInTheDocument();
+    // Submit button disabled before verification
+    const submitBtn = screen.getByRole('button', { name: /Create Resident Account/i });
+    expect(submitBtn).toBeDisabled();
+    expect(screen.getByText(/Please complete the Government ID and Face Biometrics verification/i)).toBeInTheDocument();
   });
 
-  it('completes ID upload, scanning, and unlocks Step 5 personal information', async () => {
+  it('handles ID scan failure gracefully', async () => {
+    vi.spyOn(apiClient, 'scanGovernmentId').mockRejectedValue(
+      new Error('ID image is too blurry. Please upload a clear photo.')
+    );
+
+    render(<RegisterPage />);
+
+    const fileInput = screen.getByTestId('id-upload-input');
+    const dummyFile = new File(['blurry_id'], 'id.png', { type: 'image/png' });
+    fireEvent.change(fileInput, { target: { files: [dummyFile] } });
+
+    fireEvent.click(screen.getByRole('button', { name: /Scan & Process ID/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/ID image is too blurry/i)).toBeInTheDocument();
+    });
+  });
+
+  it('allows user to re-verify after completing verification', async () => {
     vi.spyOn(apiClient, 'scanGovernmentId').mockResolvedValue({
       temp_verification_id: 'temp_sess_123',
       extracted_data: {
@@ -48,39 +70,36 @@ describe('RegisterPage Multi-Step Gated Flow', () => {
 
     render(<RegisterPage />);
 
-    // Select ID type
-    const selectElem = screen.getByLabelText(/Select Government ID Type/i);
-    fireEvent.change(selectElem, { target: { value: 'PHILIPPINE_NATIONAL_ID' } });
-
-    // Upload ID file
+    // Upload & Scan
     const fileInput = screen.getByTestId('id-upload-input');
     const dummyFile = new File(['mock_id'], 'id.png', { type: 'image/png' });
     fireEvent.change(fileInput, { target: { files: [dummyFile] } });
+    fireEvent.click(screen.getByRole('button', { name: /Scan & Process ID/i }));
 
-    // Click "Scan & Verify ID"
-    const scanBtn = screen.getByRole('button', { name: /Scan & Process ID/i });
-    fireEvent.click(scanBtn);
-
-    // After scan succeeds, prompt to start face capture
+    // Face capture
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Start Face Verification/i })).toBeInTheDocument();
     });
-
-    // Start face verification (which triggers FaceCaptureModal)
     fireEvent.click(screen.getByRole('button', { name: /Start Face Verification/i }));
 
-    // In modal, click capture
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /Capture Face Photo/i })).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole('button', { name: /Capture Face Photo/i }));
 
-    // Step 5: Personal Information Review should now be visible and pre-populated
+    // Verified state
     await waitFor(() => {
-      expect(screen.getByDisplayValue('JUAN DELA CRUZ')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('1995-08-15')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('31')).toBeInTheDocument();
-      expect(screen.getByDisplayValue('PUROK 2, SABANG')).toBeInTheDocument();
+      expect(screen.getByText(/Verified \(91%\)/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Re-verify/i })).toBeInTheDocument();
+    });
+
+    // Click Re-verify to reset
+    fireEvent.click(screen.getByRole('button', { name: /Re-verify/i }));
+
+    // Verification controls reappear
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Scan & Process ID/i })).toBeInTheDocument();
+      expect(screen.queryByText(/Verified \(91%\)/i)).not.toBeInTheDocument();
     });
   });
 });
