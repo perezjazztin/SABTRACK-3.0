@@ -225,8 +225,7 @@ export default function FaceCaptureModal({
 
     adherenceFrames.current = 0;
     setStageProgress(0);
-    stepStartTime.current = Date.now();
-    stepCooldownUntil.current = Date.now() + 250; // Responsive settle period before checking action adherence
+    stepCooldownUntil.current = Date.now() + 850; // Deliberate settle period so user clearly sees the instruction and has time to turn
 
     const interval = setInterval(() => {
       const video = videoRef.current;
@@ -273,8 +272,8 @@ export default function FaceCaptureModal({
                 if (isFaceTone) {
                   facePixels++;
                   sumX += x;
-                  if (x < 58) leftZoneFacePixels++;
-                  else if (x > 62) rightZoneFacePixels++;
+                  if (x < 57) leftZoneFacePixels++;
+                  else if (x > 63) rightZoneFacePixels++;
                 }
               }
             }
@@ -302,8 +301,7 @@ export default function FaceCaptureModal({
                     Math.abs(frame[idx + 1] - prev[idx + 1]) +
                     Math.abs(frame[idx + 2] - prev[idx + 2]);
 
-                  // Responsive delta threshold for webcam head motion
-                  if (delta > 32) {
+                  if (delta > 36) {
                     if (x < 57) diffLeft++;
                     else if (x > 63) diffRight++;
                     else diffCenter++;
@@ -319,18 +317,15 @@ export default function FaceCaptureModal({
               return;
             }
 
-            const stepDuration = now - stepStartTime.current;
-            const isAdaptive = stepDuration > 2200; // Ease requirements smoothly if trying for > 2.2s
-
-            // Progression is strictly conditioned on user following the system instruction
+            // Progression is strictly conditioned on user holding the instructed pose
             let stepSatisfied = false;
 
             if (currentStepIndex === 0) {
               // Instruction: Center face inside oval guide
-              const isCentered = facePresent && faceCenterX >= 46 && faceCenterX <= 74;
+              const isCentered = facePresent && faceCenterX >= 48 && faceCenterX <= 72;
               if (isCentered) {
                 adherenceFrames.current += 1;
-                const targetFrames = 3;
+                const targetFrames = 4;
                 const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
                 setStageProgress(progress);
                 if (adherenceFrames.current >= targetFrames) {
@@ -338,22 +333,20 @@ export default function FaceCaptureModal({
                   stepSatisfied = true;
                 }
               } else {
-                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.4);
-                setStageProgress(Math.round((adherenceFrames.current / 3) * 100));
+                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
+                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
               }
             } else if (currentStepIndex === 1) {
               // Instruction: Turn slightly to the left (toward left shoulder / left side of mirrored screen)
               const turnedLeft =
                 facePresent &&
-                ((baselineFaceX.current - faceCenterX >= 1.8) ||
-                 (faceCenterX <= 58.5) ||
-                 (diffLeft >= 5 && diffLeft >= diffRight * 1.15) ||
-                 (leftZoneFacePixels >= 15 && leftZoneFacePixels >= rightZoneFacePixels * 1.05) ||
-                 (isAdaptive && (diffLeft >= 3 || faceCenterX <= 60)));
+                ((baselineFaceX.current - faceCenterX >= 2.4) ||
+                 (diffLeft >= 10 && diffLeft > diffRight) ||
+                 (leftZoneFacePixels >= 20 && leftZoneFacePixels > rightZoneFacePixels * 1.15));
 
               if (turnedLeft) {
                 adherenceFrames.current += 1;
-                const targetFrames = 2;
+                const targetFrames = 4;
                 const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
                 setStageProgress(progress);
                 if (adherenceFrames.current >= targetFrames) {
@@ -361,57 +354,47 @@ export default function FaceCaptureModal({
                   stepSatisfied = true;
                 }
               } else {
-                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.4);
-                setStageProgress(Math.round((adherenceFrames.current / 2) * 100));
+                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
+                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
               }
             } else if (currentStepIndex === 2) {
               // Instruction: Turn slightly to the right (toward right shoulder / right side of mirrored screen)
-              // Physical proof of turning right (multi-modal check with high responsiveness):
-              // 1. Shift right relative to baseline center: (faceCenterX - baselineFaceX) >= 1.8
-              // 2. Shift right relative to step 1's left pose: (faceCenterX - leftPoseRecordedX) >= 3.0
-              // 3. Absolute right placement: faceCenterX >= 61.2
-              // 4. Optical motion to the right: diffRight >= 5 && diffRight >= diffLeft * 1.15
-              // 5. Right zone face mass dominance: rightZoneFacePixels >= 15 && rightZoneFacePixels >= leftZoneFacePixels * 1.05
-              // 6. Adaptive fallback if held for > 2.2s
               const turnedRight =
                 facePresent &&
-                ((faceCenterX - baselineFaceX.current >= 1.8) ||
-                 (leftPoseRecordedX.current !== null && (faceCenterX - leftPoseRecordedX.current >= 3.0)) ||
-                 (faceCenterX >= 61.2) ||
-                 (diffRight >= 5 && diffRight >= diffLeft * 1.15) ||
-                 (diffRight >= 8) ||
-                 (rightZoneFacePixels >= 15 && rightZoneFacePixels >= leftZoneFacePixels * 1.05) ||
-                 (isAdaptive && (diffRight >= 3 || faceCenterX >= 59 || (diffRight + diffCenter) >= 6)));
+                ((faceCenterX - baselineFaceX.current >= 2.4) ||
+                 (leftPoseRecordedX.current !== null && (faceCenterX - leftPoseRecordedX.current >= 3.8)) ||
+                 (diffRight >= 10 && diffRight > diffLeft) ||
+                 (rightZoneFacePixels >= 20 && rightZoneFacePixels > leftZoneFacePixels * 1.15));
 
               if (turnedRight) {
                 adherenceFrames.current += 1;
-                const targetFrames = 2;
+                const targetFrames = 4;
                 const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
                 setStageProgress(progress);
                 if (adherenceFrames.current >= targetFrames) {
                   stepSatisfied = true;
                 }
               } else {
-                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.4);
-                setStageProgress(Math.round((adherenceFrames.current / 2) * 100));
+                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
+                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
               }
             } else if (currentStepIndex === 3) {
               // Instruction: Look straight & blink naturally (return to center for crisp snapshot)
               const returnedToCenter =
                 facePresent &&
-                Math.abs(faceCenterX - baselineFaceX.current) <= 9;
+                Math.abs(faceCenterX - baselineFaceX.current) <= 7;
 
               if (returnedToCenter) {
                 adherenceFrames.current += 1;
-                const targetFrames = 3;
+                const targetFrames = 4;
                 const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
                 setStageProgress(progress);
                 if (adherenceFrames.current >= targetFrames) {
                   stepSatisfied = true;
                 }
               } else {
-                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.4);
-                setStageProgress(Math.round((adherenceFrames.current / 3) * 100));
+                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
+                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
               }
             }
 
@@ -422,12 +405,12 @@ export default function FaceCaptureModal({
               if (currentStepIndex < LIVENESS_STEPS.length - 1) {
                 setCurrentStepIndex((prev) => prev + 1);
               } else {
-                // Completed all instructions — auto-capture now that all poses are validated
+                // Completed all instructions — deliberate confirmation pause before snapshot
                 setIsCompleted(true);
                 setStageProgress(100);
                 setTimeout(() => {
                   triggerCapture();
-                }, 300);
+                }, 1000);
               }
             }
           }
@@ -574,14 +557,12 @@ export default function FaceCaptureModal({
 
                   {/* Pose Guidance Graphic inside oval */}
                   {currentStep.direction === 'left' && (
-                    <div className="absolute left-2 sm:left-3 p-2 rounded-full bg-emerald-600/90 text-white animate-bounce shadow-md flex items-center gap-1">
+                    <div className="absolute left-3 p-2 rounded-full bg-emerald-700 text-white animate-bounce shadow-md">
                       <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
-                      <span className="text-[10px] font-extrabold pr-1 hidden sm:inline">Turn Left</span>
                     </div>
                   )}
                   {currentStep.direction === 'right' && (
-                    <div className="absolute right-2 sm:right-3 p-2 rounded-full bg-emerald-600/90 text-white animate-bounce shadow-md flex items-center gap-1">
-                      <span className="text-[10px] font-extrabold pl-1 hidden sm:inline">Turn Right</span>
+                    <div className="absolute right-3 p-2 rounded-full bg-emerald-700 text-white animate-bounce shadow-md">
                       <ArrowRight className="w-5 h-5 stroke-[2.5]" />
                     </div>
                   )}
@@ -604,7 +585,7 @@ export default function FaceCaptureModal({
                     <ShieldCheck className="w-3 h-3 text-emerald-200" />
                     <span>
                       {isCompleted
-                        ? 'Liveness Verified'
+                        ? 'Liveness Verified ✓ Taking Photo…'
                         : !isFaceDetected
                         ? 'Center Face in Oval'
                         : `Step ${currentStepIndex + 1} of ${LIVENESS_STEPS.length}`}
@@ -614,28 +595,13 @@ export default function FaceCaptureModal({
               </div>
 
               {/* Dynamic Command Floating Banner at Top */}
-              <div className="absolute top-3 inset-x-3 z-20 flex items-center justify-between pointer-events-none">
-                <div className="w-16" />
+              <div className="absolute top-3 inset-x-3 z-20 flex justify-center pointer-events-none">
                 <div className="bg-slate-900/85 backdrop-blur-md px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg flex items-center gap-2 text-white">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   <p className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
                     {currentStep.command}
                   </p>
                 </div>
-                {/* Skip Step Action if pose has been held/tried */}
-                {currentStepIndex > 0 && currentStepIndex < LIVENESS_STEPS.length - 1 ? (
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStepIndex((prev) => prev + 1)}
-                    className="px-2.5 py-1 rounded-full bg-slate-900/80 hover:bg-slate-800 text-emerald-300 text-[11px] font-semibold border border-emerald-500/40 shadow-sm transition-all flex items-center gap-1 cursor-pointer pointer-events-auto"
-                    title="Skip to next pose if camera detection is slow"
-                  >
-                    <span>Skip</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </button>
-                ) : (
-                  <div className="w-16" />
-                )}
               </div>
 
               {/* Progress Line Bar at Bottom of Video */}
