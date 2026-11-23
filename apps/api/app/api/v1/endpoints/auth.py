@@ -3,6 +3,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 import re
 import shutil
+import threading
 from typing import Dict, Tuple
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, Response, UploadFile, status
 from app.modules.notifications.service import email_service
@@ -229,12 +230,18 @@ def register(
     db.add(audit_entry)
     db.commit()
 
-    # Queue welcome email to resident
-    background_tasks.add_task(
-        email_service.send_welcome_email,
-        to_email=clean_email,
-        full_name=new_user.full_name,
-    )
+    # Queue welcome email to resident asynchronously in background thread so HTTP response is instant
+    def _send_welcome_email_worker(recipient: str, recipient_name: str) -> None:
+        try:
+            email_service.send_welcome_email(to_email=recipient, full_name=recipient_name)
+        except Exception as err:
+            logger.warning("Background welcome email dispatch failed: %s", err)
+
+    threading.Thread(
+        target=_send_welcome_email_worker,
+        args=(clean_email, new_user.full_name),
+        daemon=True,
+    ).start()
 
     return new_user
 

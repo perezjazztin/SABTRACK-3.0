@@ -97,6 +97,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successNotice, setSuccessNotice] = useState<string | null>(null);
   const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
 
   const isLockedOut = lockoutSeconds !== null && lockoutSeconds > 0;
@@ -107,6 +108,38 @@ export default function LoginPage() {
     : isLockoutExpired
     ? 'Lockout expired. You may now try signing in again.'
     : errorMessage;
+
+  // Prefetch downstream portal routes for instantaneous navigation upon login
+  useEffect(() => {
+    if (typeof router.prefetch === 'function') {
+      router.prefetch('/resident');
+      router.prefetch('/admin');
+    }
+  }, [router]);
+
+  // Pre-fill email from registration or query parameter and show confirmation notice
+  useEffect(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const queryEmail = params.get('email');
+        const isRegistered = params.get('registered') === 'true';
+
+        const storedEmail = queryEmail || localStorage.getItem('sabtrack_registered_email');
+        if (storedEmail) {
+          setEmail(storedEmail);
+        }
+
+        if (isRegistered) {
+          setSuccessNotice(
+            'Account registered successfully! Please enter your password or click Facial Verification to sign in.'
+          );
+        }
+      }
+    } catch {
+      // Storage or URLSearchParams unavailable in test/sandboxed environments
+    }
+  }, []);
 
   // Restore active lockout countdown on page load if still active
   useEffect(() => {
@@ -315,6 +348,17 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 text-left mb-8">
             Sign in to your SABTRACK account to continue
           </p>
+
+          {/* Registration / Account Creation Success Notice */}
+          {successNotice && !displayError && (
+            <div
+              role="status"
+              className="mb-5 p-3.5 rounded-2xl text-xs flex items-start gap-2.5 bg-emerald-50 text-emerald-900 border border-emerald-200 animate-in fade-in"
+            >
+              <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div className="flex-1 font-medium">{successNotice}</div>
+            </div>
+          )}
 
           {/* Error alert (announced to screen readers) */}
           {displayError && (

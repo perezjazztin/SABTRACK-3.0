@@ -496,9 +496,10 @@ export default function RegisterPage() {
 
     try {
       const normalizedResidentId = residentIdNum.trim().toUpperCase();
+      const cleanEmail = email.trim().toLowerCase();
 
       await registerResident({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
         full_name: fullName.trim(),
         area_id: areaId ? Number(areaId) : null,
@@ -506,19 +507,23 @@ export default function RegisterPage() {
         verification_token: verificationToken,
       });
 
-      if (typeof window !== 'undefined' && normalizedResidentId) {
+      if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('sabtrack_registered_resident_id', normalizedResidentId);
+          if (normalizedResidentId) {
+            localStorage.setItem('sabtrack_registered_resident_id', normalizedResidentId);
+          }
+          localStorage.setItem('sabtrack_registered_email', cleanEmail);
         } catch {
           // Ignore storage unavailability in private browsing
         }
       }
 
       setIsDone(true);
+      setIsSubmitting(false);
       setSuccessMessage('Resident identity verified and account registered successfully! Redirecting to sign in…');
       redirectTimer.current = setTimeout(() => {
-        router.replace('/login');
-      }, 1500);
+        router.push(`/login?email=${encodeURIComponent(cleanEmail)}&registered=true`);
+      }, 500);
     } catch (err) {
       setErrorMessage(
         err instanceof Error && err.message
@@ -1273,7 +1278,17 @@ export default function RegisterPage() {
             <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled={locked || !canSubmit}
+                onClick={
+                  isDone
+                    ? (e) => {
+                        e.preventDefault();
+                        router.push(
+                          `/login?email=${encodeURIComponent(email.trim().toLowerCase())}&registered=true`
+                        );
+                      }
+                    : undefined
+                }
+                disabled={isSubmitting || (!isDone && !canSubmit)}
                 aria-label="Create Resident Account"
                 aria-busy={isSubmitting}
                 className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-bold text-white
@@ -1287,12 +1302,11 @@ export default function RegisterPage() {
                 ) : isSubmitting ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
                 ) : null}
-                {isDone ? 'Account created' : isSubmitting ? 'Creating account…' : 'Create Resident Account'}
+                {isDone ? 'Proceed to Sign In →' : isSubmitting ? 'Creating account…' : 'Create Resident Account'}
               </button>
 
               <Link
-                href="/login"
-                aria-disabled={locked}
+                href={`/login${email.trim() ? `?email=${encodeURIComponent(email.trim().toLowerCase())}` : ''}`}
                 className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold
                   text-emerald-800 border-2 border-emerald-200 bg-white transition
                   hover:border-emerald-500 hover:bg-emerald-50
