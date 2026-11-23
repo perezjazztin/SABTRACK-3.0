@@ -99,6 +99,28 @@ describe('AwarenessHubPage Component', () => {
         }
         return jsonResponse(completionResponse);
       }
+      if (url.includes('/api/v1/gamification/awareness/status')) {
+        return jsonResponse({
+          resource_points: {},
+          daily_points_today: 0,
+          daily_limit: 20,
+          interval_seconds: 45,
+          max_points_per_resource: 5,
+        });
+      }
+      if (url.includes('/api/v1/gamification/awareness/heartbeat')) {
+        const body = JSON.parse(String(init?.body || '{}'));
+        return jsonResponse({
+          resource_id: body.resource_id,
+          status: 'AWARDED',
+          points_awarded: 1,
+          points_earned: 1,
+          max_points: 5,
+          daily_points_today: 1,
+          daily_limit: 20,
+          total_points: 6,
+        });
+      }
       if (url.includes('/api/v1/gamification/my-points')) {
         return jsonResponse({
           total_points: 5,
@@ -381,5 +403,28 @@ describe('AwarenessHubPage Component', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/Landfill Diversion Target/i)).toBeInTheDocument();
     expect(screen.getByText(/Open Burning Tolerance/i)).toBeInTheDocument();
+  });
+
+  it('triggers awareness heartbeat and displays celebratory point toast when 45s timer completes', async () => {
+    render(<AwarenessHubPage />);
+    await waitForStatusLoad();
+
+    vi.useFakeTimers();
+
+    // Click View Details on first resource
+    const viewDetailsButtons = screen.getAllByRole('button', { name: /View Details/i });
+    fireEvent.click(viewDetailsButtons[0]);
+
+    // Modal opens, showing circle countdown and 0 / 5 pts
+    expect(screen.getByText(/Auto-Earning SAB-Points/i)).toBeInTheDocument();
+    expect(screen.getByText(/0 \/ 5 pts/i)).toBeInTheDocument();
+
+    // Fast-forward 46 seconds using advanceTimersByTimeAsync to drain promise microtasks
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(46000);
+    });
+
+    expect(screen.getByText(/\+1 SAB-Point earned!/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/1 \/ 5 pts/i).length).toBeGreaterThan(0);
   });
 });

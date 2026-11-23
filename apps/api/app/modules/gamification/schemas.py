@@ -172,6 +172,30 @@ class ArticleReadingStatus(BaseModel):
     minimum_read_seconds: int
 
 
+class AwarenessStatusResponse(BaseModel):
+    resource_points: dict[str, int]
+    daily_points_today: int
+    daily_limit: int = 20
+    interval_seconds: int = 45
+    max_points_per_resource: int = 5
+
+
+class AwarenessHeartbeatRequest(BaseModel):
+    resource_id: str = Field(..., min_length=1, max_length=100)
+    session_id: Optional[UUID] = None
+
+
+class AwarenessHeartbeatResponse(BaseModel):
+    resource_id: str
+    status: Literal["AWARDED", "RESOURCE_CAP_REACHED", "DAILY_LIMIT_REACHED"]
+    points_awarded: int
+    points_earned: int
+    max_points: int = 5
+    daily_points_today: int
+    daily_limit: int = 20
+    total_points: Optional[int] = None
+
+
 class ArticleReadingCompleteRequest(BaseModel):
     session_id: UUID
 

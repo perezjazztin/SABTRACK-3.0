@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   BookOpen,
   Video,
@@ -30,8 +30,10 @@ import { cn } from '@/lib/utils';
 import {
   completeArticleReading,
   getArticleReadingStatus,
+  getAwarenessStatus,
   getMyPointsSummary,
   openArticleReading,
+  submitAwarenessHeartbeat,
 } from '@/lib/api-client';
 import {
   ArticleReadingCompletion,
@@ -610,6 +612,259 @@ export default function AwarenessHubPage() {
   const [activeModalItem, setActiveModalItem] = useState<EducationalItem | null>(null);
   const [activeFeaturedVideoIndex, setActiveFeaturedVideoIndex] = useState(0);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+  const [readingStatus, setReadingStatus] = useState<ArticleReadingStatus | null>(null);
+  const [readingStatusError, setReadingStatusError] = useState<string | null>(null);
+  const [readingError, setReadingError] = useState<string | null>(null);
+  const [readingSession, setReadingSession] = useState<ArticleReadingSession | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [reachedArticleEnd, setReachedArticleEnd] = useState(false);
+  const [completionResult, setCompletionResult] = useState<ArticleReadingCompletion | null>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [refreshedPoints, setRefreshedPoints] = useState<number | null>(null);
+  const openedArticleId = useRef<string | null>(null);
+  const articleContentRef = useRef<HTMLDivElement | null>(null);
+
+  // Continuous auto-points counting state
+  const [secondsLeft, setSecondsLeft] = useState(45);
+  const [isPaused, setIsPaused] = useState(false);
+  const [resourcePointsMap, setResourcePointsMap] = useState<Record<string, number>>({});
+  const [heartbeatToast, setHeartbeatToast] = useState<string | null>(null);
+  const isHeartbeatingRef = useRef(false);
+
+  const activeModalItemRef = useRef<EducationalItem | null>(activeModalItem);
+  activeModalItemRef.current = activeModalItem;
+  const isPausedRef = useRef(isPaused);
+  isPausedRef.current = isPaused;
+  const resourcePointsMapRef = useRef(resourcePointsMap);
+  resourcePointsMapRef.current = resourcePointsMap;
+
+  useEffect(() => {
+    let active = true;
+    getArticleReadingStatus()
+      .then((status) => {
+        if (active) {
+          setReadingStatus(status);
+          setReadingStatusError(null);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          const reason = error instanceof Error ? `: ${error.message}` : '';
+          setReadingStatusError(`Unable to load article reading status${reason}`);
+        }
+      });
+
+    getAwarenessStatus()
+      .then((awareness) => {
+        if (active && awareness?.resource_points) {
+          setResourcePointsMap(awareness.resource_points);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const triggerHeartbeat = useCallback(async (resourceId: string) => {
+    if (isHeartbeatingRef.current) return;
+    const currentPts = resourcePointsMapRef.current[resourceId] ?? 0;
+    if (currentPts >= 5) return;
+
+    isHeartbeatingRef.current = true;
+    try {
+      const res = await submitAwarenessHeartbeat(resourceId);
+      if (res.status === 'AWARDED') {
+        setResourcePointsMap((prevMap) => ({
+          ...prevMap,
+          [resourceId]: res.points_earned,
+        }));
+        setHeartbeatToast(`+${res.points_awarded} SAB-Point earned! (${res.points_earned} / 5 pts)`);
+        getMyPointsSummary()
+          .then((summary) => {
+            setRefreshedPoints(summary.total_points);
+          })
+          .catch(() => {});
+        setReadingStatus((curr) =>
+          curr ? { ...curr, awards_today: res.daily_points_today } : curr
+        );
+      } else if (res.status === 'RESOURCE_CAP_REACHED') {
+        setResourcePointsMap((prevMap) => ({
+          ...prevMap,
+          [resourceId]: 5,
+        }));
+        setHeartbeatToast('Resource Mastered! 5 / 5 SAB-Points earned.');
+      } else if (res.status === 'DAILY_LIMIT_REACHED') {
+        setHeartbeatToast("Today's 20-point daily limit reached. Resets at midnight.");
+      }
+    } catch (err: unknown) {
+      console.error('Awareness heartbeat error:', err);
+      const msg = err instanceof Error ? err.message : 'Unable to record awareness point.';
+      setHeartbeatToast(`Point recording error: ${msg}`);
+    } finally {
+      isHeartbeatingRef.current = false;
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPaused(document.hidden);
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeModalItem) {
+      return;
+    }
+
+    if (openedArticleId.current === activeModalItem.id) {
+      return;
+    }
+    openedArticleId.current = activeModalItem.id;
+
+    setReadingSession(null);
+    setElapsedSeconds(0);
+    setSecondsLeft(45);
+    setIsPaused(false);
+    setHeartbeatToast(null);
+    setReadingError(null);
+
+    let active = true;
+    openArticleReading(activeModalItem.id)
+      .then((session) => {
+        if (active) {
+          setReadingSession(session);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [activeModalItem]);
+
+  useEffect(() => {
+    if (!activeModalItem || isPaused) {
+      return;
+    }
+
+    const currentPts = resourcePointsMap[activeModalItem.id] ?? 0;
+    if (currentPts >= 5) {
+      return;
+    }
+
+    let countdown = 45;
+    setSecondsLeft(45);
+
+    const timer = window.setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+      countdown -= 1;
+      if (countdown <= 0) {
+        countdown = 45;
+        setSecondsLeft(45);
+        void triggerHeartbeat(activeModalItem.id);
+      } else {
+        setSecondsLeft(countdown);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [activeModalItem?.id, isPaused, (resourcePointsMap[activeModalItem?.id ?? ''] ?? 0) >= 5, triggerHeartbeat]);
+
+  useEffect(() => {
+    if (!heartbeatToast) return;
+    const t = window.setTimeout(() => {
+      setHeartbeatToast(null);
+    }, 4500);
+    return () => window.clearTimeout(t);
+  }, [heartbeatToast]);
+
+  const openResource = (item: EducationalItem) => {
+    setActiveModalItem(item);
+  };
+
+  const closeResource = () => {
+    setActiveModalItem(null);
+    openedArticleId.current = null;
+    setReadingSession(null);
+    setElapsedSeconds(0);
+    setSecondsLeft(45);
+    setIsPaused(false);
+    setHeartbeatToast(null);
+    setCompletionResult(null);
+    setReadingError(null);
+  };
+
+  const handleArticleScroll = (event: React.UIEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    if (element.scrollTop + element.clientHeight >= element.scrollHeight - 1) {
+      setReachedArticleEnd(true);
+    }
+  };
+
+  const refreshAfterCompletion = async (result: ArticleReadingCompletion) => {
+    if (result.status === 'AWARDED' || result.status === 'ALREADY_READ') {
+      setReadingStatus((current) =>
+        current
+          ? {
+              ...current,
+              awards_today: result.awards_today,
+              completed_article_ids: Array.from(
+                new Set([...current.completed_article_ids, result.article_id])
+              ),
+            }
+          : current
+      );
+    } else {
+      setReadingStatus((current) =>
+        current ? { ...current, awards_today: result.awards_today } : current
+      );
+    }
+
+    try {
+      const [status, pointsSummary] = await Promise.all([
+        getArticleReadingStatus(),
+        getMyPointsSummary(),
+      ]);
+      setReadingStatus(status);
+      setRefreshedPoints(pointsSummary.total_points);
+    } catch (error: unknown) {
+      setReadingError(
+        error instanceof Error
+          ? `The reading result was recorded, but points could not be refreshed: ${error.message}`
+          : 'The reading result was recorded, but points could not be refreshed.'
+      );
+    }
+  };
+
+  const handleMarkAsRead = async () => {
+    const sessionId = readingSession?.session_id;
+    if (!sessionId || isCompleting) {
+      return;
+    }
+
+    setIsCompleting(true);
+    setReadingError(null);
+    try {
+      const result = await completeArticleReading(sessionId);
+      setCompletionResult(result);
+      if (result.status === 'DAILY_LIMIT_REACHED') {
+        setReadingSession(null);
+      }
+      await refreshAfterCompletion(result);
+    } catch (error: unknown) {
+      setReadingError(
+        error instanceof Error ? error.message : 'Unable to submit article reading completion.'
+      );
+    } finally {
+      setIsCompleting(false);
+    }
+  };
 
   const currentFeaturedVideo = VERIFIED_VIDEOS[activeFeaturedVideoIndex];
 
@@ -642,9 +897,8 @@ export default function AwarenessHubPage() {
           </p>
 
           <div className="space-y-1 text-xs text-emerald-100/95" aria-live="polite">
-            <p>Eligible articles earn 5 SAB-Points after at least 20 seconds.</p>
-            <p>Reach the end and select Mark as Read, up to three articles per day.</p>
-            <p>Each article can earn points only once.</p>
+            <p>Earn 1 SAB-Point automatically every 45 seconds of active reading or watching.</p>
+            <p>Earn up to 5 points per guide, with a daily awareness limit of 20 points.</p>
             {readingStatus && (
               <p className="font-semibold">
                 Today&apos;s article awards: {readingStatus.awards_today} / {readingStatus.daily_limit}
@@ -1259,7 +1513,89 @@ export default function AwarenessHubPage() {
           aria-labelledby="modal-title"
           className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
         >
-          <div className="neu-modal rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200/70 shadow-neu-raised space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+          {/* Celebratory Floating Toast when points are earned */}
+          {heartbeatToast && (
+            <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[70] bg-gradient-to-r from-civic-forest to-emerald-700 text-white px-5 py-3 rounded-2xl shadow-2xl border-2 border-emerald-300 flex items-center gap-3 animate-bounce">
+              <Sparkles className="w-5 h-5 text-emerald-200 animate-spin flex-shrink-0" />
+              <div>
+                <p className="text-sm font-extrabold">{heartbeatToast}</p>
+                {refreshedPoints !== null && (
+                  <p className="text-[11px] text-emerald-100 font-medium">Current Balance: {refreshedPoints} SAB-Points</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div className="neu-modal rounded-3xl max-w-2xl w-full p-6 sm:p-8 border border-slate-200/70 shadow-neu-raised space-y-5 my-8 max-h-[90vh] overflow-y-auto relative">
+            {/* Sticky Floating Circular Auto-Earning Widget — Visible All Throughout Reading */}
+            <div className="sticky top-0 z-30 flex items-center justify-between -mx-6 sm:-mx-8 px-6 sm:px-8 py-2.5 bg-white/95 backdrop-blur-md border-b border-emerald-100/90 shadow-sm -mt-6 sm:-mt-8 mb-2">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-xs font-bold text-slate-800 tracking-tight">
+                  {((resourcePointsMap[activeModalItem.id] ?? 0) >= 5)
+                    ? 'Guide Mastered (5/5 Pts)'
+                    : isPaused
+                    ? 'Auto-Points Paused'
+                    : 'Auto-Earning SAB-Points'}
+                </span>
+              </div>
+
+              {/* The Literal Circle Itself */}
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <span className="text-xs font-black text-emerald-950 font-mono block">
+                    {Math.min(5, resourcePointsMap[activeModalItem.id] ?? 0)} / 5 pts
+                  </span>
+                  <span className="text-[10px] text-emerald-700 font-medium block">
+                    {((resourcePointsMap[activeModalItem.id] ?? 0) >= 5)
+                      ? '✓ Mastered'
+                      : isPaused
+                      ? 'Inactive tab'
+                      : `+1 pt in ${secondsLeft}s`}
+                  </span>
+                </div>
+
+                {/* SVG Mini Circle */}
+                <div className="relative flex items-center justify-center flex-shrink-0 w-11 h-11">
+                  <svg width="44" height="44" className="transform -rotate-90">
+                    <circle
+                      cx="22"
+                      cy="22"
+                      r="18"
+                      stroke="#E2E8F0"
+                      strokeWidth="3.5"
+                      fill="#F0FDF4"
+                    />
+                    <circle
+                      cx="22"
+                      cy="22"
+                      r="18"
+                      stroke={((resourcePointsMap[activeModalItem.id] ?? 0) >= 5) ? '#059669' : '#10B981'}
+                      strokeWidth="3.5"
+                      fill="transparent"
+                      strokeDasharray={2 * Math.PI * 18}
+                      strokeDashoffset={
+                        ((resourcePointsMap[activeModalItem.id] ?? 0) >= 5)
+                          ? 0
+                          : 2 * Math.PI * 18 * (secondsLeft / 45)
+                      }
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-linear"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    {((resourcePointsMap[activeModalItem.id] ?? 0) >= 5) ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    ) : (
+                      <span className="text-[11px] font-extrabold font-mono text-emerald-950">
+                        {secondsLeft}s
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1">
                 <span className={cn('px-2.5 py-0.5 rounded-full text-[10px] font-bold border inline-block', activeModalItem.badgeColor)}>
@@ -1362,47 +1698,6 @@ export default function AwarenessHubPage() {
                 ))}
               </ul>
             </div>
-
-            {activeModalItem.type === 'article' && (
-              <section className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 space-y-2">
-                {readingStatusError && <p role="alert">{readingStatusError}</p>}
-                {readingError && <p role="alert">{readingError}</p>}
-                {completionResult?.status === 'AWARDED' && (
-                  <div className="font-bold text-emerald-800">
-                    <p>+{completionResult.points_awarded} SAB-Points</p>
-                    {refreshedPoints !== null && <p>Current balance: {refreshedPoints} SAB-Points</p>}
-                  </div>
-                )}
-                {readingStatus?.completed_article_ids.includes(activeModalItem.id) ? (
-                  <p className="font-semibold text-emerald-800">Read ✓</p>
-                ) : (
-                  <>
-                    <p className="text-xs text-emerald-900">
-                      Reading progress: {Math.min(elapsedSeconds, readingStatus?.minimum_read_seconds ?? 20)} / {readingStatus?.minimum_read_seconds ?? 20} seconds
-                      {reachedArticleEnd ? ' • Article end reached' : ' • Scroll to the end'}
-                    </p>
-                    {completionResult?.status === 'DAILY_LIMIT_REACHED' && (
-                      <p className="text-sm font-semibold text-amber-800">
-                        You’ve reached today’s reading limit. Come back tomorrow to earn 5 SAB-Points for this article.
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleMarkAsRead}
-                      disabled={
-                        !readingSession?.session_id ||
-                        !reachedArticleEnd ||
-                        elapsedSeconds < (readingStatus?.minimum_read_seconds ?? 20) ||
-                        isCompleting
-                      }
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-civic-forest text-white disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isCompleting ? 'Submitting…' : 'Mark as Read'}
-                    </button>
-                  </>
-                )}
-              </section>
-            )}
 
             {/* Close action */}
             <div className="pt-2 flex justify-end">
