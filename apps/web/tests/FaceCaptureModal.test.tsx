@@ -91,10 +91,9 @@ describe('FaceCaptureModal Component', () => {
 
     expect(screen.getByRole('heading', { name: /Facial Verification Sign In/i })).toBeInTheDocument();
     expect(screen.queryByText(/Active Liveness Progression/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Direct Facial Verification/i)).toBeInTheDocument();
-    expect(screen.getByText(/Look straight at the camera/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blink Verification/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Look straight & blink naturally/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Look to the left/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Look to the right/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Blink naturally/i)).not.toBeInTheDocument();
   });
 });

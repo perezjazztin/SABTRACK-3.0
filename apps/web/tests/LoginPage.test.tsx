@@ -293,7 +293,7 @@ describe('LoginPage Role-Based Redirection', () => {
     // Face capture modal opens in direct facial verification mode without Active Liveness Progression
     expect(await screen.findByRole('heading', { name: /Facial Verification Sign In/i })).toBeInTheDocument();
     expect(screen.queryByText(/Active Liveness Progression/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/Direct Facial Verification/i)).toBeInTheDocument();
+    expect(screen.getByText(/Blink Verification/i)).toBeInTheDocument();
 
     // Click manual Capture Face Photo button inside modal
     const captureBtn = screen.getByRole('button', { name: /Capture Face Photo/i });

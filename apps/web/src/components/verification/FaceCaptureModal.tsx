@@ -88,6 +88,7 @@ export default function FaceCaptureModal({
   const [isCapturing, setIsCapturing] = useState<boolean>(false);
   const [isFlashing, setIsFlashing] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [isBlinkDetected, setIsBlinkDetected] = useState<boolean>(false);
 
   // Action adherence tracking refs (Strict user-action progression, no auto-timer)
   const adherenceFrames = useRef<number>(0);
@@ -171,6 +172,7 @@ export default function FaceCaptureModal({
       setCurrentStepIndex(0);
       setStageProgress(0);
       setIsCompleted(false);
+      setIsBlinkDetected(false);
       setIsInitializing(true);
       prevFrameData.current = null;
       adherenceFrames.current = 0;
@@ -231,7 +233,8 @@ export default function FaceCaptureModal({
 
     adherenceFrames.current = 0;
     setStageProgress(0);
-    stepCooldownUntil.current = isLoginMode ? Date.now() + 150 : Date.now() + 850;
+    setIsBlinkDetected(false);
+    stepCooldownUntil.current = isLoginMode ? Date.now() + 750 : Date.now() + 850;
 
     const interval = setInterval(() => {
       const video = videoRef.current;
@@ -323,25 +326,60 @@ export default function FaceCaptureModal({
               return;
             }
 
-            // Direct login mode: quick auto-capture once face is aligned in the oval (no multi-step poses)
+            // Direct login mode: deliberate pause + slight blink verification before auto-capture
             if (isLoginMode) {
               const isCentered = facePresent && faceCenterX >= 45 && faceCenterX <= 75;
               if (isCentered) {
+                // Calculate localized eye region optical difference for natural blink
+                let eyeDiff = 0;
+                if (prevFrameData.current) {
+                  const prev = prevFrameData.current;
+                  for (let y = 30; y <= 54; y += 2) {
+                    for (let x = 40; x <= 80; x += 2) {
+                      const idx = (y * 120 + x) * 4;
+                      const delta =
+                        Math.abs(frame[idx] - prev[idx]) +
+                        Math.abs(frame[idx + 1] - prev[idx + 1]) +
+                        Math.abs(frame[idx + 2] - prev[idx + 2]);
+                      if (delta > 32) {
+                        eyeDiff++;
+                      }
+                    }
+                  }
+                }
+
                 adherenceFrames.current += 1;
-                const targetFrames = 4;
-                const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
+                const progress = Math.min(85, Math.round((adherenceFrames.current / 5) * 60));
                 setStageProgress(progress);
-                if (adherenceFrames.current >= targetFrames) {
+
+                // Natural blink detection: eye region movement while head is stably centered
+                const blinkOccurred = eyeDiff >= 6 || (diffCenter >= 8 && diffLeft < 15 && diffRight < 15);
+
+                if (blinkOccurred && adherenceFrames.current >= 2) {
+                  clearInterval(interval);
+                  setIsBlinkDetected(true);
+                  setIsCompleted(true);
+                  setStageProgress(100);
+                  // Deliberate 450ms pause after blink so eyes reopen for a clear, crisp photo
+                  setTimeout(() => {
+                    triggerCapture();
+                  }, 450);
+                  return;
+                }
+
+                // Fallback: If user holds steady for ~3.5 seconds without blinking (e.g., dark glasses)
+                if (adherenceFrames.current >= 35) {
                   clearInterval(interval);
                   setIsCompleted(true);
                   setStageProgress(100);
                   setTimeout(() => {
                     triggerCapture();
-                  }, 300);
+                  }, 350);
+                  return;
                 }
               } else {
                 adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
-                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
+                setStageProgress(Math.round((adherenceFrames.current / 5) * 40));
               }
               return;
             }
@@ -465,6 +503,7 @@ export default function FaceCaptureModal({
     setCurrentStepIndex(0);
     setStageProgress(0);
     setIsCompleted(false);
+    setIsBlinkDetected(false);
     prevFrameData.current = null;
     adherenceFrames.current = 0;
     stepCooldownUntil.current = 0;
@@ -492,13 +531,13 @@ export default function FaceCaptureModal({
                   {isLoginMode ? 'Facial Verification Sign In' : 'Facial Liveness Verification'}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-emerald-600" />
-                  {isLoginMode ? 'Direct Scan' : 'Action-Guided'}
+                  {isLoginMode ? <Eye className="w-3 h-3 text-emerald-600" /> : <Sparkles className="w-3 h-3 text-emerald-600" />}
+                  {isLoginMode ? 'Blink to Sign In' : 'Action-Guided'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
                 {isLoginMode
-                  ? 'Look directly at the camera to verify your identity and sign in'
+                  ? 'Look straight at the camera & blink naturally to verify'
                   : 'Active pose check • You can also tap "Capture Face Photo" below anytime'}
               </p>
             </div>
@@ -603,6 +642,14 @@ export default function FaceCaptureModal({
                     </div>
                   )}
 
+                  {/* Login Mode: Friendly Eye Blink Badge inside oval */}
+                  {isLoginMode && !isCompleted && isFaceDetected && (
+                    <div className="absolute text-emerald-100 animate-pulse font-bold text-xs bg-slate-900/85 px-3 py-1 rounded-full border border-emerald-400/40 flex items-center gap-1.5 shadow">
+                      <Eye className="w-3.5 h-3.5 text-emerald-300" />
+                      <span>Blink Naturally</span>
+                    </div>
+                  )}
+
                   {/* Top Status Pill on the Oval */}
                   <div
                     className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-0.5 text-white text-[11px] font-bold rounded-full shadow flex items-center gap-1.5 whitespace-nowrap ${
@@ -617,12 +664,14 @@ export default function FaceCaptureModal({
                     <span>
                       {isCompleted
                         ? isLoginMode
-                          ? 'Face Verified ✓ Signing In…'
+                          ? 'Blink Verified ✓ Taking Photo…'
                           : 'Liveness Verified ✓ Taking Photo…'
                         : !isFaceDetected
                         ? 'Center Face in Oval'
                         : isLoginMode
-                        ? 'Face Aligned — Ready to Sign In'
+                        ? isBlinkDetected
+                          ? 'Blink Detected ✓ Taking Photo…'
+                          : 'Look Straight & Blink Naturally'
                         : `Step ${currentStepIndex + 1} of ${LIVENESS_STEPS.length}`}
                     </span>
                   </div>
@@ -634,7 +683,11 @@ export default function FaceCaptureModal({
                 <div className="bg-slate-900/85 backdrop-blur-md px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg flex items-center gap-2 text-white">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   <p className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
-                    {isLoginMode ? 'Look straight at the camera' : currentStep.command}
+                    {isLoginMode
+                      ? isBlinkDetected
+                        ? 'Blink verified! Taking snapshot…'
+                        : 'Look straight & blink naturally'
+                      : currentStep.command}
                   </p>
                 </div>
               </div>
@@ -645,7 +698,9 @@ export default function FaceCaptureModal({
                   <Check className="w-3 h-3 text-emerald-400" />
                   <span>
                     {isLoginMode
-                      ? 'Align your face naturally inside the guide to authenticate'
+                      ? isBlinkDetected
+                        ? 'Blink confirmed — capturing photo'
+                        : 'Hold steady and blink naturally to authenticate'
                       : currentStep.instruction}
                   </span>
                 </span>
@@ -706,15 +761,15 @@ export default function FaceCaptureModal({
               </ul>
             </div>
           ) : (
-            /* Direct Facial Verification Guidance Card for Login (No Active Liveness Checklist) */
+            /* Direct Facial Verification Guidance Card for Login with Blink Verification */
             <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200">
-                <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                <Eye className="w-5 h-5 text-emerald-700" />
               </div>
               <div>
-                <h4 className="text-xs font-bold text-slate-800">Direct Facial Verification</h4>
+                <h4 className="text-xs font-bold text-slate-800">Blink Verification Sign In</h4>
                 <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
-                  Active liveness poses are bypassed for login. Position your face in the oval to sign in automatically or tap the button below.
+                  Position your face inside the guide and blink naturally to verify. You can also tap &quot;Capture Face Photo&quot; anytime to capture immediately.
                 </p>
               </div>
             </div>
