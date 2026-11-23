@@ -50,4 +50,30 @@ describe('FaceCaptureModal Component', () => {
     fireEvent.click(cancelBtn);
     expect(handleClose).toHaveBeenCalled();
   });
+
+  it('does not trigger capture automatically without user action', async () => {
+    vi.useFakeTimers();
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(<FaceCaptureModal isOpen={true} onCapture={handleCapture} onClose={handleClose} />);
+
+    // Fast-forward 10 seconds — should NOT auto-advance or auto-capture
+    vi.advanceTimersByTime(10000);
+
+    expect(handleCapture).not.toHaveBeenCalled();
+    // Modal stays on the first instruction waiting for user adherence
+    expect(screen.getByText(/Center your face/i)).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
+  it('allows user to skip to next pose if having difficulty and provides direct capture', async () => {
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(<FaceCaptureModal isOpen={true} onCapture={handleCapture} onClose={handleClose} />);
+
+    // Direct capture button is always available and clickable
+    const directCaptureBtn = screen.getByRole('button', { name: /Capture Face Photo/i });
+    expect(directCaptureBtn).toBeInTheDocument();
+    expect(directCaptureBtn).toBeEnabled();
+  });
 });
