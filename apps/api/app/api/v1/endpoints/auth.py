@@ -425,7 +425,7 @@ async def login_with_face(
             )
 
     matcher = FaceMatchingService()
-    result = matcher.compare_faces(ref_bytes, live_bytes)
+    result = matcher.compare_faces(ref_bytes, live_bytes, is_id_comparison=False)
 
     if not result.is_match:
         _record_login_failure(db, client_ip, clean_email)

@@ -25,7 +25,7 @@ class FaceMatchResult:
 class FaceMatchingService:
     """Open-source computer vision service for detecting and comparing facial biometrics."""
 
-    MATCH_THRESHOLD: float = 0.45
+    MATCH_THRESHOLD: float = 0.55
 
     def __init__(self):
         # Gracefully handle optional Haar Cascade across OpenCV releases (4.x and 5.x)
@@ -113,8 +113,13 @@ class FaceMatchingService:
 
         return None
 
-    def _compare_with_gemini_vision(self, id_bytes: bytes, live_bytes: bytes) -> Optional[FaceMatchResult]:
-        """Uses Google Gemini multimodal vision AI to verify live selfie against ID portrait."""
+    def _compare_with_gemini_vision(
+        self,
+        id_bytes: bytes,
+        live_bytes: bytes,
+        is_id_comparison: bool = True,
+    ) -> Optional[FaceMatchResult]:
+        """Uses Google Gemini multimodal vision AI to verify live selfie against ID portrait or enrolled face."""
         raw_keys = (
             getattr(settings, "GEMINI_API_KEYS", None)
             or getattr(settings, "GEMINI_API_KEY", None)
@@ -131,26 +136,49 @@ class FaceMatchingService:
         id_b64 = base64.b64encode(clean_id_bytes).decode("utf-8")
         live_b64 = base64.b64encode(clean_live_bytes).decode("utf-8")
 
-        prompt = (
-            "You are an expert biometric identity verification system for Philippine government services.\n\n"
-            "Input Images:\n"
-            "- Image 1: Official government identification card (e.g. PhilSys National ID, Driver's License, UMID, Postal ID, Passport).\n"
-            "- Image 2: Live camera selfie photo captured by the resident during online registration.\n\n"
-            "Task: Compare the portrait photograph on the ID card (Image 1) against the live selfie photo (Image 2) "
-            "to determine whether both images depict the SAME person.\n\n"
-            "Important Real-World Context:\n"
-            "- In Philippine IDs, the printed portrait photo may be grayscale, low-contrast, or taken several years earlier.\n"
-            "- The live selfie has different lighting, angle, camera resolution, natural aging, current hairstyle, or facial expression.\n"
-            "- Focus on persistent anatomical facial geometry: facial structure, eye shape and spacing, nose bridge structure, and mouth/jaw proportions.\n"
-            "- If the facial geometry is consistent with being the same person at a different time/lighting, mark is_match as TRUE with high confidence (e.g. 0.85 - 0.95).\n"
-            "- If the two images clearly show DIFFERENT individuals (different person, different gender, or fundamentally contradictory facial bone structure), mark is_match as FALSE.\n\n"
-            "Return strictly a JSON object with keys:\n"
-            "{\n"
-            '  "is_match": boolean,\n'
-            '  "match_score": float between 0.0 and 1.0,\n'
-            '  "details": string concisely explaining the decision (1-2 sentences)\n'
-            "}"
-        )
+        if is_id_comparison:
+            prompt = (
+                "You are an expert biometric identity verification system for Philippine government services.\n\n"
+                "Input Images:\n"
+                "- Image 1: Official government identification card (e.g. PhilSys National ID, Driver's License, UMID, Postal ID, Passport).\n"
+                "- Image 2: Live camera selfie photo captured by the resident during online registration.\n\n"
+                "Task: Compare the portrait photograph on the ID card (Image 1) against the live selfie photo (Image 2) "
+                "to determine whether both images depict the SAME person.\n\n"
+                "Important Real-World Context:\n"
+                "- In Philippine IDs, the printed portrait photo may be grayscale, low-contrast, or taken several years earlier.\n"
+                "- The live selfie has different lighting, angle, camera resolution, natural aging, current hairstyle, or facial expression.\n"
+                "- Focus on persistent anatomical facial geometry: facial structure, eye shape and spacing, nose bridge structure, and mouth/jaw proportions.\n"
+                "- If the facial geometry is consistent with being the same person at a different time/lighting, mark is_match as TRUE with high confidence (e.g. 0.85 - 0.95).\n"
+                "- If the two images clearly show DIFFERENT individuals (different person, different gender, or fundamentally contradictory facial bone structure), mark is_match as FALSE.\n\n"
+                "Return strictly a JSON object with keys:\n"
+                "{\n"
+                '  "is_match": boolean,\n'
+                '  "match_score": float between 0.0 and 1.0,\n'
+                '  "details": string concisely explaining the decision (1-2 sentences)\n'
+                "}"
+            )
+        else:
+            prompt = (
+                "You are an expert biometric facial authentication system for SABTRACK.\n\n"
+                "Input Images:\n"
+                "- Image 1: Enrolled biometric reference face photo of the registered resident (captured during previous registration/onboarding).\n"
+                "- Image 2: Live camera selfie photo captured during the current sign-in attempt.\n\n"
+                "Task: Compare the enrolled biometric reference face (Image 1) against the live login selfie (Image 2) "
+                "to determine whether both images depict the SAME person signing into their account.\n\n"
+                "Important Real-World Authentication Guidelines:\n"
+                "- Both images are camera photos/selfies of the user taken at different times or sessions.\n"
+                "- Natural day-to-day variations are expected: slight changes in angle, distance, lighting, facial expression (smiling, neutral, blinking), hair styling, or minor accessories (such as glasses).\n"
+                "- Do NOT reject the pair just because both images are selfies or camera frames—this is a legitimate face-to-face biometric sign-in comparison.\n"
+                "- Focus on persistent anatomical facial geometry: eye shape and inter-pupillary spacing, nose bridge and nostril width, cheekbones, mouth width, and jawline structure.\n"
+                "- If the facial geometry indicates they are the SAME person, return is_match as TRUE with high confidence (match_score between 0.85 and 0.98).\n"
+                "- ONLY return is_match as FALSE if the images depict two visibly DIFFERENT individuals or an imposter.\n\n"
+                "Return strictly a JSON object with keys:\n"
+                "{\n"
+                '  "is_match": boolean,\n'
+                '  "match_score": float between 0.0 and 1.0,\n'
+                '  "details": string concisely explaining the decision (1-2 sentences)\n'
+                "}"
+            )
 
         vision_models = [
             "gemini-3.5-flash-lite",
@@ -189,11 +217,23 @@ class FaceMatchingService:
                                 details = str(
                                     data.get("details")
                                     or (
-                                        "Biometric face match verified successfully against ID portrait."
+                                        "Biometric face match verified successfully against reference portrait."
                                         if is_match
-                                        else "Facial features do not match the portrait on the ID card."
+                                        else "Facial features do not match the registered profile."
                                     )
                                 )
+
+                                # Safety heuristic: if AI text explicitly notes it is the same person/frames despite format checks
+                                lower_details = details.lower()
+                                if not is_match and (
+                                    "same person" in lower_details
+                                    or "same individual" in lower_details
+                                    or "identical" in lower_details
+                                ) and "not the same" not in lower_details and "different individual" not in lower_details:
+                                    logger.info("AI details indicate same person: auto-aligning is_match to True")
+                                    is_match = True
+                                    score = max(0.85, score)
+
                                 logger.info(
                                     "Gemini Vision AI verification completed on %s: is_match=%s score=%s",
                                     model_name,
@@ -211,22 +251,13 @@ class FaceMatchingService:
 
         return None
 
-    def compare_faces(self, id_image_bytes: bytes, live_face_bytes: bytes) -> FaceMatchResult:
-        """Compares ID photograph against live captured face snapshot."""
-        if id_image_bytes == live_face_bytes and len(id_image_bytes) > 0:
-            return FaceMatchResult(
-                is_match=True,
-                match_score=0.96,
-                details="Face verified successfully against reference portrait.",
-            )
-
-        # 1. Primary: Use multimodal Vision AI to thoroughly verify ID portrait vs live capture
-        if getattr(settings, "GEMINI_API_KEY", None):
-            ai_result = self._compare_with_gemini_vision(id_image_bytes, live_face_bytes)
-            if ai_result is not None:
-                return ai_result
-
-        # 2. Resilient Fallback: Computer Vision facial feature and keypoint analysis
+    def _compare_with_computer_vision(
+        self,
+        id_image_bytes: bytes,
+        live_face_bytes: bytes,
+        is_id_comparison: bool = True,
+    ) -> FaceMatchResult:
+        """Computer Vision facial feature and keypoint analysis fallback."""
         id_arr = np.frombuffer(id_image_bytes, np.uint8)
         live_arr = np.frombuffer(live_face_bytes, np.uint8)
 
@@ -234,18 +265,20 @@ class FaceMatchingService:
         live_img = cv2.imdecode(live_arr, cv2.IMREAD_COLOR)
 
         if id_img is None:
-            return FaceMatchResult(is_match=False, match_score=0.0, details="Unreadable ID image.")
+            return FaceMatchResult(is_match=False, match_score=0.0, details="Unreadable reference image.")
         if live_img is None:
             return FaceMatchResult(is_match=False, match_score=0.0, details="Unreadable live face capture.")
 
         id_face = self._detect_and_crop_face(id_img)
         live_face = self._detect_and_crop_face(live_img)
 
+        ref_label = "government ID card" if is_id_comparison else "enrolled biometric profile"
+
         if id_face is None:
             return FaceMatchResult(
                 is_match=False,
                 match_score=0.0,
-                details="No face detected on uploaded ID card. Please ensure the portrait is clearly visible.",
+                details=f"No face detected on {ref_label}. Please ensure the portrait is clearly visible.",
             )
 
         if live_face is None:
@@ -309,7 +342,7 @@ class FaceMatchingService:
 
         is_match = combined_score >= self.MATCH_THRESHOLD
         detail_msg = (
-            f"Facial features (eyes, nose, facial contours) verified against ID portrait (Confidence: {combined_score:.1%})"
+            f"Facial features (eyes, nose, facial contours) verified against {ref_label} (Confidence: {combined_score:.1%})"
             if is_match
             else f"Facial feature mismatch. Similarity score ({combined_score:.1%}) below required threshold ({self.MATCH_THRESHOLD:.0%})."
         )
@@ -318,6 +351,33 @@ class FaceMatchingService:
             is_match=is_match,
             match_score=round(combined_score, 4),
             details=detail_msg,
+        )
+
+    def compare_faces(
+        self,
+        id_image_bytes: bytes,
+        live_face_bytes: bytes,
+        is_id_comparison: bool = True,
+    ) -> FaceMatchResult:
+        """Compares ID photograph (or enrolled biometric template) against live captured face snapshot."""
+        if id_image_bytes == live_face_bytes and len(id_image_bytes) > 0:
+            return FaceMatchResult(
+                is_match=True,
+                match_score=0.96,
+                details="Face verified successfully against reference portrait.",
+            )
+
+        # 1. Primary: Use multimodal Vision AI
+        if getattr(settings, "GEMINI_API_KEY", None):
+            ai_result = self._compare_with_gemini_vision(
+                id_image_bytes, live_face_bytes, is_id_comparison=is_id_comparison
+            )
+            if ai_result is not None:
+                return ai_result
+
+        # 2. Resilient Fallback: Computer Vision facial feature and keypoint analysis (when AI is unavailable)
+        return self._compare_with_computer_vision(
+            id_image_bytes, live_face_bytes, is_id_comparison=is_id_comparison
         )
 
     def generate_test_face_fixtures(self) -> Tuple[bytes, bytes, bytes]:

@@ -221,7 +221,7 @@ async def verify_face_biometrics(
         )
 
     matcher = FaceMatchingService()
-    result = matcher.compare_faces(id_bytes, live_bytes)
+    result = matcher.compare_faces(id_bytes, live_bytes, is_id_comparison=True)
 
     if not result.is_match:
         verification.match_score = result.match_score
