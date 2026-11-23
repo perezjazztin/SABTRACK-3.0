@@ -15,6 +15,7 @@ from app.core.database import Base
 from app.modules.identity.models import User
 
 
+# Broad topical categories for barangay official announcements.
 class AnnouncementCategory(str, Enum):
     GENERAL = "GENERAL"
     CLEANUP_DRIVE = "CLEANUP_DRIVE"
@@ -23,10 +24,12 @@ class AnnouncementCategory(str, Enum):
     POLICY_UPDATE = "POLICY_UPDATE"
 
 
+# Database model storing public bulletins, cleanup drives, and community advisories.
 class Announcement(Base):
     """Official ecological, scheduling, and community announcements published by Barangay Sabang."""
     __tablename__ = "announcements"
 
+    # Primary key identifier.
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -39,6 +42,7 @@ class Announcement(Base):
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, index=True)
     is_demo_data: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Foreign key referencing the staff user who published the announcement.
     author_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -57,4 +61,5 @@ class Announcement(Base):
         nullable=False,
     )
 
+    # Relationship linking the announcement to the author's user profile.
     author = relationship("User")

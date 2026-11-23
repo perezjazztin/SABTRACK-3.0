@@ -1,3 +1,4 @@
+// Gamification civic reward status types and ledger transaction contracts.
 export type ClaimStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type RedemptionStatus = 'PENDING' | 'APPROVED' | 'FULFILLED' | 'CANCELLED';
 export type ClaimActivityType = 'SEGREGATION' | 'COMMUNITY_CLEANUP' | 'OTHER';

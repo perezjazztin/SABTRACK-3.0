@@ -1,3 +1,4 @@
+// Supported Philippine identity document types and verification response structures.
 export type SupportedIdType =
   | 'PHILIPPINE_NATIONAL_ID'
   | 'DRIVERS_LICENSE'

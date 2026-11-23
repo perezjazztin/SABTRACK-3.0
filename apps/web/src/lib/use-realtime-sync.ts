@@ -22,6 +22,7 @@ export function useRealtimeSync(
   options: RealtimeSyncOptions = {}
 ) {
   const { entity = '*', intervalMs = 2000, enabled = true } = options;
+  // Keeps mutable reference to sync callback to avoid re-triggering effect on identity changes.
   const onSyncRef = useRef(onSync);
   onSyncRef.current = onSync;
 
@@ -33,6 +34,7 @@ export function useRealtimeSync(
     let heartbeatTimer: NodeJS.Timeout | null = null;
     let isCleanedUp = false;
 
+    // Establishes WebSocket connection and registers message and lifecycle handlers.
     const connectWs = () => {
       if (typeof window === 'undefined' || isCleanedUp) return;
 

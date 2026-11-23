@@ -36,6 +36,7 @@ from app.modules.schedules.service import (
 router = APIRouter()
 
 
+# GET endpoint listing collection schedules filtered optionally by purok or weekday.
 @router.get(
     "",
     response_model=ScheduleListResponse,

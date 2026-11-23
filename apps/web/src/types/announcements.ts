@@ -1,3 +1,4 @@
+// Enumerates bulletin categories for public barangay announcements and advisories.
 export type AnnouncementCategory =
   | 'GENERAL'
   | 'CLEANUP_DRIVE'
@@ -5,6 +6,7 @@ export type AnnouncementCategory =
   | 'EMERGENCY'
   | 'POLICY_UPDATE';
 
+// Represents an announcement item with author attribution, pin priority, and status flags.
 export interface AnnouncementItem {
   id: number;
   title: string;
@@ -19,11 +21,13 @@ export interface AnnouncementItem {
   updated_at: string;
 }
 
+// Response payload containing a paginated list of announcements.
 export interface AnnouncementListResponse {
   items: AnnouncementItem[];
   total: number;
 }
 
+// Request payload for publishing a new bulletin or emergency advisory.
 export interface AnnouncementCreatePayload {
   title: string;
   content: string;

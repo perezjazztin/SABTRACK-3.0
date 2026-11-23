@@ -39,6 +39,7 @@ import {
   AdvisoryCreatePayload,
 } from '@/types/schedules';
 
+// Enumeration of collection days for schedule configuration.
 const DAYS_OF_WEEK: DayOfWeek[] = [
   'MONDAY',
   'TUESDAY',
@@ -49,6 +50,7 @@ const DAYS_OF_WEEK: DayOfWeek[] = [
   'SUNDAY',
 ];
 
+// Waste classification categories supported by the municipal collection routes.
 const WASTE_TYPES: WasteType[] = [
   'BIODEGRADABLE',
   'NON_BIODEGRADABLE',
@@ -56,6 +58,7 @@ const WASTE_TYPES: WasteType[] = [
   'SPECIAL_HAZARDOUS',
 ];
 
+// Administrative interface for managing weekly collection timetables and route delay advisories.
 export default function AdminSchedulesPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'BARANGAY_ADMIN';
@@ -90,6 +93,7 @@ export default function AdminSchedulesPage() {
     effective_date: '',
   });
 
+  // Fetches schedule slots, active advisories, and area metadata from the backend.
   const loadData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     if (!silent) setError(null);
@@ -118,6 +122,7 @@ export default function AdminSchedulesPage() {
   }, [loadData]);
 
   // Automatic real-time background synchronization (< 3s SLA)
+  // Synchronizes collection schedules via WebSocket invalidation channel.
   useRealtimeSync(() => loadData(true), { entity: 'schedules' });
 
   const handleOpenAddSchedule = () => {
@@ -152,6 +157,7 @@ export default function AdminSchedulesPage() {
   };
 
   // Handle Create or Update Schedule
+  // Persists new schedule slots or updates existing timetable allocations.
   const handleSaveSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -180,6 +186,7 @@ export default function AdminSchedulesPage() {
   };
 
   // Handle Deactivate Schedule
+  // Soft-deactivates an existing collection schedule slot.
   const handleDeleteSchedule = async (id: number) => {
     if (!confirm('Are you sure you want to deactivate this collection schedule?')) return;
     try {
@@ -191,6 +198,7 @@ export default function AdminSchedulesPage() {
   };
 
   // Handle Create Advisory
+  // Dispatches an emergency schedule delay or holiday advisory across resident feeds.
   const handleCreateAdvisory = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);

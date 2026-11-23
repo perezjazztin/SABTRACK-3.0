@@ -3,17 +3,20 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
+# Breakdown item schema showing category frequency and share percentage.
 class CategoryBreakdownItem(BaseModel):
     category: str
     count: int
     percentage: float
 
 
+# Breakdown item schema showing report count per status.
 class StatusBreakdownItem(BaseModel):
     status: str
     count: int
 
 
+# Area hotspot metric identifying geographic clusters with elevated waste incidents.
 class AreaHotspotItem(BaseModel):
     area_id: Optional[int]
     area_name: str
@@ -22,18 +25,21 @@ class AreaHotspotItem(BaseModel):
     severity_level: str  # 'CRITICAL' | 'ELEVATED' | 'NORMAL'
 
 
+# Resolution performance metrics calculating resolution rates and turnaround days.
 class ResolutionMetrics(BaseModel):
     total_resolved: int
     avg_resolution_days: float
     median_resolution_days: float
 
 
+# Civic engagement metrics summarizing points distributed and community participation.
 class EngagementMetrics(BaseModel):
     total_claims_awarded: int
     total_points_distributed: int
     active_initiatives_count: int
 
 
+# Rule-based decision support insight highlighting operational bottlenecks.
 class DecisionSupportInsight(BaseModel):
     title: str
     level: str  # 'CRITICAL' | 'WARNING' | 'POSITIVE' | 'NEUTRAL'
@@ -44,12 +50,14 @@ class DecisionSupportInsight(BaseModel):
 # -------------------------------------------------------------
 # Descriptive Analytics Schema Elements (Historical Aggregates)
 # -------------------------------------------------------------
+# Daily time-series count of submitted versus resolved reports.
 class TrendDataPoint(BaseModel):
     date: str  # YYYY-MM-DD
     submitted_count: int
     resolved_count: int
 
 
+# Aggregated descriptive analytics schema summarizing historical operations.
 class DescriptiveAnalytics(BaseModel):
     total_reports: int
     open_reports: int
@@ -69,6 +77,7 @@ class DescriptiveAnalytics(BaseModel):
 # -------------------------------------------------------------
 # Predictive Analytics Schema Elements (Forecasts & Outlook)
 # -------------------------------------------------------------
+# Purok-level 7-day risk forecasting and proactive dispatch recommendation.
 class AreaRiskForecastItem(BaseModel):
     area_id: Optional[int]
     area_name: str
@@ -80,6 +89,7 @@ class AreaRiskForecastItem(BaseModel):
     proactive_dispatch_action: str
 
 
+# Predictive analytics forecast schema computed using linear trend regression.
 class PredictiveAnalytics(BaseModel):
     forecast_horizon_days: int = 7
     trend_direction: str  # 'UPWARD' | 'DOWNWARD' | 'STABLE'
@@ -94,6 +104,7 @@ class PredictiveAnalytics(BaseModel):
 # -------------------------------------------------------------
 # Top-Level Business Analytics Response
 # -------------------------------------------------------------
+# Combined analytics payload delivered to administrative dashboard.
 class AnalyticsOverviewResponse(BaseModel):
     total_reports: int
     open_reports: int
@@ -114,6 +125,7 @@ class AnalyticsOverviewResponse(BaseModel):
 # -------------------------------------------------------------
 # AI-Assisted Decision Support Narrative Briefing Schema
 # -------------------------------------------------------------
+# Executive narrative summary generated via Gemini for barangay leadership.
 class NarrativeSummaryResponse(BaseModel):
     title: str
     executive_summary: str

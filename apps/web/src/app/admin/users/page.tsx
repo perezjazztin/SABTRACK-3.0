@@ -28,6 +28,7 @@ import {
   Eye,
 } from 'lucide-react';
 
+// Role badge style and label mappings for administrative user management tables.
 const ROLE_BADGES: Record<
   UserRole,
   { label: string; bg: string; text: string; border: string }
@@ -52,6 +53,7 @@ const ROLE_BADGES: Record<
   },
 };
 
+// Administrative user management interface for account provisioning, role assignment, and access revocation.
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === 'BARANGAY_ADMIN';
@@ -73,6 +75,7 @@ export default function AdminUsersPage() {
     role: 'BARANGAY_STAFF',
   });
 
+  // Queries the backend user directory with optional role, status, and text search filters.
   const loadUsers = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -100,6 +103,7 @@ export default function AdminUsersPage() {
     loadUsers();
   }, [loadUsers]);
 
+  // Toggles active/deactivated state of target user with safeguards against self-deactivation.
   const handleToggleStatus = async (targetUser: AdminUserItem) => {
     if (targetUser.id === currentUser?.id && targetUser.is_active) {
       alert('You cannot deactivate your own administrative account.');
@@ -119,6 +123,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Modifies assigned user role with checks preventing self-revocation of administrative rights.
   const handleRoleChange = async (targetUser: AdminUserItem, newRole: UserRole) => {
     if (targetUser.id === currentUser?.id && newRole !== 'BARANGAY_ADMIN') {
       alert('You cannot revoke your own administrative privileges.');
@@ -133,6 +138,7 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Submits the new account provisioning payload to the backend user management API.
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);

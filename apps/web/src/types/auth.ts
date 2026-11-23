@@ -1,3 +1,4 @@
+// Role-based access control roles and user authentication data contracts.
 export type UserRole =
   | 'RESIDENT'
   | 'BARANGAY_STAFF'

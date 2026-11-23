@@ -62,7 +62,9 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// Admin and staff dashboard page for reviewing, filtering, and updating status of community reports.
 export default function AdminReportsPage() {
+  // State storing the list of reports fetched from backend.
   const [reports, setReports] = useState<WasteReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedStatus, setSelectedStatus] = useState<string>('ALL');

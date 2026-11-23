@@ -45,6 +45,7 @@ def _calculate_age(dob_str: str | None) -> int | None:
         return None
 
 
+# POST endpoint scanning government ID, stripping telemetry metadata, and extracting citizen name and DOB.
 @router.post(
     "/identity-verification/scan-id",
     response_model=ScanIdResponse,
@@ -160,6 +161,7 @@ async def scan_government_id(
     )
 
 
+# POST endpoint comparing live camera selfie portrait against the ID photo to issue a signed registration token.
 @router.post(
     "/identity-verification/verify-face",
     response_model=VerifyFaceResponse,

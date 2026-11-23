@@ -49,6 +49,7 @@ from app.modules.identity.schemas import (
 router = APIRouter()
 
 
+# Checks database for consecutive failed logins and raises HTTP 429 Too Many Requests if locked.
 def _check_rate_limit(db: Session, ip: str, email: str) -> None:
     """Enforces login throttling to defend against brute-force attacks via persistent database records."""
     key_email = email.lower().strip()
@@ -77,6 +78,7 @@ def _check_rate_limit(db: Session, ip: str, email: str) -> None:
             db.commit()
 
 
+# Increments failed login count and triggers lockout timestamp if max attempts exceeded.
 def _record_login_failure(db: Session, ip: str, email: str) -> None:
     """Increments failed attempt count and sets lockout if threshold reached."""
     key_email = email.lower().strip()
@@ -102,6 +104,7 @@ def _record_login_failure(db: Session, ip: str, email: str) -> None:
     db.commit()
 
 
+# Clears throttle tracking record after successful credential verification.
 def _reset_login_attempts(db: Session, ip: str, email: str) -> None:
     """Cleans up throttle records upon successful authentication."""
     key_email = email.lower().strip()
@@ -115,6 +118,7 @@ def _reset_login_attempts(db: Session, ip: str, email: str) -> None:
         db.commit()
 
 
+# Registers a new resident account, verifying required biometric token before provisioning.
 @router.post(
     "/auth/register",
     response_model=UserRead,

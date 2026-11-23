@@ -15,6 +15,7 @@ class UploadResponse(BaseModel):
     filename: str = Field(..., description="Internal sanitized UUID filename")
 
 
+# POST endpoint accepting multipart/form-data evidence photos, stripping EXIF tags, and returning file URL.
 @router.post(
     "/uploads",
     response_model=UploadResponse,

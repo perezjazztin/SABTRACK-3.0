@@ -24,6 +24,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
+// Visual style and label mapping for complaint triage status tags.
 const REPORT_STATUS_BADGES: Record<
   ReportStatus,
   { label: string; bg: string; text: string; border: string }
@@ -60,14 +61,18 @@ const REPORT_STATUS_BADGES: Record<
   },
 };
 
+// Central command overview dashboard for Barangay Sabang administrative staff and council leaders.
 export default function AdminOverviewPage() {
+  // Retrieves current authenticated session user and assigned role.
   const { user } = useAuth();
+  // State variables for operational metrics, queue items, and loading status.
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState<WasteReport[]>([]);
   const [claims, setClaims] = useState<ClaimItem[]>([]);
   const [advisories, setAdvisories] = useState<AdvisoryItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
 
+  // Concurrently loads operational data from all core modules via Promise.allSettled.
   const loadAdminMetrics = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -88,14 +93,17 @@ export default function AdminOverviewPage() {
     }
   }, []);
 
+  // Initial load trigger on component mount.
   useEffect(() => {
     loadAdminMetrics();
   }, [loadAdminMetrics]);
 
   // Automatic background synchronization (< 3s SLA)
+  // Subscribes to real-time WebSocket invalidation events for background metric updates.
   useRealtimeSync(() => loadAdminMetrics(true), { entity: '*' });
 
   // Derived counts
+  // Computes pending queue counts and operational workload metrics.
   const pendingReports = reports.filter((r) => r.status === 'SUBMITTED');
   const inProgressReports = reports.filter((r) =>
     ['UNDER_REVIEW', 'IN_PROGRESS'].includes(r.status)

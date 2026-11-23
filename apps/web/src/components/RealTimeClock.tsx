@@ -11,12 +11,14 @@ export interface RealTimeClockProps {
   variant?: 'default' | 'banner' | 'compact';
 }
 
+// Real-time ticking clock component synchronized to Philippine Standard Time (PST / UTC+8).
 export const RealTimeClock: React.FC<RealTimeClockProps> = ({
   className,
   showDate = true,
   showPSTLabel = true,
   variant = 'default',
 }) => {
+  // Local state holding current Date instance, updated every second via setInterval.
   const [mounted, setMounted] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
 

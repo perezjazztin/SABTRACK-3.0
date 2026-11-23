@@ -16,6 +16,7 @@ from app.core.database import Base
 from app.modules.identity.models import User
 
 
+# Official government-issued ID card types accepted for citizen identity verification.
 class SupportedIdType(str, enum.Enum):
     PHILIPPINE_NATIONAL_ID = "PHILIPPINE_NATIONAL_ID"
     DRIVERS_LICENSE = "DRIVERS_LICENSE"
@@ -23,6 +24,7 @@ class SupportedIdType(str, enum.Enum):
     UMID = "UMID"
 
 
+# Verification workflow status lifecycle states.
 class VerificationStatus(str, enum.Enum):
     PENDING = "PENDING"
     VERIFIED = "VERIFIED"
@@ -30,6 +32,7 @@ class VerificationStatus(str, enum.Enum):
     FLAGGED = "FLAGGED"
 
 
+# Database table recording OCR results, facial biometric match scores, and verification tokens.
 class IdentityVerification(Base):
     """Audit and validation record for resident government ID and facial biometric verification."""
     __tablename__ = "identity_verifications"
@@ -45,6 +48,7 @@ class IdentityVerification(Base):
         SAEnum(SupportedIdType, native_enum=False, length=50),
         nullable=False,
     )
+    # Stored as SHA-256 hash to prevent storing raw citizen ID numbers while preventing duplicate registrations.
     id_number_hash: Mapped[str] = mapped_column(
         String(64),
         unique=True,
@@ -67,6 +71,7 @@ class IdentityVerification(Base):
         index=True,
     )
     
+    # Single-use registration token hash ensuring only verified scans can complete signup.
     verification_token_hash: Mapped[str | None] = mapped_column(
         String(64),
         index=True,

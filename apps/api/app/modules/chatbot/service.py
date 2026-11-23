@@ -78,6 +78,7 @@ def has_legal_reference_intent(query: str) -> bool:
     ]
     return any(t in q for t in legal_triggers)
 
+# Redacts Philippine phone numbers and email addresses to preserve citizen privacy under RA 10173.
 def scrub_pii(text: str) -> str:
     """Strip personal identifiers (emails, phone numbers) to comply with RA 10173."""
     # Scrub email addresses
@@ -126,6 +127,7 @@ _SAFETY_PROFANITY_PATTERN = re.compile(
     re.IGNORECASE
 )
 
+# Content moderation filter checking for violent, illegal, or abusive language before calling external LLMs.
 def evaluate_content_safety(text: str) -> Optional[str]:
     """
     Evaluate message for violations regarding violence, illegal acts, or profanity.
@@ -174,6 +176,7 @@ def evaluate_content_safety(text: str) -> Optional[str]:
             "Please feel free to ask about waste segregation, collection schedules, or barangay recycling initiatives."
         )
 
+# Assembles live purok pickup timetables and advisories as contextual grounding text for Gemini AI.
 def get_schedule_context(db: Session, area_id: Optional[int] = None) -> str:
     """Fetch live collection schedule rules from database for grounding."""
     try:
@@ -201,6 +204,7 @@ def get_schedule_context(db: Session, area_id: Optional[int] = None) -> str:
         logger.warning(f"Could not load schedule context from DB: {e}")
         return "Schedules: Biodegradables (Green Bag) Mon/Wed/Fri; Non-Bio (Black Bag) Tue/Sat; Recyclables (Clear/White) Wed."
 
+# Retrieves list of Gemini API keys supporting multiple keys for round-robin quota rotation.
 def get_api_keys() -> List[str]:
     """Retrieve configured Gemini API keys (supports comma-separated list for rotation)."""
     from app.core.config import settings
@@ -249,6 +253,7 @@ def get_quick_prompts() -> List[QuickPromptItem]:
         ),
     ]
 
+# Core orchestration function managing EcoBot inquiries, cache lookups, search grounding, and fallbacks.
 def query_ecobot(req: ChatQueryRequest, db: Session) -> ChatQueryResponse:
     """Main EcoBot query orchestrator with caching, live search, multi-turn history, and offline fallback."""
     clean_message = scrub_pii(req.message.strip())

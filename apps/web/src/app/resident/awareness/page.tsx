@@ -434,6 +434,7 @@ const EDUCATIONAL_RESOURCES: EducationalItem[] = [
  * CITIZEN ACTION CHECKLIST
  * Practical everyday habits for Barangay Sabang residents
  */
+// Everyday waste reduction habits and proper bin preparation checklist for residents.
 const CITIZEN_ACTION_CHECKLIST = [
   {
     id: 'drain-liquids',
@@ -512,6 +513,7 @@ const CIVIC_FAQS = [
 /**
  * STANDARD WASTE CLASSIFICATION & SEGREGATION (Pillar 2)
  */
+// 4-stream color-coded container guidelines pursuant to RA 9003 and municipal standards.
 const SEGREGATION_BINS = [
   {
     id: 'biodegradable',
@@ -606,6 +608,7 @@ const SEGREGATION_BINS = [
   },
 ];
 
+// Educational portal offering video guides, regulatory articles, composting techniques, and reading timer rewards.
 export default function AwarenessHubPage() {
   const [selectedCategory, setSelectedCategory] = useState<TopicCategory>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -638,6 +641,7 @@ export default function AwarenessHubPage() {
   const resourcePointsMapRef = useRef(resourcePointsMap);
   resourcePointsMapRef.current = resourcePointsMap;
 
+  // Loads current educational reading rewards status and cached point tallies on mount.
   useEffect(() => {
     let active = true;
     getArticleReadingStatus()

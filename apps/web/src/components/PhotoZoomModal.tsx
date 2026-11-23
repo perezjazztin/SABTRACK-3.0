@@ -20,6 +20,7 @@ export interface PhotoZoomModalProps {
   subtitle?: string;
 }
 
+// Full-screen modal allowing staff and residents to inspect evidence photos with pan and zoom controls.
 export function PhotoZoomModal({
   isOpen,
   onClose,
@@ -28,6 +29,7 @@ export function PhotoZoomModal({
   title = 'Incident Evidence Photo',
   subtitle,
 }: PhotoZoomModalProps) {
+  // Stores zoom magnification level between 1x and 3x.
   const [zoom, setZoom] = useState<number>(1);
   const [hasError, setHasError] = useState<boolean>(false);
 

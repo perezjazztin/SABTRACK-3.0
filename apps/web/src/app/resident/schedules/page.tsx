@@ -50,6 +50,7 @@ function sectorLocations(
   return names.map((name) => ({ name, ...base }));
 }
 
+// Mapping of Barangay Sabang streets, subdivisions, and purok corridors to collection days and sectors.
 export const SABANG_LOCATIONS: SabangLocation[] = [
   {
     name: 'General Luna St.',
@@ -221,6 +222,7 @@ interface ScheduleGroup {
 
 const WASTE_ORDER = Object.keys(WASTE_TYPE_CONFIG) as WasteType[];
 
+// Groups schedule slots by sector and day, consolidating multiple waste types collected in the same truck dispatch.
 function groupSchedules(items: ScheduleItem[]): ScheduleGroup[] {
   const map = new Map<string, ScheduleGroup>();
 
@@ -332,6 +334,7 @@ function ReminderButton({
 // 3. MAIN COMPONENT
 // -------------------------------------------------------------
 
+// Resident schedule lookup page with location filtering, calendar/grid toggle, and email notification signup.
 export default function ResidentSchedulesPage() {
   const { user } = useAuth();
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);

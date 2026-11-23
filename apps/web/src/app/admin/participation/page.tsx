@@ -33,6 +33,7 @@ import {
   ClaimReviewPayload,
 } from '@/types/gamification';
 
+// Administrative review console for verifying resident participation claims and clean-up campaigns.
 export default function AdminParticipationPage() {
   const [claims, setClaims] = useState<ClaimItem[]>([]);
   const [initiatives, setInitiatives] = useState<InitiativeItem[]>([]);
@@ -57,6 +58,7 @@ export default function AdminParticipationPage() {
   });
   const [creatingInit, setCreatingInit] = useState(false);
 
+  // Fetches claims matching the active status filter alongside published initiatives.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -83,6 +85,7 @@ export default function AdminParticipationPage() {
   useRealtimeSync(loadData, { entity: 'claims' });
 
   // Open review modal
+  // Opens the review dialog and initializes points allocation (fixed 25 pts for segregation).
   const handleOpenReview = (claim: ClaimItem) => {
     setSelectedClaim(claim);
     setReviewNotes('');
@@ -90,6 +93,7 @@ export default function AdminParticipationPage() {
   };
 
   // Submit Review (Approve or Reject)
+  // Submits the staff approval or rejection decision and issues double-entry points if approved.
   const handleReviewDecision = async (status: 'APPROVED' | 'REJECTED') => {
     if (!selectedClaim) return;
     setReviewing(true);
@@ -112,6 +116,7 @@ export default function AdminParticipationPage() {
   };
 
   // Handle Create Initiative
+  // Registers a new community clean-up drive or environmental initiative.
   const handleCreateInitiative = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreatingInit(true);

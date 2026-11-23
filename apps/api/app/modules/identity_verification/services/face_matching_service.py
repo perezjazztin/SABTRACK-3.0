@@ -21,6 +21,7 @@ class FaceMatchResult:
     details: str
 
 
+# Biometric facial comparison service verifying selfie liveness against government ID cards.
 class FaceMatchingService:
     """Open-source computer vision service for detecting and comparing facial biometrics."""
 
@@ -37,6 +38,7 @@ class FaceMatchingService:
         else:
             self.face_cascade = None
 
+    # Resizes and converts image to JPEG format for Gemini multimodal vision processing.
     def _prepare_image_for_vision(self, b: bytes) -> Tuple[bytes, str]:
         """Normalizes and safely downsizes large photos for Gemini Vision AI."""
         try:
@@ -51,6 +53,7 @@ class FaceMatchingService:
         except Exception:
             return b, "image/jpeg"
 
+    # Isolates face bounding box using Haar cascades or skin-color thresholding, returning equalized crop.
     def _detect_and_crop_face(self, img: np.ndarray) -> Optional[np.ndarray]:
         """Detects the primary face region and returns normalized 128x128 grayscale crop."""
         if img is None:

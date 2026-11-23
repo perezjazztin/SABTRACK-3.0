@@ -76,4 +76,25 @@ describe('FaceCaptureModal Component', () => {
     expect(directCaptureBtn).toBeInTheDocument();
     expect(directCaptureBtn).toBeEnabled();
   });
+
+  it('omits Active Liveness Progression and renders direct scan UI when in login mode', () => {
+    const handleCapture = vi.fn();
+    const handleClose = vi.fn();
+    render(
+      <FaceCaptureModal
+        isOpen={true}
+        onCapture={handleCapture}
+        onClose={handleClose}
+        mode="login"
+      />
+    );
+
+    expect(screen.getByRole('heading', { name: /Facial Verification Sign In/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Active Liveness Progression/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/Direct Facial Verification/i)).toBeInTheDocument();
+    expect(screen.getByText(/Look straight at the camera/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Look to the left/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Look to the right/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Blink naturally/i)).not.toBeInTheDocument();
+  });
 });

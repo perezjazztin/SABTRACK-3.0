@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DashboardFooter } from '@/components/DashboardFooter';
 
+// Resident portal navigation items linking to resident features.
 export const RESIDENT_NAV = [
   { label: 'Dashboard', href: '/resident', icon: LayoutDashboard },
   { label: 'Collection Schedules', href: '/resident/schedules', icon: Calendar },
@@ -29,6 +30,7 @@ export const RESIDENT_NAV = [
   { label: 'Profile', href: '/resident/profile', icon: User },
 ];
 
+// Layout shell providing sidebar navigation and RBAC route protection for resident portal views.
 export default function ResidentLayout({
   children,
 }: {

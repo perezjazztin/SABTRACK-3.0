@@ -23,7 +23,7 @@ const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700
 
 const ADMIN_ROLES = ['BARANGAY_STAFF', 'BARANGAY_ADMIN'];
 
-// Single source of truth for role -> portal routing.
+// Role-based redirection path resolver directing staff to /admin and residents to /resident.
 function getRedirectPath(role: string): string {
   if (ADMIN_ROLES.includes(role)) return '/admin';
   if (role === 'RESIDENT') return '/resident';
@@ -506,6 +506,7 @@ export default function LoginPage() {
         isOpen={isFaceModalOpen}
         onCapture={handleFaceLoginCapture}
         onClose={() => setIsFaceModalOpen(false)}
+        mode="login"
       />
     </div>
   );

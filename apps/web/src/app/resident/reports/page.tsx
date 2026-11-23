@@ -62,7 +62,9 @@ const STATUS_CONFIG: Record<
   },
 };
 
+// Resident portal page for submitting waste incident reports and tracking resolution status.
 export default function ResidentReportsPage() {
+  // State variables for submitted reports list, modal toggle, and filter criteria.
   const [reports, setReports] = useState<WasteReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

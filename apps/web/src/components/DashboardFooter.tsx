@@ -16,6 +16,7 @@ export interface DashboardFooterProps {
   className?: string;
 }
 
+// Compact footer rendered at the bottom of administrative and resident portal layouts.
 export const DashboardFooter: React.FC<DashboardFooterProps> = ({ className = '' }) => {
   const [helpOpen, setHelpOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);

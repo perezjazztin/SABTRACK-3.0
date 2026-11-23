@@ -116,6 +116,7 @@ AWARENESS_DAILY_POINTS_LIMIT = 20
 PHILIPPINE_TIMEZONE = ZoneInfo("Asia/Manila")
 
 
+# Calculates start and end of current calendar day in Philippine Time (UTC+8) for daily point limits.
 def _article_reading_day_bounds(now: datetime) -> tuple[datetime, datetime]:
     local_now = now.astimezone(PHILIPPINE_TIMEZONE)
     local_start = datetime.combine(
@@ -130,6 +131,7 @@ def _article_reading_day_bounds(now: datetime) -> tuple[datetime, datetime]:
     )
 
 
+# Queries the count of article reading awards claimed today by a resident for daily cap enforcement.
 def _count_article_awards_today(db: Session, resident_id: int, now: datetime) -> int:
     start, end = _article_reading_day_bounds(now)
     return int(
@@ -145,6 +147,7 @@ def _count_article_awards_today(db: Session, resident_id: int, now: datetime) ->
     )
 
 
+# Retrieves educational article reading status and completed article IDs for the current resident.
 def get_article_reading_status(db: Session, resident_id: int) -> ArticleReadingStatus:
     now = datetime.now(timezone.utc)
     completed_article_ids = db.scalars(
@@ -616,6 +619,7 @@ def _has_task_award(db: Session, resident_id: int, task_key: str) -> bool:
     ) is not None
 
 
+# Evaluates resident participation submission, updates approval state, and credits points ledger atomically.
 def review_claim(
     db: Session,
     claim_id: int,

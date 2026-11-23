@@ -52,6 +52,7 @@ import {
 
 type Tab = 'leaderboard' | 'tasks' | 'redeem' | 'history';
 
+// Visual color classes and badge icons for citizen gamification tiers.
 const TIER_COLORS: Record<string, string> = {
   'Gold Barangay Champion': 'text-yellow-700 bg-yellow-50 border-yellow-300',
   'Silver Eco-Warrior': 'text-slate-600 bg-slate-100 border-slate-300',
@@ -114,6 +115,7 @@ function ProgressBar({ current, total, color = 'bg-emerald-500' }: { current: nu
 
 /* ─── page ──────────────────────────────────────────────────────────── */
 
+// Resident rewards portal managing SAB-Points, civic task claims, voucher redemption, and leaderboard rankings.
 export default function ResidentPointsPage() {
   const [summary, setSummary] = useState<ResidentPointsSummary | null>(null);
   const [initiatives, setInitiatives] = useState<InitiativeItem[]>([]);
@@ -143,6 +145,7 @@ export default function ResidentPointsPage() {
   const [redeemLoading, setRedeemLoading] = useState(false);
   const [redeemResult, setRedeemResult] = useState<RedemptionRequest | null>(null);
 
+  // Fetches points summary, leaderboard standings, civic tasks, catalog items, and redemptions.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -172,6 +175,7 @@ export default function ResidentPointsPage() {
   useEffect(() => { loadData(); }, [loadData]);
   useRealtimeSync(loadData, { entity: '*' });
 
+  // Submits a resident participation claim with uploaded proof photo for staff verification.
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -223,6 +227,7 @@ export default function ResidentPointsPage() {
     setShowClaimModal(true);
   };
 
+  // Redeems a reward voucher using verified SAB-Points and updates the double-entry ledger.
   const handleRedeem = async () => {
     if (
       !redeemTarget ||

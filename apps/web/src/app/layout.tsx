@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     'A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang, Lipa City, Batangas.',
 };
 
+// Root application layout injecting global authentication provider and persistent UI chrome.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-civic-sand text-slate-800 antialiased">
+        {/* Global authentication context provider wrapping all client routes */}
         <AuthProvider>
           <Header />
           <main className="flex-1 w-full flex flex-col">

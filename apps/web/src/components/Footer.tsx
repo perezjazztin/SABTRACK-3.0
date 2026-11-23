@@ -35,6 +35,7 @@ const CONTACTS = [
   { icon: Clock, text: 'Mon–Fri, 8:00 AM – 5:00 PM' },
 ];
 
+// Landing page footer displaying project metadata, academic attribution, and LGU emergency contacts.
 export const Footer: React.FC = () => {
   const pathname = usePathname() || '';
   const isDashboard = pathname.startsWith('/admin') || pathname.startsWith('/resident');

@@ -6,6 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from app.core.logging import logger
 
 
+# Converts standard Starlette/FastAPI HTTP exceptions into consistent JSON error responses.
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Handles standard HTTP exceptions with structured response format."""
     return JSONResponse(
@@ -19,6 +20,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
     )
 
 
+# Catches Pydantic schema validation failures and formats field-level validation error details.
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handles request validation errors cleanly."""
     errors = []
@@ -40,6 +42,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 
+# Intercepts database errors and masks raw database/SQL details from clients with a 503 response.
 async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> JSONResponse:
     """Safely handles database exceptions without leaking internal query details."""
     logger.error("Database error on %s: %s", request.url.path, str(exc).split("\n")[0])
@@ -54,6 +57,7 @@ async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> 
     )
 
 
+# Fallback handler capturing any unhandled exceptions to prevent server crashes and return 500 status.
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Fallback handler for unhandled server errors."""
     logger.error("Unhandled server exception on %s: %s", request.url.path, repr(exc), exc_info=True)

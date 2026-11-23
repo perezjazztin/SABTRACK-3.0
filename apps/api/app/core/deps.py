@@ -16,6 +16,7 @@ from app.core.logging import logger
 from app.modules.identity.models import Session as SessionModel, User as UserModel, SecurityAuditLog
 
 
+# Extracts client IP address from proxy headers (x-forwarded-for) or direct socket host.
 def get_client_ip(request: Request) -> str:
     """Extracts client IP address safely."""
     forwarded = request.headers.get("x-forwarded-for")
@@ -24,11 +25,13 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
+# Injects and validates the session cookie, retrieving the active session record from the database.
 def get_current_session(
     request: Request,
     db: Session = Depends(get_db),
 ) -> SessionModel:
     """Validates the session cookie and retrieves the active session record."""
+    # Extracts the raw opaque session token from HTTP-only cookie.
     raw_token = request.cookies.get(settings.SESSION_COOKIE_NAME)
     if not raw_token:
         raise HTTPException(
@@ -36,6 +39,7 @@ def get_current_session(
             detail="Authentication required. Please log in.",
         )
 
+    # Hashes token to match stored SHA-256 hash in database.
     token_hash = hash_token(raw_token)
     stmt = select(SessionModel).where(SessionModel.session_id_hash == token_hash)
     session = db.scalar(stmt)
@@ -52,6 +56,7 @@ def get_current_session(
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
 
+    # Purges expired session and halts request processing with 401 Unauthorized.
     if expires_at < now:
         db.delete(session)
         db.commit()
@@ -63,6 +68,7 @@ def get_current_session(
     return session
 
 
+# Injects current user by resolving the active session and verifying user active status.
 def get_current_user(
     session: SessionModel = Depends(get_current_session),
 ) -> UserModel:
@@ -76,6 +82,7 @@ def get_current_user(
     return user
 
 
+# Validates X-CSRF-Token header against session csrf_token for state-modifying requests (POST, PUT, PATCH, DELETE).
 def verify_csrf(
     request: Request,
     session: SessionModel = Depends(get_current_session),
@@ -95,6 +102,7 @@ def verify_csrf(
             )
 
 
+# Higher-order dependency factory returning a checker function that verifies granular permissions.
 def require_permission(permission: Permission) -> Callable:
     """Dependency factory enforcing atomic capability permissions."""
     def _permission_checker(user: UserModel = Depends(get_current_user)) -> UserModel:
@@ -114,6 +122,7 @@ def require_permission(permission: Permission) -> Callable:
     return _permission_checker
 
 
+# Higher-order dependency factory returning a checker function that verifies specific role membership.
 def require_role(role: UserRole) -> Callable:
     """Dependency factory enforcing specific role membership."""
     def _role_checker(user: UserModel = Depends(get_current_user)) -> UserModel:

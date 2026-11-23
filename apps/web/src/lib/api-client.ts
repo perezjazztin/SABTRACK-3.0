@@ -23,6 +23,7 @@ import {
   VerifyFaceResponse,
 } from '@/types/verification';
 
+// Custom error class capturing HTTP status codes and structured validation errors from backend.
 export class ApiClientError extends Error {
   constructor(
     message: string,
@@ -34,9 +35,10 @@ export class ApiClientError extends Error {
   }
 }
 
-// In-memory cache for active CSRF token
+// In-memory cache for active CSRF token across client transitions
 let activeCsrfToken: string | null = null;
 
+// Sets active CSRF token in memory and synchronizes with browser sessionStorage.
 export function setCsrfToken(token: string | null): void {
   activeCsrfToken = token;
   if (typeof window !== 'undefined') {
@@ -52,6 +54,7 @@ export function setCsrfToken(token: string | null): void {
   }
 }
 
+// Retrieves CSRF token from memory, cookie, or sessionStorage for mutating requests.
 export function getCsrfToken(): string | null {
   if (activeCsrfToken) {
     return activeCsrfToken;
@@ -94,6 +97,7 @@ export async function apiFetch<T>(
   isRetry = false
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  // Extracts HTTP verb (GET, POST, PUT, PATCH, DELETE) to determine whether CSRF token is required.
   const method = (options.method || 'GET').toUpperCase();
   const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 

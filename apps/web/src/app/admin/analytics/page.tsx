@@ -40,6 +40,7 @@ import {
   Check,
 } from 'lucide-react';
 
+// Visual style mappings for geographic complaint hotspot severity tiers.
 const SEVERITY_BADGES = {
   CRITICAL: {
     label: 'Critical Hotspot',
@@ -64,6 +65,7 @@ const SEVERITY_BADGES = {
   },
 };
 
+// Visual style mappings for predictive 7-day waste overflow risk forecasts.
 const RISK_BADGES = {
   HIGH_RISK: {
     label: 'High Overflow Risk',
@@ -88,6 +90,7 @@ const RISK_BADGES = {
   },
 };
 
+// Visual badge formatting for automated decision support alert levels.
 const INSIGHT_LEVEL_BADGES = {
   CRITICAL: {
     bg: 'bg-rose-50 border-rose-200 text-rose-800',
@@ -111,6 +114,7 @@ const INSIGHT_LEVEL_BADGES = {
   },
 };
 
+// Executive business analytics dashboard providing descriptive metrics, predictive modeling, and AI briefing generation.
 export default function AdminAnalyticsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'BARANGAY_ADMIN';
@@ -123,6 +127,7 @@ export default function AdminAnalyticsPage() {
   const [narrativeError, setNarrativeError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Calls the LLM decision support endpoint to synthesize an executive narrative memo from telemetry data.
   const handleGenerateNarrative = async () => {
     setNarrativeLoading(true);
     setNarrativeError(null);
@@ -136,10 +141,12 @@ export default function AdminAnalyticsPage() {
     }
   };
 
+  // Triggers browser print dialog for exporting formal executive briefing memorandums.
   const handlePrintPDF = () => {
     window.print();
   };
 
+  // Copies the structured AI briefing text to the system clipboard.
   const handleCopyText = () => {
     if (!narrative) return;
     const text = `${narrative.title}\nGenerated: ${new Date(narrative.generated_at).toLocaleString()}\nModel: ${narrative.model_used}\n\nEXECUTIVE SUMMARY:\n${narrative.executive_summary}\n\nKEY FINDINGS:\n${narrative.key_findings.map((f, i) => `${i + 1}. ${f}`).join('\n')}\n\nRECOMMENDED ACTIONS:\n${narrative.recommended_actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}\n\n${narrative.governance_disclaimer}`;
@@ -148,6 +155,7 @@ export default function AdminAnalyticsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Retrieves aggregated business analytics telemetry including historical patterns and linear forecasts.
   const fetchAnalytics = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     if (!silent) setError(null);

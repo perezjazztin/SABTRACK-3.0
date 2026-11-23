@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from app.modules.announcements.models import AnnouncementCategory
 
 
+# Request schema for publishing a new official announcement.
 class AnnouncementCreate(BaseModel):
     title: str = Field(..., min_length=5, max_length=200, description="Headline of the announcement")
     content: str = Field(..., min_length=10, max_length=5000, description="Full markdown or text details")
@@ -12,6 +13,7 @@ class AnnouncementCreate(BaseModel):
     is_pinned: bool = Field(default=False, description="Whether to feature this at the top of the bulletin")
 
 
+# Response schema returning announcement details including author name.
 class AnnouncementRead(BaseModel):
     id: int
     title: str
@@ -28,6 +30,7 @@ class AnnouncementRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Envelope schema returning paginated announcement list.
 class AnnouncementListResponse(BaseModel):
     items: List[AnnouncementRead]
     total: int

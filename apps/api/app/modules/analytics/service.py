@@ -28,6 +28,7 @@ import httpx
 import json
 
 
+# Analytics engine computing descriptive historical totals and 7-day predictive risk forecasts.
 class AnalyticsService:
     """Formal Business Analytics Engine implementing the mandated 6-step analytics procedure
     with rigorous Descriptive (Historical Aggregates) and Predictive (Operational Forecasting) results.
@@ -41,6 +42,7 @@ class AnalyticsService:
       6. Decision Support: Synthesize policy and operational recommendations for Barangay Officials
     """
 
+    # Compiles comprehensive analytics overview combining descriptive metrics and predictive risk models.
     @classmethod
     def get_overview_analytics(cls, db: Session) -> AnalyticsOverviewResponse:
         now = datetime.now(timezone.utc)
@@ -450,6 +452,7 @@ class AnalyticsService:
         )
 
 
+    # Generates executive summary memorandum using statistical synthesis or Gemini AI without processing PII.
     @classmethod
     def generate_narrative_summary(cls, db: Session) -> NarrativeSummaryResponse:
         """Generates AI-assisted executive decision-support narrative summary from aggregated telemetry.

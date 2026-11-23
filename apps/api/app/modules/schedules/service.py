@@ -8,12 +8,14 @@ from app.modules.areas.models import Area
 from app.modules.identity.models import User
 
 
+# Fetches collection schedules filtered optionally by area, day of week, or active status.
 def get_schedules(
     db: Session,
     area_id: Optional[int] = None,
     day_of_week: Optional[DayOfWeek] = None,
     active_only: bool = True,
 ) -> List[ScheduleRead]:
+    # Builds query joining Area model to avoid N+1 query overhead.
     stmt = (
         select(Schedule)
         .options(joinedload(Schedule.area))
@@ -28,6 +30,7 @@ def get_schedules(
     if day_of_week is not None:
         filters.append(Schedule.day_of_week == day_of_week)
 
+    # Applies combined query filters if present.
     if filters:
         stmt = stmt.where(and_(*filters))
 
@@ -54,6 +57,7 @@ def get_schedules(
     return items
 
 
+# Persists a new pickup schedule after validating that the associated purok area exists.
 def create_schedule(db: Session, payload: ScheduleCreate) -> ScheduleRead:
     # Verify area exists
     area = db.scalar(select(Area).where(Area.id == payload.area_id))
@@ -70,6 +74,7 @@ def create_schedule(db: Session, payload: ScheduleCreate) -> ScheduleRead:
         is_active=True,
         is_demo_data=True,
     )
+    # Adds entity to unit of work and commits changes to database.
     db.add(schedule)
     db.commit()
     db.refresh(schedule)
@@ -92,6 +97,7 @@ def create_schedule(db: Session, payload: ScheduleCreate) -> ScheduleRead:
 
 
 
+# Modifies attributes of an existing schedule record and refreshes ORM state.
 def update_schedule(db: Session, schedule_id: int, payload: ScheduleUpdate) -> Optional[ScheduleRead]:
     """Updates an existing collection timetable entry."""
     schedule = db.get(Schedule, schedule_id)
@@ -137,6 +143,7 @@ def update_schedule(db: Session, schedule_id: int, payload: ScheduleUpdate) -> O
         updated_at=schedule.updated_at,
     )
 
+# Soft-deletes a schedule by setting active status to False instead of hard-deleting records.
 def deactivate_schedule(db: Session, schedule_id: int) -> bool:
     schedule = db.scalar(select(Schedule).where(Schedule.id == schedule_id))
     if not schedule:

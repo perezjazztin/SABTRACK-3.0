@@ -23,6 +23,7 @@ from app.modules.announcements.service import (
 router = APIRouter()
 
 
+# GET endpoint listing published barangay announcements with optional category filtering.
 @router.get(
     "",
     response_model=AnnouncementListResponse,

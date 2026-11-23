@@ -1,3 +1,4 @@
+// Analytics data schemas for descriptive aggregations and predictive trend forecasts.
 export interface CategoryBreakdownItem {
   category: string;
   count: number;

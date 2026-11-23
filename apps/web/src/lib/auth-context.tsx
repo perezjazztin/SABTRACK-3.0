@@ -19,15 +19,21 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
 }
 
+// Context instance providing shared authentication state across the component tree.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Provider component managing user authentication session, login/logout actions, and role checks.
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Stores current authenticated user object or null when logged out.
   const [user, setUser] = useState<User | null>(null);
+  // Stores atomic permission strings held by current user's role.
   const [permissions, setPermissions] = useState<string[]>([]);
+  // Tracks pending session verification or authentication requests.
   const [loading, setLoading] = useState<boolean>(true);
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Queries /auth/me to restore active user session from HTTP-only cookie on page mount.
   const refreshSession = useCallback(async () => {
     try {
       setLoading(true);

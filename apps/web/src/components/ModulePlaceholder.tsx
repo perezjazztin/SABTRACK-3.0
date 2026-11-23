@@ -11,6 +11,7 @@ interface ModulePlaceholderProps {
   icon: LucideIcon;
 }
 
+// Placeholder banner component used during development phases for scheduled modules.
 export const ModulePlaceholder: React.FC<ModulePlaceholderProps> = ({
   title,
   portalType,

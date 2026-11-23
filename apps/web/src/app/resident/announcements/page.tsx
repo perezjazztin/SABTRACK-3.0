@@ -26,6 +26,7 @@ import {
   AnnouncementCategory,
 } from '@/types/announcements';
 
+// Filter tabs for switching between bulletin categories.
 const CATEGORY_TABS: { key: string; label: string; icon: React.ElementType }[] = [
   { key: 'ALL', label: 'All Notices', icon: Bell },
   { key: 'CLEANUP_DRIVE', label: 'Clean-Up Drives', icon: Sparkles },
@@ -35,6 +36,7 @@ const CATEGORY_TABS: { key: string; label: string; icon: React.ElementType }[] =
   { key: 'GENERAL', label: 'General', icon: FileText },
 ];
 
+// Badge styling and icon mapping for announcement categories.
 const CATEGORY_CONFIG: Record<
   AnnouncementCategory,
   { label: string; badgeClass: string; icon: React.ElementType }
@@ -66,6 +68,7 @@ const CATEGORY_CONFIG: Record<
   },
 };
 
+// Public community bulletin board for residents to view official barangay waste advisories.
 export default function ResidentAnnouncementsPage() {
   const { user } = useAuth();
   const canManage = user?.role === 'BARANGAY_STAFF' || user?.role === 'BARANGAY_ADMIN';
@@ -76,6 +79,7 @@ export default function ResidentAnnouncementsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Retrieves public notices matching the selected category filter.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);

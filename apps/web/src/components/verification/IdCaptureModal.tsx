@@ -10,15 +10,18 @@ interface IdCaptureModalProps {
   side?: 'front' | 'back';
 }
 
+// Modal dialog rendering camera viewfinder with alignment overlay to capture front or back of government ID.
 export default function IdCaptureModal({
   isOpen,
   onCapture,
   onClose,
   side = 'front',
 }: IdCaptureModalProps) {
+  // References to camera video feed and snapshot canvas.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // State tracking active video stream, device camera errors, and facing mode.
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCapturing, setIsCapturing] = useState<boolean>(false);

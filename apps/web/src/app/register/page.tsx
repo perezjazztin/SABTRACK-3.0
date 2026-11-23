@@ -30,6 +30,7 @@ import IdCaptureModal from '@/components/verification/IdCaptureModal';
 
 const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
+// Geographic purok options within Barangay Sabang available for resident profile assignment.
 const PUROK_OPTIONS = [
   { id: 1, name: 'Purok 1 - Zone North' },
   { id: 2, name: 'Purok 2 - Zone Central' },
@@ -40,6 +41,7 @@ const PUROK_OPTIONS = [
   { id: 7, name: 'Purok 7 - Agricultural Perimeter' },
 ];
 
+// Government ID documents supported by the OCR extraction pipeline.
 const SUPPORTED_IDS: { type: SupportedIdType; label: string }[] = [
   { type: 'PHILIPPINE_NATIONAL_ID', label: 'Philippine National ID (PhilSys)' },
   { type: 'DRIVERS_LICENSE', label: "Driver's License (LTO)" },
@@ -51,6 +53,7 @@ const MIN_PASSWORD_LENGTH = 8;
 
 /* ---------- Password helpers ---------- */
 
+// Evaluates individual complexity requirements for the resident password.
 function getPasswordChecks(password: string) {
   return {
     length: password.length >= MIN_PASSWORD_LENGTH,
@@ -61,6 +64,7 @@ function getPasswordChecks(password: string) {
   };
 }
 
+// Calculates aggregate password strength rating and corresponding indicator bar colors.
 function getStrength(password: string) {
   if (!password) return { score: 0, label: '', barClass: '', textClass: '' };
   const checks = getPasswordChecks(password);
@@ -88,6 +92,7 @@ const underlineInput =
 
 /* ---------- Reusable pieces ---------- */
 
+// Displays a green check icon when an input field meets its validation constraints.
 function ValidTick({ show }: { show: boolean }) {
   return (
     <Check
@@ -110,6 +115,7 @@ interface PasswordFieldProps {
   describedBy?: string;
 }
 
+// Controlled password input with visibility toggle button.
 function PasswordField({
   id,
   label,
@@ -207,6 +213,7 @@ function CloudEdge() {
 
 /* ---------- Main Component ---------- */
 
+// Resident self-registration page with 2-step government ID OCR and live facial biometric verification.
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -220,12 +227,13 @@ export default function RegisterPage() {
   const backFileInputRef = useRef<HTMLInputElement | null>(null);
   const [activeCameraSide, setActiveCameraSide] = useState<'front' | 'back'>('front');
 
+  // OCR extraction and temporary verification session state
   const [isScanningId, setIsScanningId] = useState(false);
   const [tempVerificationId, setTempVerificationId] = useState<string | null>(null);
   const [extractedData, setExtractedData] = useState<ExtractedIdData | null>(null);
   const [scanSuccessBanner, setScanSuccessBanner] = useState<string | null>(null);
 
-  // Camera modal states
+  // Camera modal and biometric match verification states
   const [isIdCameraModalOpen, setIsIdCameraModalOpen] = useState(false);
   const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
   const [isMatchingFace, setIsMatchingFace] = useState(false);
@@ -269,6 +277,7 @@ export default function RegisterPage() {
     password === confirmPassword &&
     acceptedPrivacy;
 
+  // Cleans up blob object URLs on unmount to release browser memory resources.
   useEffect(() => {
     return () => {
       if (redirectTimer.current) clearTimeout(redirectTimer.current);
@@ -287,6 +296,7 @@ export default function RegisterPage() {
     }
   }, [errorMessage]);
 
+  // Updates front ID file state, revokes previous preview URLs, and resets verification token.
   const handleSetIdFile = (file: File | null) => {
     if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
       URL.revokeObjectURL(idPreviewUrl);
@@ -317,6 +327,7 @@ export default function RegisterPage() {
     setVerificationDetails(null);
   };
 
+  // Updates back ID file state and manages preview object URL lifecycle.
   const handleSetBackIdFile = (file: File | null) => {
     if (idBackPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
       URL.revokeObjectURL(idBackPreviewUrl);
@@ -373,6 +384,7 @@ export default function RegisterPage() {
   };
 
   // Scan & OCR Government ID
+  // Sends ID documents to OCR service to extract citizen name, masked ID number, and address.
   const handleScanId = async () => {
     if (!idFile) {
       setErrorMessage('Please select or capture the front of your government-issued ID.');
@@ -419,6 +431,7 @@ export default function RegisterPage() {
   };
 
   // Face biometrics captured from FaceCaptureModal
+  // Verifies live webcam facial capture against the portrait extracted from the government ID.
   const handleFaceCaptured = async (faceBlob: Blob) => {
     if (!tempVerificationId) {
       setErrorMessage('Verification session expired. Please scan your government ID again.');
@@ -454,6 +467,7 @@ export default function RegisterPage() {
     setScanSuccessBanner(null);
   };
 
+  // Submits the finalized resident account registration payload with verification token.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isDone) return;

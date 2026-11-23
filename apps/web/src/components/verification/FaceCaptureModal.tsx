@@ -21,6 +21,7 @@ interface FaceCaptureModalProps {
   isOpen: boolean;
   onCapture: (blob: Blob) => void;
   onClose: () => void;
+  mode?: 'registration' | 'login';
 }
 
 type LivenessDirection = 'center' | 'left' | 'right' | 'blink';
@@ -64,14 +65,19 @@ const LIVENESS_STEPS: LivenessStep[] = [
   },
 ];
 
+// Modal dialog guiding resident through camera facial liveness challenges (center, turn, blink).
 export default function FaceCaptureModal({
   isOpen,
   onCapture,
   onClose,
+  mode = 'registration',
 }: FaceCaptureModalProps) {
+  const isLoginMode = mode === 'login';
+  // References to video stream element and hidden canvas for frame extraction.
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // State managing camera stream, current liveness step index, and capture progress.
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
@@ -225,7 +231,7 @@ export default function FaceCaptureModal({
 
     adherenceFrames.current = 0;
     setStageProgress(0);
-    stepCooldownUntil.current = Date.now() + 850; // Deliberate settle period so user clearly sees the instruction and has time to turn
+    stepCooldownUntil.current = isLoginMode ? Date.now() + 150 : Date.now() + 850;
 
     const interval = setInterval(() => {
       const video = videoRef.current;
@@ -314,6 +320,29 @@ export default function FaceCaptureModal({
 
             // Wait until settle period elapses before evaluating user adherence
             if (now < stepCooldownUntil.current) {
+              return;
+            }
+
+            // Direct login mode: quick auto-capture once face is aligned in the oval (no multi-step poses)
+            if (isLoginMode) {
+              const isCentered = facePresent && faceCenterX >= 45 && faceCenterX <= 75;
+              if (isCentered) {
+                adherenceFrames.current += 1;
+                const targetFrames = 4;
+                const progress = Math.min(100, Math.round((adherenceFrames.current / targetFrames) * 100));
+                setStageProgress(progress);
+                if (adherenceFrames.current >= targetFrames) {
+                  clearInterval(interval);
+                  setIsCompleted(true);
+                  setStageProgress(100);
+                  setTimeout(() => {
+                    triggerCapture();
+                  }, 300);
+                }
+              } else {
+                adherenceFrames.current = Math.max(0, adherenceFrames.current - 0.5);
+                setStageProgress(Math.round((adherenceFrames.current / 4) * 100));
+              }
               return;
             }
 
@@ -421,7 +450,7 @@ export default function FaceCaptureModal({
     }, 80);
 
     return () => clearInterval(interval);
-  }, [isOpen, stream, currentStepIndex, isCapturing, isCompleted, cameraError, triggerCapture]);
+  }, [isOpen, stream, currentStepIndex, isCapturing, isCompleted, cameraError, triggerCapture, isLoginMode]);
 
   if (!isOpen) return null;
 
@@ -460,15 +489,17 @@ export default function FaceCaptureModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 id="face-capture-modal-title" className="text-base font-bold text-slate-800">
-                  Facial Liveness Verification
+                  {isLoginMode ? 'Facial Verification Sign In' : 'Facial Liveness Verification'}
                 </h2>
                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/80 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-emerald-600" />
-                  Action-Guided
+                  {isLoginMode ? 'Direct Scan' : 'Action-Guided'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">
-                Active pose check &bull; You can also tap &quot;Capture Face Photo&quot; below anytime
+                {isLoginMode
+                  ? 'Look directly at the camera to verify your identity and sign in'
+                  : 'Active pose check • You can also tap "Capture Face Photo" below anytime'}
               </p>
             </div>
           </div>
@@ -555,18 +586,18 @@ export default function FaceCaptureModal({
                   {/* Subtle pulsing horizontal laser line */}
                   <div className="absolute inset-x-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-300 to-transparent shadow-[0_0_8px_#34d399] animate-pulse top-1/2 -translate-y-1/2" />
 
-                  {/* Pose Guidance Graphic inside oval */}
-                  {currentStep.direction === 'left' && (
+                  {/* Pose Guidance Graphic inside oval (only for registration active liveness) */}
+                  {!isLoginMode && currentStep.direction === 'left' && (
                     <div className="absolute left-3 p-2 rounded-full bg-emerald-700 text-white animate-bounce shadow-md">
                       <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
                     </div>
                   )}
-                  {currentStep.direction === 'right' && (
+                  {!isLoginMode && currentStep.direction === 'right' && (
                     <div className="absolute right-3 p-2 rounded-full bg-emerald-700 text-white animate-bounce shadow-md">
                       <ArrowRight className="w-5 h-5 stroke-[2.5]" />
                     </div>
                   )}
-                  {currentStep.direction === 'blink' && (
+                  {!isLoginMode && currentStep.direction === 'blink' && (
                     <div className="absolute text-emerald-100 animate-pulse font-bold text-xs bg-slate-900/85 px-3 py-1 rounded-full border border-emerald-400/40">
                       Blink Naturally
                     </div>
@@ -585,9 +616,13 @@ export default function FaceCaptureModal({
                     <ShieldCheck className="w-3 h-3 text-emerald-200" />
                     <span>
                       {isCompleted
-                        ? 'Liveness Verified ✓ Taking Photo…'
+                        ? isLoginMode
+                          ? 'Face Verified ✓ Signing In…'
+                          : 'Liveness Verified ✓ Taking Photo…'
                         : !isFaceDetected
                         ? 'Center Face in Oval'
+                        : isLoginMode
+                        ? 'Face Aligned — Ready to Sign In'
                         : `Step ${currentStepIndex + 1} of ${LIVENESS_STEPS.length}`}
                     </span>
                   </div>
@@ -599,7 +634,7 @@ export default function FaceCaptureModal({
                 <div className="bg-slate-900/85 backdrop-blur-md px-4 py-1.5 rounded-full border border-emerald-500/30 shadow-lg flex items-center gap-2 text-white">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                   <p className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
-                    {currentStep.command}
+                    {isLoginMode ? 'Look straight at the camera' : currentStep.command}
                   </p>
                 </div>
               </div>
@@ -608,7 +643,11 @@ export default function FaceCaptureModal({
               <div className="absolute bottom-2.5 inset-x-3 z-20 bg-slate-900/85 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-slate-700/60 flex items-center justify-between text-xs text-white">
                 <span className="text-[11px] font-medium text-emerald-300 flex items-center gap-1.5 truncate">
                   <Check className="w-3 h-3 text-emerald-400" />
-                  <span>{currentStep.instruction}</span>
+                  <span>
+                    {isLoginMode
+                      ? 'Align your face naturally inside the guide to authenticate'
+                      : currentStep.instruction}
+                  </span>
                 </span>
 
                 <div className="w-24 bg-slate-800 rounded-full h-1.5 overflow-hidden ml-3 shrink-0">
@@ -621,50 +660,65 @@ export default function FaceCaptureModal({
             </div>
           )}
 
-          {/* Liveness Steps Checklist — SABTRACK Soft-Card Style */}
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800">
-                Active Liveness Progression
-              </span>
-              <button
-                type="button"
-                onClick={handleRestart}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 transition"
-              >
-                <RefreshCw className="w-3 h-3 text-emerald-600" />
-                <span>Restart Poses</span>
-              </button>
-            </div>
+          {/* Liveness Steps Checklist — Shown for Registration; Replaced with Direct Card for Login */}
+          {!isLoginMode ? (
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  Active Liveness Progression
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRestart}
+                  className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 transition"
+                >
+                  <RefreshCw className="w-3 h-3 text-emerald-600" />
+                  <span>Restart Poses</span>
+                </button>
+              </div>
 
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 pt-1">
-              {LIVENESS_STEPS.map((step, idx) => {
-                const isPassed = currentStepIndex > idx || isCompleted;
-                const isCurrent = currentStepIndex === idx && !isCompleted;
-                return (
-                  <li
-                    key={step.id}
-                    className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
-                      isCurrent
-                        ? 'bg-white text-emerald-950 font-bold border border-emerald-400 shadow-sm ring-1 ring-emerald-200'
-                        : isPassed
-                        ? 'text-emerald-800 bg-emerald-100/50 font-medium'
-                        : 'text-slate-500 bg-white/70 border border-slate-100'
-                    }`}
-                  >
-                    {isPassed ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                    ) : isCurrent ? (
-                      <div className="w-4 h-4 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin flex-shrink-0" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                    )}
-                    <span className="truncate">{step.label}</span>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-700 pt-1">
+                {LIVENESS_STEPS.map((step, idx) => {
+                  const isPassed = currentStepIndex > idx || isCompleted;
+                  const isCurrent = currentStepIndex === idx && !isCompleted;
+                  return (
+                    <li
+                      key={step.id}
+                      className={`flex items-center gap-2 p-2 rounded-xl transition-all ${
+                        isCurrent
+                          ? 'bg-white text-emerald-950 font-bold border border-emerald-400 shadow-sm ring-1 ring-emerald-200'
+                          : isPassed
+                          ? 'text-emerald-800 bg-emerald-100/50 font-medium'
+                          : 'text-slate-500 bg-white/70 border border-slate-100'
+                      }`}
+                    >
+                      {isPassed ? (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                      ) : isCurrent ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-emerald-600 border-t-transparent animate-spin flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                      )}
+                      <span className="truncate">{step.label}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ) : (
+            /* Direct Facial Verification Guidance Card for Login (No Active Liveness Checklist) */
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4 flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0 border border-emerald-200">
+                <ShieldCheck className="w-5 h-5 text-emerald-700" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-800">Direct Facial Verification</h4>
+                <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+                  Active liveness poses are bypassed for login. Position your face in the oval to sign in automatically or tap the button below.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer — Clean SABTRACK Button Pair */}

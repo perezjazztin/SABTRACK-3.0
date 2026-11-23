@@ -32,9 +32,11 @@ class ExtractedIdData:
     details: str = ""
 
 
+# Optical Character Recognition and data privacy service for extracting text from Philippine government IDs.
 class IdOcrService:
     """Service for processing government IDs, stripping metadata, and extracting personal details."""
 
+    # Cleans prefixes, labels, and formats names into standard 'First Middle Last' structure.
     @staticmethod
     def normalize_name(raw_name: str) -> str:
         """Cleans and standardizes extracted person names from Philippine IDs."""
@@ -62,6 +64,7 @@ class IdOcrService:
 
         return cleaned
 
+    # Removes EXIF geolocation and camera metadata to protect citizen data privacy (RA 10173).
     @staticmethod
     def strip_exif_metadata(image_bytes: bytes) -> bytes:
         """Strips EXIF GPS and camera telemetry from uploaded image bytes complying with RA 10173."""
@@ -90,6 +93,7 @@ class IdOcrService:
                 detail="Uploaded file is not a valid or readable image. Please upload a clear JPG or PNG image.",
             )
 
+    # Validates resolution, contrast, and blur using OpenCV Laplacian variance.
     @staticmethod
     def check_readability(image_bytes: bytes) -> tuple[bool, str]:
         """Validates that image has sufficient resolution, contrast, and sharpness."""

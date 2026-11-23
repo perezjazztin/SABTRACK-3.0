@@ -6,6 +6,7 @@ from app.core.security import UserRole
 from app.modules.areas.models import Area  # noqa: F401
 
 
+# Core user table storing resident and staff accounts with hashed credentials and roles.
 class User(Base):
     """User account entity with role-based access control."""
     __tablename__ = "users"
@@ -20,7 +21,7 @@ class User(Base):
         nullable=False,
     )
     
-    # Optional association with a validated area or purok
+    # Optional foreign key association linking user to a specific purok or zone.
     area_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("areas.id", ondelete="SET NULL"),
@@ -41,6 +42,7 @@ class User(Base):
         nullable=False,
     )
 
+    # One-to-many relationship linking active authentication sessions to the user.
     sessions: Mapped[list["Session"]] = relationship(
         "Session",
         back_populates="user",
@@ -48,6 +50,7 @@ class User(Base):
     )
 
 
+# Active user session records storing token hashes, CSRF tokens, and expiration times.
 class Session(Base):
     """Server-side session record.
     
@@ -78,6 +81,7 @@ class Session(Base):
     user: Mapped["User"] = relationship("User", back_populates="sessions")
 
 
+# Security event log recording logins, logouts, lockouts, and access attempts.
 class SecurityAuditLog(Base):
     """Immutable audit trail for security-relevant authentication and access events."""
     __tablename__ = "security_audit_logs"
@@ -99,6 +103,7 @@ class SecurityAuditLog(Base):
     )
 
 
+# Rate-limiting table tracking consecutive failed login attempts by IP and email.
 class LoginThrottling(Base):
     """Tracks failed authentication attempts for persistent brute-force defense across restarts."""
     __tablename__ = "login_throttling"

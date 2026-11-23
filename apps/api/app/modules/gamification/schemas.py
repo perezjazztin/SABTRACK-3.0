@@ -11,6 +11,7 @@ from app.modules.gamification.models import (
 )
 
 
+# Request payload for barangay staff creating a new points-eligible initiative.
 class InitiativeCreate(BaseModel):
     title: str = Field(..., min_length=5, max_length=150, description="Initiative or clean-up title")
     description: str = Field(..., min_length=10, max_length=2000, description="Details and instructions")
@@ -19,6 +20,7 @@ class InitiativeCreate(BaseModel):
     location: str = Field(..., min_length=3, max_length=150, description="Meeting place or designated sector")
 
 
+# Response representation of an active community initiative.
 class InitiativeRead(BaseModel):
     id: int
     title: str
@@ -33,6 +35,7 @@ class InitiativeRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Resident request to claim points for segregation or cleanup attendance.
 class ClaimCreate(BaseModel):
     initiative_id: Optional[int] = Field(None, description="Optional associated initiative ID")
     activity_title: str = Field(..., min_length=5, max_length=150, description="Summary of civic action performed")
@@ -42,12 +45,14 @@ class ClaimCreate(BaseModel):
     points_requested: int = Field(default=25, ge=5, le=500, description="Points requested based on initiative")
 
 
+# Staff review action payload approving or rejecting a resident claim.
 class ClaimReviewPayload(BaseModel):
     status: ClaimStatus = Field(..., description="Approved or Rejected")
     review_notes: Optional[str] = Field(None, max_length=1000, description="Official verification remarks")
     points_awarded: Optional[int] = Field(None, ge=1, le=500, description="Custom points override if approved")
 
 
+# Serialized claim response including reviewer information and status.
 class ClaimRead(BaseModel):
     id: int
     resident_id: int
@@ -68,6 +73,7 @@ class ClaimRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Detailed ledger transaction record returned in resident points history.
 class PointsLedgerRead(BaseModel):
     id: int
     points: int
@@ -80,6 +86,7 @@ class PointsLedgerRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Aggregated summary returned to resident portal showing net points balance and tier.
 class ResidentPointsSummary(BaseModel):
     total_points: int
     tier: str
@@ -88,6 +95,7 @@ class ResidentPointsSummary(BaseModel):
     recent_claims: List[ClaimRead]
 
 
+# Catalog item available for reward redemption.
 class RewardItemRead(BaseModel):
     id: int
     name: str
@@ -103,15 +111,18 @@ class RewardItemRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Request schema for redeeming an available reward item.
 class RedemptionCreate(BaseModel):
     reward_id: int = Field(..., description="ID of reward item to redeem")
 
 
+# Staff review payload for approving or fulfilling a voucher redemption.
 class RedemptionReviewPayload(BaseModel):
     status: RedemptionStatus = Field(..., description="Requested review transition")
     review_notes: Optional[str] = Field(None, max_length=1000, description="Official review remarks")
 
 
+# Serialized redemption request including voucher claim code and fulfillment status.
 class RedemptionRequestRead(BaseModel):
     id: int
     resident_id: int
@@ -128,6 +139,7 @@ class RedemptionRequestRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Actionable civic task card definition for resident dashboard.
 class CivicTaskItem(BaseModel):
     id: str
     title: str
@@ -142,6 +154,7 @@ class CivicTaskItem(BaseModel):
     image_url: Optional[str] = None
 
 
+# Purok leaderboard ranking entry for gamification competition.
 class LeaderboardEntry(BaseModel):
     rank: int
     resident_id: int

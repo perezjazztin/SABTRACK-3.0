@@ -11,6 +11,7 @@ from app.modules.analytics.service import AnalyticsService
 router = APIRouter()
 
 
+# GET endpoint retrieving aggregated municipal waste telemetry, hotspot rankings, and predictive outlook.
 @router.get(
     "/overview",
     response_model=AnalyticsOverviewResponse,

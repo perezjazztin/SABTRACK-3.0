@@ -64,8 +64,10 @@ const DEFAULT_PROMPTS: QuickPromptItem[] = [
   },
 ];
 
+// Floating chat widget providing resident access to EcoBot AI for upcycling guides and schedules.
 export const EcoBotWidget: React.FC = () => {
   const { user } = useAuth();
+  // State variables managing chat window expansion, user inputs, and asynchronous loading.
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
