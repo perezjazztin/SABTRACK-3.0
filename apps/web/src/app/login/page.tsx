@@ -7,7 +7,9 @@ import { Raleway } from 'next/font/google';
 import { useAuth } from '@/lib/auth-context';
 import {
   AlertCircle,
+  Camera,
   Check,
+  Clock,
   Eye,
   EyeOff,
   Loader2,
@@ -15,6 +17,7 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
+import FaceCaptureModal from '@/components/verification/FaceCaptureModal';
 
 const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
@@ -25,6 +28,15 @@ function getRedirectPath(role: string): string {
   if (ADMIN_ROLES.includes(role)) return '/admin';
   if (role === 'RESIDENT') return '/resident';
   return '/';
+}
+
+function formatCountdown(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  if (mins > 0) {
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  }
+  return `${secs}s`;
 }
 
 /* ---------- Shared styles (identical to register) ---------- */
@@ -76,14 +88,78 @@ function CloudEdge() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isAuthenticated, user } = useAuth();
+  const { login, loginWithFace, isAuthenticated, user } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFaceModalOpen, setIsFaceModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lockoutSeconds, setLockoutSeconds] = useState<number | null>(null);
+
+  const isLockedOut = lockoutSeconds !== null && lockoutSeconds > 0;
+  const isLockoutExpired = lockoutSeconds === 0;
+
+  const displayError = isLockedOut
+    ? `Too many failed login attempts. Please wait ${lockoutSeconds} second${lockoutSeconds === 1 ? '' : 's'} before retrying.`
+    : isLockoutExpired
+    ? 'Lockout expired. You may now try signing in again.'
+    : errorMessage;
+
+  // Restore active lockout countdown on page load if still active
+  useEffect(() => {
+    try {
+      const storedUntil = localStorage.getItem('sabtrack_login_lockout_until');
+      if (storedUntil) {
+        const until = parseInt(storedUntil, 10);
+        const remaining = Math.ceil((until - Date.now()) / 1000);
+        if (remaining > 0) {
+          setLockoutSeconds(remaining);
+          setErrorMessage(`Too many failed login attempts. Please wait ${remaining} seconds before retrying.`);
+        } else {
+          localStorage.removeItem('sabtrack_login_lockout_until');
+        }
+      }
+    } catch {
+      // Local storage unavailable
+    }
+  }, []);
+
+  // Real-time decreasing countdown timer for rate limiting lockout
+  useEffect(() => {
+    if (!isLockedOut) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setLockoutSeconds((prev) => {
+        try {
+          const storedUntil = localStorage.getItem('sabtrack_login_lockout_until');
+          if (storedUntil) {
+            const until = parseInt(storedUntil, 10);
+            const remaining = Math.ceil((until - Date.now()) / 1000);
+            if (remaining <= 0) {
+              localStorage.removeItem('sabtrack_login_lockout_until');
+              return 0;
+            }
+            return remaining;
+          }
+        } catch {}
+
+        if (prev === null || prev <= 1) {
+          try {
+            localStorage.removeItem('sabtrack_login_lockout_until');
+          } catch {}
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isLockedOut]);
 
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
@@ -104,21 +180,36 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || isLockedOut) return;
 
     setIsSubmitting(true);
     setErrorMessage(null);
 
     try {
       const authenticatedUser = await login({ email: email.trim(), password });
+      try {
+        localStorage.removeItem('sabtrack_login_lockout_until');
+      } catch {}
       // Keep loading state active during navigation
       navigateTo(getRedirectPath(authenticatedUser.role));
     } catch (err) {
-      setErrorMessage(
+      const rawMessage =
         err instanceof Error && err.message
           ? err.message
-          : 'We could not sign you in. Please check your details and try again.'
-      );
+          : 'We could not sign you in. Please check your details and try again.';
+
+      const match = rawMessage.match(/wait (\d+) seconds/i);
+      if (match) {
+        const secs = parseInt(match[1], 10);
+        setLockoutSeconds(secs);
+        try {
+          localStorage.setItem('sabtrack_login_lockout_until', String(Date.now() + secs * 1000));
+        } catch {}
+      } else {
+        setLockoutSeconds(null);
+      }
+
+      setErrorMessage(rawMessage);
       setPassword('');
       setIsSubmitting(false);
     }
@@ -129,7 +220,44 @@ export default function LoginPage() {
   };
 
   const clearError = () => {
-    if (errorMessage) setErrorMessage(null);
+    if (errorMessage && !isLockedOut) {
+      setErrorMessage(null);
+      setLockoutSeconds(null);
+    }
+  };
+
+  const handleOpenFaceLogin = () => {
+    if (!email.trim()) {
+      setErrorMessage('Please enter your Account Email above first so we can verify your face against your resident profile.');
+      const emailInput = document.getElementById('email');
+      if (emailInput) {
+        emailInput.focus();
+      }
+      return;
+    }
+    setErrorMessage(null);
+    setIsFaceModalOpen(true);
+  };
+
+  const handleFaceLoginCapture = async (faceBlob: Blob) => {
+    setIsFaceModalOpen(false);
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    try {
+      const authenticatedUser = await loginWithFace(email.trim(), faceBlob);
+      try {
+        localStorage.removeItem('sabtrack_login_lockout_until');
+      } catch {}
+      navigateTo(getRedirectPath(authenticatedUser.role));
+    } catch (err) {
+      const rawMessage =
+        err instanceof Error && err.message
+          ? err.message
+          : 'Facial verification login failed. Please try again or sign in with your password.';
+      setErrorMessage(rawMessage);
+      setIsSubmitting(false);
+    }
   };
 
   // Avoid flashing the form while an authenticated user is being redirected.
@@ -189,14 +317,39 @@ export default function LoginPage() {
           </p>
 
           {/* Error alert (announced to screen readers) */}
-          {errorMessage && (
+          {displayError && (
             <div
               id={errorId}
               role="alert"
-              className="mb-5 p-3.5 rounded-2xl bg-rose-50 text-rose-800 text-xs flex items-start gap-2.5 border border-rose-200"
+              className={`mb-5 p-3.5 rounded-2xl text-xs flex items-start gap-2.5 border transition-colors ${
+                isLockoutExpired
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-rose-50 text-rose-800 border-rose-200'
+              }`}
             >
-              <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
-              <span>{errorMessage}</span>
+              {isLockoutExpired ? (
+                <Check className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+              )}
+              <div className="flex-1">
+                <span className="font-medium">{displayError}</span>
+                {isLockedOut && (
+                  <div className="mt-2.5 flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-rose-200/60">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-rose-800">
+                      <Clock className="w-3.5 h-3.5 text-rose-600 animate-pulse" aria-hidden="true" />
+                      <span>Cooldown remaining:</span>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-rose-200 shadow-xs font-mono text-xs font-bold text-rose-700 tabular-nums">
+                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" aria-hidden="true" />
+                      <span>{formatCountdown(lockoutSeconds)}</span>
+                      <span className="text-[10px] font-normal text-rose-500">
+                        ({lockoutSeconds}s decreasing)
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -286,7 +439,7 @@ export default function LoginPage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled={isSubmitting || !email || !password}
+                disabled={isSubmitting || !email || !password || isLockedOut}
                 aria-busy={isSubmitting}
                 className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-bold text-white
                   bg-gradient-to-b from-emerald-500 to-emerald-700 shadow-lg shadow-emerald-700/30
@@ -295,7 +448,8 @@ export default function LoginPage() {
                   disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />}
-                {isSubmitting ? 'Signing in…' : 'Sign In'}
+                {isLockedOut && <Clock className="w-4 h-4 mr-2 animate-pulse" aria-hidden="true" />}
+                {isSubmitting ? 'Signing in…' : isLockedOut ? `Wait ${lockoutSeconds}s` : 'Sign In'}
               </button>
 
               <Link
@@ -310,6 +464,29 @@ export default function LoginPage() {
               </Link>
             </div>
 
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-3 text-slate-400 font-semibold tracking-wider">
+                  Or sign in with
+                </span>
+              </div>
+            </div>
+
+            {/* Facial Biometric Verification Login Option */}
+            <button
+              type="button"
+              onClick={handleOpenFaceLogin}
+              disabled={isSubmitting || isLockedOut}
+              className="w-full inline-flex items-center justify-center gap-2.5 rounded-full px-6 py-2.5 text-xs sm:text-sm font-bold text-emerald-900 border-2 border-emerald-300 bg-emerald-50/70 hover:bg-emerald-100/90 hover:border-emerald-500 transition-all shadow-sm active:scale-[0.99] disabled:opacity-50"
+            >
+              <Camera className="w-4 h-4 text-emerald-700" />
+              <span>Facial Verification Sign In</span>
+            </button>
+
             {/* Helper text */}
             <p className="text-xs text-slate-500 text-center pt-2">
               New resident? Create an account to get started.
@@ -323,6 +500,13 @@ export default function LoginPage() {
           </p>
         </div>
       </section>
+
+      {/* Live Facial Biometric Capture Modal for Sign In */}
+      <FaceCaptureModal
+        isOpen={isFaceModalOpen}
+        onCapture={handleFaceLoginCapture}
+        onClose={() => setIsFaceModalOpen(false)}
+      />
     </div>
   );
 }

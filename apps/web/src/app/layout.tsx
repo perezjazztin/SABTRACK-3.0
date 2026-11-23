@@ -6,9 +6,9 @@ import { EcoBotWidget } from '@/components/EcoBotWidget';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SABTRACK 3.0 — Barangay Sabang Solid Waste Management Platform',
+  title: 'SABTRACK 3.0 — A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang',
   description:
-    'Digital governance platform for garbage collection scheduling, community reporting, engagement, and administrative analytics in Barangay Sabang, Lipa City, Batangas.',
+    'A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang, Lipa City, Batangas.',
 };
 
 export default function RootLayout({

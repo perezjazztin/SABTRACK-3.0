@@ -316,7 +316,7 @@ export default function Home() {
                 <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-900 text-sm font-bold border border-emerald-200"><FileText className="w-4 h-4 text-emerald-700" aria-hidden="true" />IT 313 — System Analysis and Design</span>
                 <h3 className={`${D} text-3xl font-extrabold tracking-tight text-slate-900`}>Official academic research project</h3>
                 <blockquote className={`${D} p-6 rounded-3xl rounded-tl-none bg-emerald-50/80 border-l-4 border-emerald-700 text-lg text-emerald-950 leading-snug font-medium`}>
-                  &ldquo;SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling, Community Violation Reporting, and Gamified Waste Management Engagement in Barangay Sabang&rdquo;
+                  &ldquo;SABTRACK: A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang&rdquo;
                 </blockquote>
                 <dl className="space-y-2 text-[15px] text-slate-700">
                   <div><dt className="inline font-bold text-slate-900">Institution: </dt><dd className="inline">Batangas State University – The NEU, Lipa Campus</dd></div>

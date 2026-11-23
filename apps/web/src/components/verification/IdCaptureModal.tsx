@@ -7,12 +7,14 @@ interface IdCaptureModalProps {
   isOpen: boolean;
   onCapture: (file: File) => void;
   onClose: () => void;
+  side?: 'front' | 'back';
 }
 
 export default function IdCaptureModal({
   isOpen,
   onCapture,
   onClose,
+  side = 'front',
 }: IdCaptureModalProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,6 +110,7 @@ export default function IdCaptureModal({
 
   const handleCapture = () => {
     setIsCapturing(true);
+    const filename = side === 'back' ? 'id_camera_scan_back.jpg' : 'id_camera_scan.jpg';
     try {
       const video = videoRef.current;
       const canvas = canvasRef.current || document.createElement('canvas');
@@ -126,7 +129,7 @@ export default function IdCaptureModal({
           canvas.toBlob(
             (blob) => {
               if (blob) {
-                const capturedFile = new File([blob], 'id_camera_scan.jpg', {
+                const capturedFile = new File([blob], filename, {
                   type: 'image/jpeg',
                   lastModified: Date.now(),
                 });
@@ -134,7 +137,7 @@ export default function IdCaptureModal({
                 onClose();
               } else {
                 onCapture(
-                  new File(['mock_id_snapshot'], 'id_camera_scan.jpg', {
+                  new File(['mock_id_snapshot'], filename, {
                     type: 'image/jpeg',
                   })
                 );
@@ -151,7 +154,7 @@ export default function IdCaptureModal({
 
       // Fallback for test environments without real video rendering / toBlob
       onCapture(
-        new File(['mock_id_snapshot'], 'id_camera_scan.jpg', {
+        new File(['mock_id_snapshot'], filename, {
           type: 'image/jpeg',
           lastModified: Date.now(),
         })
@@ -180,9 +183,14 @@ export default function IdCaptureModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
           <div className="flex items-center gap-2">
             <ScanLine className="w-5 h-5 text-emerald-400" />
-            <h2 id="id-camera-modal-title" className="text-base font-bold text-white">
-              Scan Government ID with Camera
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 id="id-camera-modal-title" className="text-base font-bold text-white">
+                Scan Government ID with Camera
+              </h2>
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-800/80 text-emerald-200 border border-emerald-600/50 uppercase tracking-wider">
+                {side === 'back' ? 'Back Side' : 'Front Side'}
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -231,16 +239,20 @@ export default function IdCaptureModal({
 
                   {/* Watermark/guideline text inside frame */}
                   <div className="flex items-center justify-between text-[11px] text-emerald-300 font-semibold opacity-90">
-                    <span>Front of Official ID</span>
+                    <span>{side === 'back' ? 'Back of Official ID' : 'Front of Official ID'}</span>
                     <ScanLine className="w-4 h-4 text-emerald-300 animate-pulse" />
                   </div>
 
                   <p className="text-center text-[11px] font-medium text-emerald-200 bg-black/60 px-2 py-1 rounded-md backdrop-blur-sm mx-auto">
-                    Position your ID card within this frame
+                    {side === 'back'
+                      ? 'Position the back of your ID card within this frame'
+                      : 'Position your ID card within this frame'}
                   </p>
                 </div>
                 <p className="text-[11px] text-slate-300 text-center mt-3 drop-shadow">
-                  Ensure the ID details and portrait are clearly visible with no glare or blur.
+                  {side === 'back'
+                    ? 'Ensure the barcode, address, and card details are clearly visible with no glare or blur.'
+                    : 'Ensure the ID details and portrait are clearly visible with no glare or blur.'}
                 </p>
               </div>
 
@@ -274,7 +286,7 @@ export default function IdCaptureModal({
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold text-white bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 shadow-lg shadow-emerald-950/40 transition disabled:opacity-50"
           >
             <Camera className="w-4 h-4" />
-            <span>{isCapturing ? 'Capturing…' : 'Capture ID Photo'}</span>
+            <span>{isCapturing ? 'Capturing…' : side === 'back' ? 'Capture Back ID Photo' : 'Capture ID Photo'}</span>
           </button>
         </div>
       </div>

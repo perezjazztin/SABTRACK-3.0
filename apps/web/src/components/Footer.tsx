@@ -71,8 +71,7 @@ export const Footer: React.FC = () => {
             </div>
 
             <div className="p-3.5 rounded-xl bg-white/[0.04] border border-emerald-400/20 text-xs text-emerald-100/90 leading-relaxed italic">
-              &ldquo;SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling,
-              Community Violation Reporting, and Gamified Waste Management Engagement in Barangay Sabang&rdquo;
+              &ldquo;SABTRACK: A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang&rdquo;
             </div>
 
             <div className="text-xs text-emerald-200/80 space-y-1">

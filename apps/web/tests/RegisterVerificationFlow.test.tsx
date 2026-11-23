@@ -184,4 +184,76 @@ describe('RegisterPage Integrated Identity Verification Flow', () => {
       expect(screen.queryByText(/Verified \(91%\)/i)).not.toBeInTheDocument();
     });
   });
+
+  it('supports capturing and uploading both front and back of ID, and manages each independently', async () => {
+    const scanSpy = vi.spyOn(apiClient, 'scanGovernmentId').mockResolvedValue({
+      temp_verification_id: 'front_back_sess_789',
+      extracted_data: {
+        full_name: 'ROBERTO SILVA',
+        dob: '1992-03-14',
+        age: 34,
+        address: 'PUROK 5, ZONE CENTRAL',
+        id_number_masked: '****-****-4321',
+        id_type: 'PHILIPPINE_NATIONAL_ID',
+      },
+      message: 'ID scanned successfully.',
+    });
+
+    render(<RegisterPage />);
+
+    // Front & Back placeholders should be visible
+    expect(screen.getByText(/^Front of ID$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^Back of ID$/i)).toBeInTheDocument();
+
+    // 1. Upload Front ID
+    const frontInput = screen.getByTestId('id-upload-input');
+    const frontFile = new File(['front_data'], 'front_id.png', { type: 'image/png' });
+    fireEvent.change(frontInput, { target: { files: [frontFile] } });
+
+    expect(await screen.findByText('front_id.png')).toBeInTheDocument();
+
+    // 2. Upload Back ID
+    const backInput = screen.getByTestId('id-upload-back-input');
+    const backFile = new File(['back_data'], 'back_id.png', { type: 'image/png' });
+    fireEvent.change(backInput, { target: { files: [backFile] } });
+
+    expect(await screen.findByText('back_id.png')).toBeInTheDocument();
+    expect(screen.getByText(/Front & Back IDs ready to scan/i)).toBeInTheDocument();
+
+    // 3. Delete Back ID independently
+    const deleteBackBtn = screen.getByRole('button', { name: /Delete back ID image/i });
+    fireEvent.click(deleteBackBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText('back_id.png')).not.toBeInTheDocument();
+      // Front ID MUST still be intact
+      expect(screen.getByText('front_id.png')).toBeInTheDocument();
+    });
+
+    // 4. Capture Back ID via Camera
+    const takeBackPhotoBtn = screen.getByRole('button', { name: /Take Back Photo/i });
+    fireEvent.click(takeBackPhotoBtn);
+
+    expect(await screen.findByRole('heading', { name: /Scan Government ID with Camera/i })).toBeInTheDocument();
+    expect(screen.getByText('Back of Official ID')).toBeInTheDocument();
+
+    const captureBackBtn = screen.getByRole('button', { name: /Capture Back ID Photo/i });
+    fireEvent.click(captureBackBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText('id_camera_scan_back.jpg')).toBeInTheDocument();
+    });
+
+    // 5. Scan & Process with both Front and Back files
+    const scanBtn = screen.getByRole('button', { name: /Scan & Process ID/i });
+    fireEvent.click(scanBtn);
+
+    await waitFor(() => {
+      expect(scanSpy).toHaveBeenCalledTimes(1);
+      const [calledFront, calledType, calledBack] = scanSpy.mock.calls[0];
+      expect(calledFront.name).toBe('front_id.png');
+      expect(calledType).toBe('PHILIPPINE_NATIONAL_ID');
+      expect(calledBack?.name).toBe('id_camera_scan_back.jpg');
+    });
+  });
 });

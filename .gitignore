@@ -48,11 +48,18 @@ uploads/
 storage/
 *.log
 
-# IDE Files
+# IDE & AI Assistant Files
 .vscode/
 .idea/
-
 .superpowers/
+.agents/
+skills-lock.json
+AGENTS.md
+
+# Archives & Packages
+*.zip
+*.tar.gz
+*.rar
 
 # Microsoft Office Temporary & Local Documents
 *.docx

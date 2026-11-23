@@ -25,3 +25,4 @@ class VerifyFaceResponse(BaseModel):
     match_score: float
     status: str
     message: str
+    details: Optional[str] = None

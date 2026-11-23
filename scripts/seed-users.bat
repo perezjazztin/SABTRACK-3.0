@@ -3,6 +3,8 @@ REM ==============================================================
 REM SABTRACK 3.0 — Development Seed Script Runner
 REM ==============================================================
 
+set DISABLE_SQLALCHEMY_CEXT=1
+
 cd /d "%~dp0\.."
 
 if not exist "apps\api\.venv\Scripts\python.exe" (

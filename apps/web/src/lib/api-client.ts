@@ -108,7 +108,7 @@ export async function apiFetch<T>(
   if (isMutating) {
     let token = getCsrfToken();
     // Proactively fetch session context if token is missing and not logging in/registering
-    if (!token && endpoint !== '/api/v1/auth/login' && endpoint !== '/api/v1/auth/register') {
+    if (!token && endpoint !== '/api/v1/auth/login' && endpoint !== '/api/v1/auth/register' && endpoint !== '/api/v1/auth/login-face') {
       try {
         const me = await getMe();
         token = me?.csrf_token || getCsrfToken();
@@ -220,11 +220,15 @@ export async function registerResident(payload: RegisterPayload): Promise<User> 
  */
 export async function scanGovernmentId(
   file: File,
-  idType: SupportedIdType
+  idType: SupportedIdType,
+  backFile?: File | null
 ): Promise<ScanIdResponse> {
   const formData = new FormData();
   formData.append('id_type', idType);
   formData.append('file', file);
+  if (backFile) {
+    formData.append('back_file', backFile);
+  }
 
   const res = await fetch(`${API_BASE_URL}/api/v1/identity-verification/scan-id`, {
     method: 'POST',
@@ -272,6 +276,29 @@ export async function login(credentials: LoginCredentials): Promise<SessionUserR
     setCsrfToken(data.csrf_token);
   }
   return data;
+}
+
+export async function loginWithFace(email: string, liveFaceBlob: Blob): Promise<SessionUserResponse> {
+  const formData = new FormData();
+  formData.append('email', email);
+  formData.append('live_face', liveFaceBlob, 'live_face.jpg');
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login-face`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const errorMsg = data.detail || 'Facial verification login failed.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+
+  if (data?.csrf_token) {
+    setCsrfToken(data.csrf_token);
+  }
+  return data as SessionUserResponse;
 }
 
 /**

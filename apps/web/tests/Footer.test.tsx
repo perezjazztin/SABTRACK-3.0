@@ -9,7 +9,7 @@ describe('Footer Component Modern Civic Styling & Academic Attribution', () => {
 
     // Official Academic Title
     expect(
-      screen.getByText(/SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling/i)
+      screen.getByText(/SABTRACK: A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang/i)
     ).toBeInTheDocument();
 
     // Proponents

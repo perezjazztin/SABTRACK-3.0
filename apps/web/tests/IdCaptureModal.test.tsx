@@ -57,6 +57,31 @@ describe('IdCaptureModal Component', () => {
     });
   });
 
+  it('renders back-side frame indicators and captures with id_camera_scan_back.jpg filename', async () => {
+    render(
+      <IdCaptureModal
+        isOpen={true}
+        side="back"
+        onCapture={mockOnCapture}
+        onClose={mockOnClose}
+      />
+    );
+
+    expect(screen.getByText(/Back Side/i)).toBeInTheDocument();
+    expect(screen.getByText(/Back of Official ID/i)).toBeInTheDocument();
+    expect(screen.getByText(/Position the back of your ID card within this frame/i)).toBeInTheDocument();
+
+    const captureBtn = screen.getByRole('button', { name: /Capture Back ID Photo/i });
+    fireEvent.click(captureBtn);
+
+    await waitFor(() => {
+      expect(mockOnCapture).toHaveBeenCalledTimes(1);
+      const fileArg = mockOnCapture.mock.calls[0][0];
+      expect(fileArg).toBeInstanceOf(File);
+      expect(fileArg.name).toBe('id_camera_scan_back.jpg');
+    });
+  });
+
   it('calls onClose when close icon or Cancel button is clicked', () => {
     const { rerender } = render(
       <IdCaptureModal

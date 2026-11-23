@@ -24,4 +24,5 @@ export interface VerifyFaceResponse {
   match_score: number;
   status: 'VERIFIED' | 'REJECTED';
   message: string;
+  details?: string;
 }

@@ -209,3 +209,46 @@ def test_resident_registration_endpoint_with_resident_id_num(client):
     # Duplicate registration should return 409 Conflict
     res_dup = client.post("/api/v1/auth/register", json=payload)
     assert res_dup.status_code == 409
+
+
+def test_login_with_face_endpoint(client):
+    """Verifies that residents can authenticate using facial verification."""
+    from app.modules.identity_verification.services.face_matching_service import FaceMatchingService
+    matcher = FaceMatchingService()
+    face_a, face_a_var, face_b = matcher.generate_test_face_fixtures()
+
+    # 1. Login with face for resident
+    res = client.post(
+        "/api/v1/auth/login-face",
+        data={"email": "resident@sabtrack.test"},
+        files={"live_face": ("live.png", face_a, "image/png")},
+    )
+    assert res.status_code == 200
+    data = res.json()
+    assert data["user"]["email"] == "resident@sabtrack.test"
+    assert data["user"]["role"] == "RESIDENT"
+    assert data["csrf_token"] is not None
+
+    # 2. Login with matching variant face
+    res_var = client.post(
+        "/api/v1/auth/login-face",
+        data={"email": "resident@sabtrack.test"},
+        files={"live_face": ("live_var.png", face_a_var, "image/png")},
+    )
+    assert res_var.status_code == 200
+
+    # 3. Login with unknown email fails
+    res_unknown = client.post(
+        "/api/v1/auth/login-face",
+        data={"email": "nonexistent@sabtrack.test"},
+        files={"live_face": ("live.png", face_a, "image/png")},
+    )
+    assert res_unknown.status_code == 401
+
+    # 4. Login with non-matching face returns 401
+    res_mismatch = client.post(
+        "/api/v1/auth/login-face",
+        data={"email": "resident@sabtrack.test"},
+        files={"live_face": ("live_b.png", face_b, "image/png")},
+    )
+    assert res_mismatch.status_code == 401

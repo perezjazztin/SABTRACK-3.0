@@ -3,6 +3,8 @@ REM ==============================================================
 REM SABTRACK 3.0 — FastAPI Backend Local Runner
 REM ==============================================================
 
+set DISABLE_SQLALCHEMY_CEXT=1
+
 cd /d "%~dp0\..\apps\api"
 
 if not exist ".venv\Scripts\python.exe" (

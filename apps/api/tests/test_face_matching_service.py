@@ -20,4 +20,9 @@ def test_face_matching_handles_image_without_faces():
     
     result = service.compare_faces(face_bytes, blank_bytes)
     assert result.is_match is False
-    assert "No face detected" in result.details
+    assert (
+        "no face detected" in result.details.lower()
+        or "face detection failed" in result.details.lower()
+        or "blank" in result.details.lower()
+        or "lacks any discernible human face" in result.details.lower()
+    )

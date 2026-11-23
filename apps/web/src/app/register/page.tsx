@@ -10,6 +10,7 @@ import {
   Check,
   CheckCircle,
   Circle,
+  CreditCard,
   Eye,
   EyeOff,
   FileCheck2,
@@ -209,11 +210,15 @@ function CloudEdge() {
 export default function RegisterPage() {
   const router = useRouter();
 
-  // Verification state
+  // Verification state: Front & Back Government ID
   const [selectedIdType, setSelectedIdType] = useState<SupportedIdType>('PHILIPPINE_NATIONAL_ID');
-  const [idFile, setIdFile] = useState<File | null>(null);
+  const [idFile, setIdFile] = useState<File | null>(null); // Front ID
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const [idBackFile, setIdBackFile] = useState<File | null>(null); // Back ID
+  const [idBackPreviewUrl, setIdBackPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const backFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [activeCameraSide, setActiveCameraSide] = useState<'front' | 'back'>('front');
 
   const [isScanningId, setIsScanningId] = useState(false);
   const [tempVerificationId, setTempVerificationId] = useState<string | null>(null);
@@ -226,6 +231,7 @@ export default function RegisterPage() {
   const [isMatchingFace, setIsMatchingFace] = useState(false);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [matchScore, setMatchScore] = useState<number | null>(null);
+  const [verificationDetails, setVerificationDetails] = useState<string | null>(null);
 
   // Form inputs
   const [fullName, setFullName] = useState('');
@@ -269,8 +275,11 @@ export default function RegisterPage() {
       if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
         URL.revokeObjectURL(idPreviewUrl);
       }
+      if (idBackPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(idBackPreviewUrl);
+      }
     };
-  }, [idPreviewUrl]);
+  }, [idPreviewUrl, idBackPreviewUrl]);
 
   useEffect(() => {
     if (errorMessage && typeof errorRef.current?.scrollIntoView === 'function') {
@@ -300,11 +309,35 @@ export default function RegisterPage() {
       }
     }
 
-    // Reset temporary session if a new ID image is selected/deleted
+    // Reset temporary session if front ID image is changed/deleted
     setTempVerificationId(null);
     setExtractedData(null);
     setVerificationToken(null);
     setMatchScore(null);
+    setVerificationDetails(null);
+  };
+
+  const handleSetBackIdFile = (file: File | null) => {
+    if (idBackPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(idBackPreviewUrl);
+    }
+    setScanSuccessBanner(null);
+    setErrorMessage(null);
+
+    if (file) {
+      setIdBackFile(file);
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        setIdBackPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setIdBackPreviewUrl('mock-preview-url-back');
+      }
+    } else {
+      setIdBackFile(null);
+      setIdBackPreviewUrl(null);
+      if (backFileInputRef.current) {
+        backFileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,25 +345,43 @@ export default function RegisterPage() {
     handleSetIdFile(file);
   };
 
+  const handleBackIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    handleSetBackIdFile(file);
+  };
+
   const handleDeleteIdImage = () => {
     handleSetIdFile(null);
   };
 
+  const handleDeleteBackIdImage = () => {
+    handleSetBackIdFile(null);
+  };
+
+  const handleOpenIdCamera = (side: 'front' | 'back') => {
+    setActiveCameraSide(side);
+    setIsIdCameraModalOpen(true);
+  };
+
   const handleIdCameraCaptured = (capturedFile: File) => {
     setIsIdCameraModalOpen(false);
-    handleSetIdFile(capturedFile);
+    if (activeCameraSide === 'back') {
+      handleSetBackIdFile(capturedFile);
+    } else {
+      handleSetIdFile(capturedFile);
+    }
   };
 
   // Scan & OCR Government ID
   const handleScanId = async () => {
     if (!idFile) {
-      setErrorMessage('Please select or capture a photo of your government-issued ID.');
+      setErrorMessage('Please select or capture the front of your government-issued ID.');
       return;
     }
     setErrorMessage(null);
     setIsScanningId(true);
     try {
-      const res = await scanGovernmentId(idFile, selectedIdType);
+      const res = await scanGovernmentId(idFile, selectedIdType, idBackFile);
       setTempVerificationId(res.temp_verification_id);
       setExtractedData(res.extracted_data);
 
@@ -383,6 +434,9 @@ export default function RegisterPage() {
       const res = await verifyFaceBiometrics(tempVerificationId, faceBlob);
       setVerificationToken(res.verification_token);
       setMatchScore(res.match_score);
+      if (res.details) {
+        setVerificationDetails(res.details);
+      }
     } catch (err) {
       setErrorMessage(
         err instanceof Error
@@ -396,6 +450,7 @@ export default function RegisterPage() {
 
   const handleResetVerification = () => {
     handleSetIdFile(null);
+    handleSetBackIdFile(null);
     setScanSuccessBanner(null);
   };
 
@@ -596,88 +651,271 @@ export default function RegisterPage() {
                       </select>
                     </div>
 
-                    {/* ID Image Selection: Upload File or Direct Camera Scan */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                        Government ID Image (Upload Photo or Direct Camera Scan)
-                      </label>
-
-                      {/* Options to Choose File or Open Camera */}
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 mb-2.5">
-                        {/* Hidden file input with explicit label button */}
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          id="idUploadInput"
-                          name="idUploadInput"
-                          data-testid="id-upload-input"
-                          accept="image/jpeg,image/png,image/webp"
-                          disabled={locked || isScanningId || isMatchingFace}
-                          onChange={handleIdFileChange}
-                          className="sr-only"
-                        />
-                        <label
-                          htmlFor="idUploadInput"
-                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-emerald-800 bg-emerald-50/70 border border-emerald-300 hover:bg-emerald-100/70 hover:border-emerald-500 cursor-pointer shadow-sm transition"
-                        >
-                          <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Choose ID File</span>
+                    {/* Government ID Images (Front & Back) */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-0.5">
+                          Government ID Images (Front &amp; Back)
                         </label>
-
-                        {/* Direct camera scanner button */}
-                        <button
-                          type="button"
-                          onClick={() => setIsIdCameraModalOpen(true)}
-                          disabled={locked || isScanningId || isMatchingFace}
-                          className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
-                        >
-                          <Camera className="w-3.5 h-3.5" />
-                          <span>Scan with Camera</span>
-                        </button>
+                        <p className="text-[11px] text-slate-500">
+                          Provide both the front and back of your ID using your device camera or image upload.
+                        </p>
                       </div>
 
-                      {/* When ID image is selected/captured: Preview card with Delete button */}
-                      {idFile && (
-                        <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200/90 flex items-center justify-between gap-3 mb-2.5 animate-in fade-in">
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            {idPreviewUrl ? (
-                              <img
-                                src={idPreviewUrl}
-                                alt="ID Preview"
-                                className="w-12 h-9 object-cover rounded-md border border-slate-200 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-12 h-9 bg-emerald-100 rounded-md flex items-center justify-center shrink-0">
-                                <ImageIcon className="w-4 h-4 text-emerald-600" />
-                              </div>
+                      {/* 2-Column Responsive Card Grid for Front and Back of ID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {/* ==================== FRONT OF ID ==================== */}
+                        <div className="flex flex-col space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Front of ID</span>
+                              <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                                Required
+                              </span>
+                            </span>
+                            {idFile && (
+                              <button
+                                type="button"
+                                onClick={handleDeleteIdImage}
+                                disabled={locked || isScanningId}
+                                aria-label="Delete ID image"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:text-rose-800 transition"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                <span>Delete</span>
+                              </button>
                             )}
-
-                            <div className="truncate">
-                              <p className="text-xs font-bold text-slate-800 truncate">
-                                {idFile.name}
-                              </p>
-                              <p className="text-[11px] text-slate-500">
-                                {(idFile.size / 1024).toFixed(0)} KB &bull; Ready to scan
-                              </p>
-                            </div>
                           </div>
 
-                          {/* Delete ID Image button */}
-                          <button
-                            type="button"
-                            onClick={handleDeleteIdImage}
-                            disabled={locked || isScanningId}
-                            aria-label="Delete ID image"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200/70 transition shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      )}
+                          {/* Hidden file input for front of ID */}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            id="idUploadInput"
+                            name="idUploadInput"
+                            data-testid="id-upload-input"
+                            accept="image/jpeg,image/png,image/webp"
+                            disabled={locked || isScanningId || isMatchingFace}
+                            onChange={handleIdFileChange}
+                            className="sr-only"
+                          />
 
-                      {/* Scan trigger button */}
-                      <div className="flex items-center gap-3 pt-1">
+                          {/* ID Card Shape Container */}
+                          <div
+                            className={`relative w-full aspect-[1.586/1] rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
+                              idFile
+                                ? 'border-emerald-300 bg-slate-950 shadow-sm'
+                                : 'border-2 border-dashed border-emerald-300/80 bg-white hover:border-emerald-500 hover:bg-emerald-50/20'
+                            }`}
+                          >
+                            {idFile ? (
+                              <>
+                                {idPreviewUrl ? (
+                                  <img
+                                    src={idPreviewUrl}
+                                    alt="Front of ID Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-emerald-950 flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-emerald-400" />
+                                  </div>
+                                )}
+                                {/* Bottom Action Bar Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 border-t border-slate-700/60 flex items-center justify-between text-white animate-in fade-in">
+                                  <div className="truncate mr-2">
+                                    <p className="text-[11px] font-bold text-white truncate max-w-[120px] sm:max-w-[140px]">
+                                      {idFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-300">
+                                      {(idFile.size / 1024).toFixed(0)} KB &bull; Front Ready
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <label
+                                      htmlFor="idUploadInput"
+                                      title="Replace Front Image"
+                                      aria-label="Replace Front Image"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer transition"
+                                    >
+                                      <Upload className="w-3.5 h-3.5" />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenIdCamera('front')}
+                                      disabled={locked || isScanningId || isMatchingFace}
+                                      title="Retake Front Photo"
+                                      aria-label="Retake Front Photo"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition"
+                                    >
+                                      <Camera className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 mb-1">
+                                  <CreditCard className="w-4 h-4" />
+                                </div>
+                                <p className="text-xs font-semibold text-slate-800">
+                                  Front Side
+                                </p>
+                                <p className="text-[10px] text-slate-500 mb-2">
+                                  Portrait &amp; Full Legal Name
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                  <label
+                                    htmlFor="idUploadInput"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 hover:border-emerald-500 cursor-pointer shadow-sm transition"
+                                  >
+                                    <Upload className="w-3 h-3 text-emerald-600" />
+                                    <span>Choose ID File</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenIdCamera('front')}
+                                    disabled={locked || isScanningId || isMatchingFace}
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
+                                  >
+                                    <Camera className="w-3 h-3" />
+                                    <span>Scan with Camera</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ==================== BACK OF ID ==================== */}
+                        <div className="flex flex-col space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Back of ID</span>
+                              <span className="text-[10px] font-normal text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                                Recommended
+                              </span>
+                            </span>
+                            {idBackFile && (
+                              <button
+                                type="button"
+                                onClick={handleDeleteBackIdImage}
+                                disabled={locked || isScanningId}
+                                aria-label="Delete back ID image"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:text-rose-800 transition"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Hidden file input for back of ID */}
+                          <input
+                            ref={backFileInputRef}
+                            type="file"
+                            id="idUploadBackInput"
+                            name="idUploadBackInput"
+                            data-testid="id-upload-back-input"
+                            accept="image/jpeg,image/png,image/webp"
+                            disabled={locked || isScanningId || isMatchingFace}
+                            onChange={handleBackIdFileChange}
+                            className="sr-only"
+                          />
+
+                          {/* ID Card Shape Container */}
+                          <div
+                            className={`relative w-full aspect-[1.586/1] rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
+                              idBackFile
+                                ? 'border-emerald-300 bg-slate-950 shadow-sm'
+                                : 'border-2 border-dashed border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50/50'
+                            }`}
+                          >
+                            {idBackFile ? (
+                              <>
+                                {idBackPreviewUrl ? (
+                                  <img
+                                    src={idBackPreviewUrl}
+                                    alt="Back of ID Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-slate-400" />
+                                  </div>
+                                )}
+                                {/* Bottom Action Bar Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 border-t border-slate-700/60 flex items-center justify-between text-white animate-in fade-in">
+                                  <div className="truncate mr-2">
+                                    <p className="text-[11px] font-bold text-white truncate max-w-[120px] sm:max-w-[140px]">
+                                      {idBackFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-300">
+                                      {(idBackFile.size / 1024).toFixed(0)} KB &bull; Back Ready
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <label
+                                      htmlFor="idUploadBackInput"
+                                      title="Replace Back Image"
+                                      aria-label="Replace Back Image"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer transition"
+                                    >
+                                      <Upload className="w-3.5 h-3.5" />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenIdCamera('back')}
+                                      disabled={locked || isScanningId || isMatchingFace}
+                                      title="Retake Back Photo"
+                                      aria-label="Retake Back Photo"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition"
+                                    >
+                                      <Camera className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-1">
+                                  <CreditCard className="w-4 h-4" />
+                                </div>
+                                <p className="text-xs font-semibold text-slate-800">
+                                  Back Side
+                                </p>
+                                <p className="text-[10px] text-slate-500 mb-2">
+                                  Barcode, Address &amp; Signature
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                  <label
+                                    htmlFor="idUploadBackInput"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-300 hover:bg-slate-200 hover:border-slate-400 cursor-pointer shadow-sm transition"
+                                  >
+                                    <Upload className="w-3 h-3 text-slate-600" />
+                                    <span>Upload Back</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenIdCamera('back')}
+                                    disabled={locked || isScanningId || isMatchingFace}
+                                    aria-label="Take Back Photo"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white bg-slate-700 hover:bg-slate-800 shadow-sm transition"
+                                  >
+                                    <Camera className="w-3 h-3" />
+                                    <span>Take Back Photo</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scan Trigger Button & Feedback */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
                         <button
                           type="button"
                           onClick={handleScanId}
@@ -699,11 +937,15 @@ export default function RegisterPage() {
                           )}
                         </button>
 
-                        {tempVerificationId && (
+                        {tempVerificationId ? (
                           <span className="text-[11px] text-emerald-700 font-medium">
                             ✓ ID processed. Extracted details pasted below.
                           </span>
-                        )}
+                        ) : idFile ? (
+                          <span className="text-[11px] text-slate-500">
+                            {idBackFile ? 'Front & Back IDs ready to scan.' : 'Front ID ready to scan (Back ID optional).'}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -772,31 +1014,38 @@ export default function RegisterPage() {
                 </div>
               ) : (
                 /* Verified Summary */
-                <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-emerald-200">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                      <UserCheck className="w-4 h-4" />
+                <div className="p-3.5 rounded-xl bg-white border border-emerald-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          {extractedData?.full_name || fullName}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {SUPPORTED_IDS.find((i) => i.type === selectedIdType)?.label} &bull;{' '}
+                          {extractedData?.id_number_masked || residentIdNum}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-900">
-                        {extractedData?.full_name || fullName}
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        {SUPPORTED_IDS.find((i) => i.type === selectedIdType)?.label} &bull;{' '}
-                        {extractedData?.id_number_masked || residentIdNum}
-                      </p>
-                    </div>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={handleResetVerification}
-                    disabled={locked}
-                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline"
-                  >
-                    <RefreshCw className="w-3 h-3" />
-                    Re-verify
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleResetVerification}
+                      disabled={locked}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Re-verify
+                    </button>
+                  </div>
+                  {verificationDetails && (
+                    <div className="text-[11px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 rounded-lg p-2.5 leading-relaxed">
+                      <span className="font-bold text-emerald-950">Feature Analysis:</span> {verificationDetails}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -1052,6 +1301,7 @@ export default function RegisterPage() {
       {/* Direct Camera Scanner Modal for Government ID */}
       <IdCaptureModal
         isOpen={isIdCameraModalOpen}
+        side={activeCameraSide}
         onCapture={handleIdCameraCaptured}
         onClose={() => setIsIdCameraModalOpen(false)}
       />

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole, LoginCredentials, SessionUserResponse } from '@/types/auth';
-import { login as apiLogin, logout as apiLogout, getMe as apiGetMe } from '@/lib/api-client';
+import { login as apiLogin, loginWithFace as apiLoginWithFace, logout as apiLogout, getMe as apiGetMe } from '@/lib/api-client';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +12,7 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
+  loginWithFace: (email: string, faceBlob: Blob) => Promise<User>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
@@ -64,6 +65,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const loginWithFace = async (email: string, faceBlob: Blob): Promise<User> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiLoginWithFace(email, faceBlob);
+      setUser(data.user);
+      setPermissions(data.permissions || []);
+      return data.user;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Facial verification login failed';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoggingOut(true);
     setLoading(true);
@@ -108,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         isAuthenticated: !!user,
         login,
+        loginWithFace,
         logout,
         hasPermission,
         hasRole,

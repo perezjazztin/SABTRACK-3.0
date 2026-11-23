@@ -17,6 +17,28 @@ export interface ArticleReadingStatus {
   daily_limit: number;
   points_per_article: number;
   minimum_read_seconds: number;
+  resource_points?: Record<string, number>;
+  interval_seconds?: number;
+  max_points_per_resource?: number;
+}
+
+export interface AwarenessStatusResponse {
+  resource_points: Record<string, number>;
+  daily_points_today: number;
+  daily_limit: number;
+  interval_seconds: number;
+  max_points_per_resource: number;
+}
+
+export interface AwarenessHeartbeatResponse {
+  resource_id: string;
+  status: 'AWARDED' | 'RESOURCE_CAP_REACHED' | 'DAILY_LIMIT_REACHED';
+  points_awarded: number;
+  points_earned: number;
+  max_points: number;
+  daily_points_today: number;
+  daily_limit: number;
+  total_points?: number;
 }
 
 export interface ArticleReadingSession {
