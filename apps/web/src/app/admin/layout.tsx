@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DashboardFooter } from '@/components/DashboardFooter';
 
+// Navigation link items for the barangay staff and administrator sidebar menu.
 export const ADMIN_NAV = [
   {
     label: 'Overview',

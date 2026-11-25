@@ -27,6 +27,9 @@ from app.modules.gamification.schemas import (
     ArticleReadingStatus,
     ArticleReadingCompleteRequest,
     ArticleReadingCompletion,
+    AwarenessHeartbeatRequest,
+    AwarenessHeartbeatResponse,
+    AwarenessStatusResponse,
 )
 from app.modules.gamification.service import (
     create_initiative,
@@ -44,6 +47,8 @@ from app.modules.gamification.service import (
     open_article_reading_session,
     get_article_reading_status,
     complete_article_reading,
+    record_awareness_heartbeat,
+    get_awareness_status,
 )
 
 router = APIRouter()
@@ -93,6 +98,37 @@ def complete_article_reading_endpoint(
         return complete_article_reading(db, current_user.id, payload.session_id)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.post(
+    "/awareness/heartbeat",
+    response_model=AwarenessHeartbeatResponse,
+    summary="Record active 45-second awareness engagement point",
+    dependencies=[Depends(verify_csrf)],
+)
+def awareness_heartbeat_endpoint(
+    payload: AwarenessHeartbeatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RESIDENT)),
+):
+    try:
+        return record_awareness_heartbeat(
+            db, current_user.id, payload.resource_id, payload.session_id
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+
+
+@router.get(
+    "/awareness/status",
+    response_model=AwarenessStatusResponse,
+    summary="Get resident Awareness Hub continuous engagement progress and points",
+)
+def awareness_status_endpoint(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RESIDENT)),
+):
+    return get_awareness_status(db, current_user.id)
 
 
 @router.get(

@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.logging import logger
 
 
+# Resilient notification service supporting live SMTP delivery and offline dev file simulation.
 class EmailService:
     """Free and resilient email dispatch service supporting live SMTP and offline dev simulation.
     Rendered in Official LGU Memorandum (Formal Government Letterhead) layout.
@@ -19,12 +20,14 @@ class EmailService:
     def __init__(self) -> None:
         pass
 
+    # Constructs standard sender display header string formatted as 'Name <email>'.
     def _get_sender(self) -> str:
         """Computes sender email header string formatted as 'Name <email>'."""
         sender_email = (settings.SMTP_FROM_EMAIL or settings.SMTP_USER or "noreply@sabtrack.local").strip()
         sender_name = settings.SMTP_FROM_NAME or "SABTRACK - Barangay Sabang"
         return f"{sender_name} <{sender_email}>"
 
+    # Injects notification content into an official LGU memorandum HTML template.
     def render_base_email(
         self,
         title: str,

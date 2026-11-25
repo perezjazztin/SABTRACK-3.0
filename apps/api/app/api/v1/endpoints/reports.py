@@ -22,6 +22,7 @@ from app.modules.gamification.service import award_verified_report
 router = APIRouter()
 
 
+# Transforms SQLAlchemy Report ORM instance into Pydantic ReportRead schema with full audit history.
 def _to_report_read(report: Report) -> ReportRead:
     """Helper to convert Report model to ReportRead schema."""
     history_items = [
@@ -59,6 +60,7 @@ def _to_report_read(report: Report) -> ReportRead:
     )
 
 
+# POST endpoint creating a new community waste report and broadcasting real-time notification.
 @router.post(
     "",
     response_model=ReportRead,

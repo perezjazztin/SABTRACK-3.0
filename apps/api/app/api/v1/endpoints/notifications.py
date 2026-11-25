@@ -31,6 +31,7 @@ def require_staff_or_admin(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+# POST endpoint testing email dispatch diagnostics across live SMTP or offline preview simulator.
 @router.post(
     "/test-email",
     response_model=TestEmailResponse,

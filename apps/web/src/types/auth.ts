@@ -1,3 +1,4 @@
+// Role-based access control roles and user authentication data contracts.
 export type UserRole =
   | 'RESIDENT'
   | 'BARANGAY_STAFF'
@@ -31,4 +32,5 @@ export interface RegisterPayload {
   full_name: string;
   area_id?: number | null;
   resident_id_num?: string | null;
+  verification_token?: string | null;
 }

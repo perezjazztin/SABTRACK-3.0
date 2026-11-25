@@ -1,3 +1,4 @@
+// Weekday enumerations and collection timetable data types.
 export type DayOfWeek =
   | 'MONDAY'
   | 'TUESDAY'

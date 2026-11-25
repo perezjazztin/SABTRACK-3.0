@@ -9,6 +9,7 @@ import {
   Leaf, Trash2, AlertTriangle,
 } from 'lucide-react';
 
+// Next.js font loaders configuring display and body font typography variables.
 const display = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-display', axes: ['opsz'] });
 const body = Figtree({ subsets: ['latin'], variable: '--font-body' });
 
@@ -23,6 +24,7 @@ const label = 'block text-sm font-bold text-slate-700 mb-1.5';
 const lift = 'transition-all duration-300 motion-reduce:transition-none hover:-translate-y-1 motion-reduce:hover:translate-y-0';
 const dots = { backgroundImage: 'radial-gradient(rgba(6,95,70,.18) 1.5px, transparent 1.5px)', backgroundSize: '18px 18px' };
 
+// Reusable pill badge component for section category tags.
 function Badge({ icon: Icon, children, className = '' }: { icon: React.ElementType; children: React.ReactNode; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-sm font-bold text-emerald-900 ${className}`}>
@@ -33,6 +35,7 @@ function Badge({ icon: Icon, children, className = '' }: { icon: React.ElementTy
 }
 
 /* Concentric rings: a reusable decorative shape */
+// Decorative concentric vector circles rendering background accent depth.
 function Rings({ className = '' }: { className?: string }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 200 200" className={`pointer-events-none absolute ${className}`} fill="none" stroke="currentColor">
@@ -42,6 +45,7 @@ function Rings({ className = '' }: { className?: string }) {
 }
 
 /* Soft wave divider */
+// Organic SVG wave contour separating content sections.
 function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
   return (
     <svg aria-hidden="true" viewBox="0 0 1440 90" preserveAspectRatio="none" className={`absolute inset-x-0 w-full h-12 sm:h-20 ${flip ? 'top-0 rotate-180' : 'bottom-0'}`}>
@@ -50,6 +54,7 @@ function Wave({ fill, flip = false }: { fill: string; flip?: boolean }) {
   );
 }
 
+// Key community metrics and statutory compliance highlights displayed in the hero banner.
 const STATS = [
   { value: '7+ Puroks', label: 'Covered across Sabang', color: 'text-slate-900' },
   { value: '98%', label: 'On-time collection rate', color: 'text-emerald-700' },
@@ -57,12 +62,14 @@ const STATS = [
   { value: '100%', label: 'For Barangay Sabang', color: 'text-teal-700' },
 ];
 
+// Three-stage resident user journey mapping schedule lookup, incident reporting, and civic rewards.
 const STEPS = [
   { n: 1, icon: Clock, tag: 'Smart scheduling', title: 'Check your purok timetable', body: 'Know when the truck arrives in your purok. Sort biodegradable and non-biodegradable trash ahead of time to prevent roadside piles.', foot: 'Timely morning dispatch', img: '/images/card_scheduling.jpg', alt: 'Scheduled truck collection in Batangas', chip: 'bg-emerald-700', shape: 'rounded-tl-[5rem] rounded-br-[5rem] rounded-tr-3xl rounded-bl-3xl' },
   { n: 2, icon: ShieldCheck, tag: 'Civic vigilance', title: 'Snap & report incidents', body: 'Spot an illegal dumpsite, uncollected trash or open burning? Upload a photo. GPS data is scrubbed from the image for your privacy.', foot: 'Confidential reports', img: '/images/card_reporting.jpg', alt: 'Resident reporting street cleanliness', chip: 'bg-teal-700', shape: 'rounded-t-[8rem] rounded-b-3xl' },
   { n: 3, icon: Award, tag: 'Gamified rewards', title: 'Earn points & build pride', body: 'Every verified clean habit earns SAB-Points. Climb the Purok Cleanliness Leaderboard and inspire your neighbors.', foot: 'Leaderboard & eco-rewards', img: '/images/card_community.jpg', alt: 'Youth and volunteers in Sabang', chip: 'bg-lime-700', shape: 'rounded-tr-[5rem] rounded-bl-[5rem] rounded-tl-3xl rounded-br-3xl' },
 ];
 
+// Household waste categorization guidelines pursuant to Republic Act 9003.
 const STREAMS = [
   { name: 'Biodegradable (Nabubulok)', tip: 'Food scraps, vegetable peels, dried garden leaves, fruit rinds, leftover food.', icon: Leaf, box: 'bg-emerald-50 border-emerald-200', orb: 'bg-emerald-200/70', chip: 'bg-emerald-600', text: 'text-emerald-950' },
   { name: 'Recyclables (I-recycle)', tip: 'Clean PET bottles, plastic containers, cardboard cartons, aluminum cans, paper.', icon: Recycle, box: 'bg-sky-50 border-sky-200', orb: 'bg-sky-200/70', chip: 'bg-sky-600', text: 'text-sky-950' },
@@ -70,6 +77,7 @@ const STREAMS = [
   { name: 'Special & hazardous', tip: 'Expired medicines, used batteries, fluorescent tubes, electronics, paint cans.', icon: AlertTriangle, box: 'bg-rose-50 border-rose-200', orb: 'bg-rose-200/70', chip: 'bg-rose-600', text: 'text-rose-950' },
 ];
 
+// United Nations Sustainable Development Goals (SDG) alignment matrix.
 const SDGS = [
   { n: 11, bg: '#F99D26', box: 'border-amber-200 from-amber-50 to-orange-50/40', target: 'Target 11.6', title: 'Sustainable Cities & Communities', body: 'Minimizing per-capita environmental impact through solid waste management and disciplined barangay collection routes.' },
   { n: 12, bg: '#BF8B2E', box: 'border-yellow-200 from-yellow-50 to-amber-50/40', target: 'Target 12.5', title: 'Responsible Consumption & Production', body: 'Reducing waste generation through source segregation, materials recovery facility (MRF) logistics and recycling.' },
@@ -77,6 +85,7 @@ const SDGS = [
   { n: 17, bg: '#19486A', box: 'border-blue-200 from-blue-50 to-indigo-50/40', target: 'Target 17.17', title: 'Partnerships for the Goals', body: 'Collaborative digital governance between BatStateU, Barangay Sabang leaders and local residents.' },
 ];
 
+// Official contact channels and environmental desk operating hours.
 const CONTACTS = [
   { icon: MapPin, title: 'Barangay Hall location', text: 'Barangay Sabang, Lipa City, Batangas, Philippines 4217' },
   { icon: Phone, title: 'Solid Waste Management hotline', text: '(043) 784-2190 / +63 917 842 1900' },
@@ -84,7 +93,9 @@ const CONTACTS = [
   { icon: Clock, title: 'Office hours', text: 'Monday to Friday: 8:00 AM – 5:00 PM (Saturday morning special route dispatch)' },
 ];
 
+// Public landing page featuring platform objectives, waste sorting guides, SDGs, and civic contact desk.
 export default function Home() {
+  // State variables managing citizen contact inquiries and feedback banners.
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactCategory, setContactCategory] = useState('Schedule Inquiry');
@@ -93,12 +104,14 @@ export default function Home() {
   const [bulletinContact, setBulletinContact] = useState('');
   const [bulletinSubscribed, setBulletinSubscribed] = useState(false);
 
+  // Handles citizen inquiry form submission and displays temporary confirmation banner.
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setContactSubmitted(true);
     setContactName(''); setContactEmail(''); setContactMessage('');
     setTimeout(() => setContactSubmitted(false), 6000);
   };
+  // Handles SMS and email bulletin opt-in subscription submissions.
   const handleBulletinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!bulletinContact.trim()) return;
@@ -316,7 +329,7 @@ export default function Home() {
                 <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 text-emerald-900 text-sm font-bold border border-emerald-200"><FileText className="w-4 h-4 text-emerald-700" aria-hidden="true" />IT 313 — System Analysis and Design</span>
                 <h3 className={`${D} text-3xl font-extrabold tracking-tight text-slate-900`}>Official academic research project</h3>
                 <blockquote className={`${D} p-6 rounded-3xl rounded-tl-none bg-emerald-50/80 border-l-4 border-emerald-700 text-lg text-emerald-950 leading-snug font-medium`}>
-                  &ldquo;SABTRACK: A Digital Governance Platform for Garbage Collection Scheduling, Community Violation Reporting, and Gamified Waste Management Engagement in Barangay Sabang&rdquo;
+                  &ldquo;SABTRACK: A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang&rdquo;
                 </blockquote>
                 <dl className="space-y-2 text-[15px] text-slate-700">
                   <div><dt className="inline font-bold text-slate-900">Institution: </dt><dd className="inline">Batangas State University – The NEU, Lipa Campus</dd></div>

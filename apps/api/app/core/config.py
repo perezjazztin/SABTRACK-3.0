@@ -4,10 +4,12 @@ from typing import List, Optional
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Resolves the absolute path to the backend root directory for locating configuration files and storage.
 _API_DIR = Path(__file__).resolve().parent.parent.parent
 _ENV_FILE = os.getenv("ENV_FILE", str(_API_DIR / ".env"))
 
 
+# Application configuration class using Pydantic Settings for type validation and environment parsing.
 class Settings(BaseSettings):
     """Application configuration loaded from environment variables."""
 
@@ -22,7 +24,7 @@ class Settings(BaseSettings):
         description="PostgreSQL connection string"
     )
 
-    # CORS Allowed Origins
+    # CORS Allowed Origins for browser cross-origin resource sharing
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
@@ -40,11 +42,11 @@ class Settings(BaseSettings):
     )
     SESSION_COOKIE_SAMESITE: str = "lax"
 
-    # Rate Limiting for Authentication
+    # Rate Limiting for Authentication (prevents brute-force password guessing)
     LOGIN_MAX_ATTEMPTS: int = 5
     LOGIN_LOCKOUT_MINUTES: int = 15
 
-    # Storage settings
+    # Storage settings for resident report images and uploads
     STORAGE_UPLOAD_DIR: Path = Field(
         default=_API_DIR / "storage" / "uploads",
         description="Protected local directory for uploaded files"
@@ -78,12 +80,14 @@ class Settings(BaseSettings):
         description="Comma-separated list of Gemini API keys for zero-cost quota rotation"
     )
 
+    # Post-validation hook to automatically enforce HTTPS-only cookies in production.
     @model_validator(mode="after")
     def adjust_secure_cookie(self) -> "Settings":
         if self.ENVIRONMENT.lower() == "production" and not self.SESSION_COOKIE_SECURE:
             self.SESSION_COOKIE_SECURE = True
         return self
 
+    # Configuration for loading environment variables from .env file
     model_config = SettingsConfigDict(
         env_file=_ENV_FILE,
         env_file_encoding="utf-8",
@@ -92,4 +96,5 @@ class Settings(BaseSettings):
     )
 
 
+# Instantiates the global singleton settings object used across the application.
 settings = Settings()

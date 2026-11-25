@@ -1,3 +1,4 @@
+// System health and connectivity diagnostics returned by the backend healthcheck endpoint.
 export interface HealthResponse {
   status: 'ok' | 'degraded' | 'error';
   version: string;
@@ -6,6 +7,7 @@ export interface HealthResponse {
   database: 'connected' | 'disconnected';
 }
 
+// Geographic zone, barangay sector, or collection purok within the municipality.
 export interface Area {
   id: number;
   code: string;
@@ -17,6 +19,7 @@ export interface Area {
   updated_at: string;
 }
 
+// Standardized error response envelope returned by FastAPI exception handlers.
 export interface ApiError {
   error: {
     code: string;

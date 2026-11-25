@@ -13,12 +13,14 @@ interface ProtectedRouteProps {
   moduleName?: string;
 }
 
+// Route guard wrapper enforcing authentication, role matching, or granular permission checks.
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRole,
   requiredPermission,
   moduleName = 'Protected Module',
 }) => {
+  // Consumes auth status and permission validation functions from AuthContext.
   const { user, loading, isLoggingOut, isAuthenticated, hasRole, hasPermission, logout } = useAuth();
   const [switching, setSwitching] = useState(false);
 

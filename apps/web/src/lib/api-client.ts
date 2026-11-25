@@ -17,7 +17,13 @@ import {
   AdvisoryCreatePayload,
   ScheduleNotificationResponse,
 } from '@/types/schedules';
+import {
+  SupportedIdType,
+  ScanIdResponse,
+  VerifyFaceResponse,
+} from '@/types/verification';
 
+// Custom error class capturing HTTP status codes and structured validation errors from backend.
 export class ApiClientError extends Error {
   constructor(
     message: string,
@@ -29,9 +35,10 @@ export class ApiClientError extends Error {
   }
 }
 
-// In-memory cache for active CSRF token
+// In-memory cache for active CSRF token across client transitions
 let activeCsrfToken: string | null = null;
 
+// Sets active CSRF token in memory and synchronizes with browser sessionStorage.
 export function setCsrfToken(token: string | null): void {
   activeCsrfToken = token;
   if (typeof window !== 'undefined') {
@@ -47,6 +54,7 @@ export function setCsrfToken(token: string | null): void {
   }
 }
 
+// Retrieves CSRF token from memory, cookie, or sessionStorage for mutating requests.
 export function getCsrfToken(): string | null {
   if (activeCsrfToken) {
     return activeCsrfToken;
@@ -89,6 +97,7 @@ export async function apiFetch<T>(
   isRetry = false
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  // Extracts HTTP verb (GET, POST, PUT, PATCH, DELETE) to determine whether CSRF token is required.
   const method = (options.method || 'GET').toUpperCase();
   const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
 
@@ -103,7 +112,7 @@ export async function apiFetch<T>(
   if (isMutating) {
     let token = getCsrfToken();
     // Proactively fetch session context if token is missing and not logging in/registering
-    if (!token && endpoint !== '/api/v1/auth/login' && endpoint !== '/api/v1/auth/register') {
+    if (!token && endpoint !== '/api/v1/auth/login' && endpoint !== '/api/v1/auth/register' && endpoint !== '/api/v1/auth/login-face') {
       try {
         const me = await getMe();
         token = me?.csrf_token || getCsrfToken();
@@ -210,6 +219,58 @@ export async function registerResident(payload: RegisterPayload): Promise<User> 
   });
 }
 
+/**
+ * Upload and scan government ID (Step 1 & 2).
+ */
+export async function scanGovernmentId(
+  file: File,
+  idType: SupportedIdType,
+  backFile?: File | null
+): Promise<ScanIdResponse> {
+  const formData = new FormData();
+  formData.append('id_type', idType);
+  formData.append('file', file);
+  if (backFile) {
+    formData.append('back_file', backFile);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/identity-verification/scan-id`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || data?.detail || 'Failed to scan government ID.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+  return data as ScanIdResponse;
+}
+
+/**
+ * Verify live camera face snapshot against ID portrait (Step 3 & 4).
+ */
+export async function verifyFaceBiometrics(
+  tempVerificationId: string,
+  liveFaceBlob: Blob
+): Promise<VerifyFaceResponse> {
+  const formData = new FormData();
+  formData.append('temp_verification_id', tempVerificationId);
+  formData.append('live_face', liveFaceBlob, 'live_face.jpg');
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/identity-verification/verify-face`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || data?.detail || 'Face biometric verification failed.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+  return data as VerifyFaceResponse;
+}
+
 export async function login(credentials: LoginCredentials): Promise<SessionUserResponse> {
   const data = await apiFetch<SessionUserResponse>('/api/v1/auth/login', {
     method: 'POST',
@@ -219,6 +280,29 @@ export async function login(credentials: LoginCredentials): Promise<SessionUserR
     setCsrfToken(data.csrf_token);
   }
   return data;
+}
+
+export async function loginWithFace(email: string, liveFaceBlob: Blob): Promise<SessionUserResponse> {
+  const formData = new FormData();
+  formData.append('email', email);
+  formData.append('live_face', liveFaceBlob, 'live_face.jpg');
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login-face`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const errorMsg = data.detail || 'Facial verification login failed.';
+    throw new ApiClientError(errorMsg, res.status, data);
+  }
+
+  if (data?.csrf_token) {
+    setCsrfToken(data.csrf_token);
+  }
+  return data as SessionUserResponse;
 }
 
 /**
@@ -414,10 +498,26 @@ import {
   ArticleReadingStatus,
   ArticleReadingSession,
   ArticleReadingCompletion,
+  AwarenessHeartbeatResponse,
+  AwarenessStatusResponse,
 } from '@/types/gamification';
 
 export async function getArticleReadingStatus(): Promise<ArticleReadingStatus> {
   return apiFetch<ArticleReadingStatus>('/api/v1/gamification/article-reading/status');
+}
+
+export async function getAwarenessStatus(): Promise<AwarenessStatusResponse> {
+  return apiFetch<AwarenessStatusResponse>('/api/v1/gamification/awareness/status');
+}
+
+export async function submitAwarenessHeartbeat(
+  resourceId: string,
+  sessionId?: string | null
+): Promise<AwarenessHeartbeatResponse> {
+  return apiFetch<AwarenessHeartbeatResponse>('/api/v1/gamification/awareness/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({ resource_id: resourceId, session_id: sessionId || null }),
+  });
 }
 
 export async function openArticleReading(articleId: string): Promise<ArticleReadingSession> {

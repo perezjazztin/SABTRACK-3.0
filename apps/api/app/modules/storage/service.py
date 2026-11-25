@@ -21,13 +21,15 @@ ALLOWED_IMAGE_TYPES = {
 SAFE_FILENAME_REGEX = re.compile(r"^[a-zA-Z0-9_\-]+\.(jpg|jpeg|png|webp)$", re.IGNORECASE)
 
 
+# Service managing secure image upload, sanitization, EXIF stripping, and protected file serving.
 class StorageService:
     """Handles secure file validation, EXIF metadata stripping, and storage."""
 
+    # Validates image payload, strips EXIF metadata for privacy, and writes sanitized file with UUID filename.
     @staticmethod
     async def sanitize_and_save_image(file: UploadFile) -> Dict[str, str]:
         """Validates, strips all EXIF metadata, and saves an uploaded image."""
-        # 1. Content-Type check
+        # 1. Content-Type check against allowed MIME list
         content_type = file.content_type or ""
         if content_type.lower() not in ALLOWED_IMAGE_TYPES:
             raise HTTPException(
@@ -35,7 +37,7 @@ class StorageService:
                 detail=f"Unsupported file type '{content_type}'. Only JPEG, PNG, and WebP images are allowed.",
             )
 
-        # 2. Read bytes and enforce size limit
+        # 2. Read bytes and enforce size limit (e.g. 30MB maximum)
         contents = await file.read()
         if len(contents) > settings.MAX_UPLOAD_SIZE_BYTES:
             max_mb = settings.MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)
@@ -50,7 +52,7 @@ class StorageService:
                 detail="Uploaded file is empty.",
             )
 
-        # 3. Verify and sanitize image with Pillow (strips EXIF tags per RA 10173)
+        # 3. Verify and sanitize image with Pillow (strips EXIF tags per RA 10173 data privacy)
         try:
             input_buffer = io.BytesIO(contents)
             with Image.open(input_buffer) as img:
@@ -78,7 +80,7 @@ class StorageService:
                 if save_format == "JPEG" and img.mode in ("RGBA", "P"):
                     clean_img = img.convert("RGB")
 
-                # Generate secure UUID filename
+                # Generate secure UUID filename to prevent collisions and overwrite attacks
                 unique_id = uuid.uuid4()
                 filename = f"{unique_id}{ext}"
                 target_path = settings.STORAGE_UPLOAD_DIR / filename
@@ -107,6 +109,7 @@ class StorageService:
                 detail="Uploaded file is corrupt or not a valid image.",
             )
 
+    # Resolves and validates local upload file path, blocking directory traversal attempts.
     @staticmethod
     def resolve_upload_path(filename: str) -> Path:
         """Safely resolves file path and guards against path traversal."""
@@ -119,7 +122,7 @@ class StorageService:
         storage_root = settings.STORAGE_UPLOAD_DIR.resolve()
         target_path = (storage_root / filename).resolve()
 
-        # Check path containment
+        # Check path containment within storage root directory
         try:
             target_path.relative_to(storage_root)
         except ValueError:

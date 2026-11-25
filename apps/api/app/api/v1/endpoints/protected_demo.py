@@ -6,6 +6,7 @@ from app.modules.identity.models import User
 router = APIRouter()
 
 
+# Demonstration GET endpoint restricted to residents holding REPORTS_READ_SELF permission.
 @router.get(
     "/resident/my-reports",
     summary="Protected resident reports endpoint",

@@ -11,6 +11,7 @@ interface StatusCardProps {
   action?: React.ReactNode;
 }
 
+// Reusable neumorphic status card component displaying KPI values and operational badges.
 export const StatusCard: React.FC<StatusCardProps> = ({
   title,
   status,

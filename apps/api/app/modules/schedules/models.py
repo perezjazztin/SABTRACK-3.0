@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+# Days of the week for scheduling waste pickup routines.
 class DayOfWeek(str, Enum):
     MONDAY = "MONDAY"
     TUESDAY = "TUESDAY"
@@ -25,6 +26,7 @@ class DayOfWeek(str, Enum):
     SUNDAY = "SUNDAY"
 
 
+# Waste segregation streams collected according to Republic Act 9003 guidelines.
 class WasteType(str, Enum):
     BIODEGRADABLE = "BIODEGRADABLE"
     NON_BIODEGRADABLE = "NON_BIODEGRADABLE"
@@ -32,6 +34,7 @@ class WasteType(str, Enum):
     SPECIAL_HAZARDOUS = "SPECIAL_HAZARDOUS"
 
 
+# Routine collection timetable mapping pickup days and waste types to specific puroks.
 class Schedule(Base):
     """Weekly garbage collection schedule tied to a configurable area/purok."""
     __tablename__ = "schedules"
@@ -74,6 +77,7 @@ class Schedule(Base):
     area = relationship("Area")
 
 
+# Classification for real-time schedule interruptions and service bulletins.
 class AdvisoryType(str, Enum):
     DELAY = "DELAY"
     ROUTE_CHANGE = "ROUTE_CHANGE"
@@ -81,6 +85,7 @@ class AdvisoryType(str, Enum):
     HOLIDAY_SUSPENSION = "HOLIDAY_SUSPENSION"
 
 
+# Real-time advisory alerts for collection delays, truck maintenance, or weather disruptions.
 class ScheduleAdvisory(Base):
     """Barangay collection delay, truck breakdown, or route modification notice."""
     __tablename__ = "schedule_advisories"

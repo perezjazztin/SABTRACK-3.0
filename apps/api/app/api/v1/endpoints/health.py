@@ -15,6 +15,7 @@ class HealthResponse(BaseModel):
     database: str
 
 
+# Unauthenticated GET endpoint checking server and PostgreSQL database connectivity for uptime monitoring.
 @router.get(
     "/health",
     response_model=HealthResponse,

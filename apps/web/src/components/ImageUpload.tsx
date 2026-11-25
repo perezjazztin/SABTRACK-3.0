@@ -13,6 +13,7 @@ interface ImageUploadProps {
   maxSizeMb?: number;
 }
 
+// Drag-and-drop file upload component validating file types and invoking the sanitized upload API.
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   value,
   onChange,
@@ -21,6 +22,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
   helperText,
   disabled = false,
 }) => {
+  // State tracking upload progress and client-side validation errors.
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);

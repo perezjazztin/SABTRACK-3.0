@@ -6,19 +6,31 @@ import { useRouter } from 'next/navigation';
 import { Raleway } from 'next/font/google';
 import {
   AlertCircle,
+  Camera,
   Check,
   CheckCircle,
   Circle,
+  CreditCard,
   Eye,
   EyeOff,
+  FileCheck2,
+  Image as ImageIcon,
   Loader2,
   Recycle,
+  RefreshCw,
   ShieldCheck,
+  Trash2,
+  Upload,
+  UserCheck,
 } from 'lucide-react';
-import { registerResident } from '@/lib/api-client';
+import { registerResident, scanGovernmentId, verifyFaceBiometrics } from '@/lib/api-client';
+import { SupportedIdType, ExtractedIdData } from '@/types/verification';
+import FaceCaptureModal from '@/components/verification/FaceCaptureModal';
+import IdCaptureModal from '@/components/verification/IdCaptureModal';
 
 const raleway = Raleway({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] });
 
+// Geographic purok options within Barangay Sabang available for resident profile assignment.
 const PUROK_OPTIONS = [
   { id: 1, name: 'Purok 1 - Zone North' },
   { id: 2, name: 'Purok 2 - Zone Central' },
@@ -29,10 +41,19 @@ const PUROK_OPTIONS = [
   { id: 7, name: 'Purok 7 - Agricultural Perimeter' },
 ];
 
+// Government ID documents supported by the OCR extraction pipeline.
+const SUPPORTED_IDS: { type: SupportedIdType; label: string }[] = [
+  { type: 'PHILIPPINE_NATIONAL_ID', label: 'Philippine National ID (PhilSys)' },
+  { type: 'DRIVERS_LICENSE', label: "Driver's License (LTO)" },
+  { type: 'PASSPORT', label: 'Philippine Passport (DFA)' },
+  { type: 'UMID', label: 'UMID Card (SSS / GSIS)' },
+];
+
 const MIN_PASSWORD_LENGTH = 8;
 
 /* ---------- Password helpers ---------- */
 
+// Evaluates individual complexity requirements for the resident password.
 function getPasswordChecks(password: string) {
   return {
     length: password.length >= MIN_PASSWORD_LENGTH,
@@ -43,8 +64,7 @@ function getPasswordChecks(password: string) {
   };
 }
 
-// Advisory only. The only hard rule is the minimum length;
-// the server remains the source of truth for password policy.
+// Calculates aggregate password strength rating and corresponding indicator bar colors.
 function getStrength(password: string) {
   if (!password) return { score: 0, label: '', barClass: '', textClass: '' };
   const checks = getPasswordChecks(password);
@@ -72,6 +92,7 @@ const underlineInput =
 
 /* ---------- Reusable pieces ---------- */
 
+// Displays a green check icon when an input field meets its validation constraints.
 function ValidTick({ show }: { show: boolean }) {
   return (
     <Check
@@ -94,6 +115,7 @@ interface PasswordFieldProps {
   describedBy?: string;
 }
 
+// Controlled password input with visibility toggle button.
 function PasswordField({
   id,
   label,
@@ -189,11 +211,37 @@ function CloudEdge() {
   );
 }
 
-/* ---------- Page ---------- */
+/* ---------- Main Component ---------- */
 
+// Resident self-registration page with 2-step government ID OCR and live facial biometric verification.
 export default function RegisterPage() {
   const router = useRouter();
 
+  // Verification state: Front & Back Government ID
+  const [selectedIdType, setSelectedIdType] = useState<SupportedIdType>('PHILIPPINE_NATIONAL_ID');
+  const [idFile, setIdFile] = useState<File | null>(null); // Front ID
+  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const [idBackFile, setIdBackFile] = useState<File | null>(null); // Back ID
+  const [idBackPreviewUrl, setIdBackPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const backFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [activeCameraSide, setActiveCameraSide] = useState<'front' | 'back'>('front');
+
+  // OCR extraction and temporary verification session state
+  const [isScanningId, setIsScanningId] = useState(false);
+  const [tempVerificationId, setTempVerificationId] = useState<string | null>(null);
+  const [extractedData, setExtractedData] = useState<ExtractedIdData | null>(null);
+  const [scanSuccessBanner, setScanSuccessBanner] = useState<string | null>(null);
+
+  // Camera modal and biometric match verification states
+  const [isIdCameraModalOpen, setIsIdCameraModalOpen] = useState(false);
+  const [isCameraModalOpen, setIsCameraModalOpen] = useState(false);
+  const [isMatchingFace, setIsMatchingFace] = useState(false);
+  const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [matchScore, setMatchScore] = useState<number | null>(null);
+  const [verificationDetails, setVerificationDetails] = useState<string | null>(null);
+
+  // Form inputs
   const [fullName, setFullName] = useState('');
   const [residentIdNum, setResidentIdNum] = useState('');
   const [email, setEmail] = useState('');
@@ -202,6 +250,7 @@ export default function RegisterPage() {
   const [areaId, setAreaId] = useState<number | ''>('');
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
 
+  // Flow & error tracking
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -217,8 +266,10 @@ export default function RegisterPage() {
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   const emailLooksValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  const isVerified = Boolean(verificationToken);
 
   const canSubmit =
+    isVerified &&
     fullName.trim().length > 0 &&
     residentIdNum.trim().length > 0 &&
     email.trim().length > 0 &&
@@ -226,20 +277,197 @@ export default function RegisterPage() {
     password === confirmPassword &&
     acceptedPrivacy;
 
-  // Clean up the pending redirect if the user leaves the page.
+  // Cleans up blob object URLs on unmount to release browser memory resources.
   useEffect(() => {
     return () => {
       if (redirectTimer.current) clearTimeout(redirectTimer.current);
+      if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(idPreviewUrl);
+      }
+      if (idBackPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(idBackPreviewUrl);
+      }
     };
-  }, []);
+  }, [idPreviewUrl, idBackPreviewUrl]);
 
-  // The form is long, so bring the error into view on small screens.
   useEffect(() => {
-    if (errorMessage) {
-      errorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (errorMessage && typeof errorRef.current?.scrollIntoView === 'function') {
+      errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [errorMessage]);
 
+  // Updates front ID file state, revokes previous preview URLs, and resets verification token.
+  const handleSetIdFile = (file: File | null) => {
+    if (idPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(idPreviewUrl);
+    }
+    setScanSuccessBanner(null);
+    setErrorMessage(null);
+
+    if (file) {
+      setIdFile(file);
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        setIdPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setIdPreviewUrl('mock-preview-url');
+      }
+    } else {
+      setIdFile(null);
+      setIdPreviewUrl(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+
+    // Reset temporary session if front ID image is changed/deleted
+    setTempVerificationId(null);
+    setExtractedData(null);
+    setVerificationToken(null);
+    setMatchScore(null);
+    setVerificationDetails(null);
+  };
+
+  // Updates back ID file state and manages preview object URL lifecycle.
+  const handleSetBackIdFile = (file: File | null) => {
+    if (idBackPreviewUrl && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(idBackPreviewUrl);
+    }
+    setScanSuccessBanner(null);
+    setErrorMessage(null);
+
+    if (file) {
+      setIdBackFile(file);
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        setIdBackPreviewUrl(URL.createObjectURL(file));
+      } else {
+        setIdBackPreviewUrl('mock-preview-url-back');
+      }
+    } else {
+      setIdBackFile(null);
+      setIdBackPreviewUrl(null);
+      if (backFileInputRef.current) {
+        backFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    handleSetIdFile(file);
+  };
+
+  const handleBackIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    handleSetBackIdFile(file);
+  };
+
+  const handleDeleteIdImage = () => {
+    handleSetIdFile(null);
+  };
+
+  const handleDeleteBackIdImage = () => {
+    handleSetBackIdFile(null);
+  };
+
+  const handleOpenIdCamera = (side: 'front' | 'back') => {
+    setActiveCameraSide(side);
+    setIsIdCameraModalOpen(true);
+  };
+
+  const handleIdCameraCaptured = (capturedFile: File) => {
+    setIsIdCameraModalOpen(false);
+    if (activeCameraSide === 'back') {
+      handleSetBackIdFile(capturedFile);
+    } else {
+      handleSetIdFile(capturedFile);
+    }
+  };
+
+  // Scan & OCR Government ID
+  // Sends ID documents to OCR service to extract citizen name, masked ID number, and address.
+  const handleScanId = async () => {
+    if (!idFile) {
+      setErrorMessage('Please select or capture the front of your government-issued ID.');
+      return;
+    }
+    setErrorMessage(null);
+    setIsScanningId(true);
+    try {
+      const res = await scanGovernmentId(idFile, selectedIdType, idBackFile);
+      setTempVerificationId(res.temp_verification_id);
+      setExtractedData(res.extracted_data);
+
+      // Auto-populate extracted identity fields directly into form below
+      if (res.extracted_data.full_name) {
+        setFullName(res.extracted_data.full_name);
+      }
+      if (res.extracted_data.id_number_masked) {
+        setResidentIdNum(res.extracted_data.id_number_masked);
+      }
+
+      // Smart auto-detection of Purok if present in address
+      if (res.extracted_data.address) {
+        const addr = res.extracted_data.address.toUpperCase();
+        const matchedPurok = PUROK_OPTIONS.find((p) =>
+          addr.includes(`PUROK ${p.id}`) || addr.includes(`ZONE ${p.id}`)
+        );
+        if (matchedPurok) {
+          setAreaId(matchedPurok.id);
+        }
+      }
+
+      setScanSuccessBanner(
+        `ID details extracted successfully! Legal name and ID number have been populated in the form below.`
+      );
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Failed to scan ID. Ensure the image is sharp, clear, and well-lit.'
+      );
+    } finally {
+      setIsScanningId(false);
+    }
+  };
+
+  // Face biometrics captured from FaceCaptureModal
+  // Verifies live webcam facial capture against the portrait extracted from the government ID.
+  const handleFaceCaptured = async (faceBlob: Blob) => {
+    if (!tempVerificationId) {
+      setErrorMessage('Verification session expired. Please scan your government ID again.');
+      setIsCameraModalOpen(false);
+      return;
+    }
+
+    setIsCameraModalOpen(false);
+    setIsMatchingFace(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await verifyFaceBiometrics(tempVerificationId, faceBlob);
+      setVerificationToken(res.verification_token);
+      setMatchScore(res.match_score);
+      if (res.details) {
+        setVerificationDetails(res.details);
+      }
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : 'Facial recognition did not match the photo on your uploaded ID. Please try again with good lighting.'
+      );
+    } finally {
+      setIsMatchingFace(false);
+    }
+  };
+
+  const handleResetVerification = () => {
+    handleSetIdFile(null);
+    handleSetBackIdFile(null);
+    setScanSuccessBanner(null);
+  };
+
+  // Submits the finalized resident account registration payload with verification token.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting || isDone) return;
@@ -247,7 +475,10 @@ export default function RegisterPage() {
     setErrorMessage(null);
     setSuccessMessage(null);
 
-    // Defensive checks (the button is already disabled until these pass).
+    if (!verificationToken) {
+      setErrorMessage('Identity verification is required. Please verify your Government ID and Face Biometrics.');
+      return;
+    }
     if (password.length < MIN_PASSWORD_LENGTH) {
       setErrorMessage(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
       return;
@@ -265,29 +496,34 @@ export default function RegisterPage() {
 
     try {
       const normalizedResidentId = residentIdNum.trim().toUpperCase();
+      const cleanEmail = email.trim().toLowerCase();
 
       await registerResident({
-        email: email.trim().toLowerCase(),
+        email: cleanEmail,
         password,
         full_name: fullName.trim(),
         area_id: areaId ? Number(areaId) : null,
         resident_id_num: normalizedResidentId || undefined,
+        verification_token: verificationToken,
       });
 
-      if (typeof window !== 'undefined' && normalizedResidentId) {
+      if (typeof window !== 'undefined') {
         try {
-          localStorage.setItem('sabtrack_registered_resident_id', normalizedResidentId);
+          if (normalizedResidentId) {
+            localStorage.setItem('sabtrack_registered_resident_id', normalizedResidentId);
+          }
+          localStorage.setItem('sabtrack_registered_email', cleanEmail);
         } catch {
-          // Storage can be unavailable (private mode, blocked site data). Safe to ignore.
+          // Ignore storage unavailability in private browsing
         }
       }
 
-      // Stay in the submitting state so the form can't be sent twice during the redirect.
       setIsDone(true);
-      setSuccessMessage('Resident account registered successfully! Redirecting you to sign in…');
+      setIsSubmitting(false);
+      setSuccessMessage('Resident identity verified and account registered successfully! Redirecting to sign in…');
       redirectTimer.current = setTimeout(() => {
-        router.replace('/login');
-      }, 1500);
+        router.push(`/login?email=${encodeURIComponent(cleanEmail)}&registered=true`);
+      }, 500);
     } catch (err) {
       setErrorMessage(
         err instanceof Error && err.message
@@ -339,7 +575,7 @@ export default function RegisterPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 text-left mb-2">
             Register as a Resident
           </h1>
-          <p className="text-sm text-slate-500 text-left mb-8">
+          <p className="text-sm text-slate-500 text-left mb-6">
             Create your resident account to access schedules and earn SAB-Points
           </p>
 
@@ -366,19 +602,491 @@ export default function RegisterPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full name */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* ========================================================= */}
+            {/* 2-Step Government ID & Facial Biometric Verification      */}
+            {/* ========================================================= */}
+            <div className="rounded-2xl border border-emerald-200/90 bg-emerald-50/50 p-4 sm:p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs sm:text-sm font-bold text-slate-900">
+                      Government ID &amp; Facial Biometric Verification
+                    </h2>
+                    <p className="text-[11px] text-slate-500">
+                      Two-step verification: Official ID OCR extraction &amp; Live Face Liveness Match
+                    </p>
+                  </div>
+                </div>
+
+                {isVerified && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold">
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                    Verified ({Math.round((matchScore || 0) * 100)}%)
+                  </span>
+                )}
+              </div>
+
+              {!isVerified ? (
+                <div className="space-y-3.5 pt-1">
+                  {/* ---------------------------------------------------- */}
+                  {/* Step 1: Government ID Document (Upload or Camera)    */}
+                  {/* ---------------------------------------------------- */}
+                  <div className="p-3.5 rounded-xl bg-white border border-emerald-200/90 shadow-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-bold flex items-center justify-center">1</span>
+                        Step 1: Government ID Document
+                      </span>
+                      {tempVerificationId && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                          <Check className="w-3 h-3 text-emerald-600" />
+                          ID Scanned &amp; Details Extracted
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Select ID Type */}
+                    <div>
+                      <label htmlFor="idType" className="block text-xs font-semibold text-slate-700 mb-1">
+                        Select Government ID Type
+                      </label>
+                      <select
+                        id="idType"
+                        name="idType"
+                        value={selectedIdType}
+                        onChange={(e) => setSelectedIdType(e.target.value as SupportedIdType)}
+                        disabled={locked || isScanningId || isMatchingFace}
+                        className={`${underlineInput} cursor-pointer text-xs`}
+                      >
+                        {SUPPORTED_IDS.map((id) => (
+                          <option key={id.type} value={id.type}>
+                            {id.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Government ID Images (Front & Back) */}
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-700 mb-0.5">
+                          Government ID Images (Front &amp; Back)
+                        </label>
+                        <p className="text-[11px] text-slate-500">
+                          Provide both the front and back of your ID using your device camera or image upload.
+                        </p>
+                      </div>
+
+                      {/* 2-Column Responsive Card Grid for Front and Back of ID */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {/* ==================== FRONT OF ID ==================== */}
+                        <div className="flex flex-col space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Front of ID</span>
+                              <span className="text-[10px] font-semibold text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded-full">
+                                Required
+                              </span>
+                            </span>
+                            {idFile && (
+                              <button
+                                type="button"
+                                onClick={handleDeleteIdImage}
+                                disabled={locked || isScanningId}
+                                aria-label="Delete ID image"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:text-rose-800 transition"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Hidden file input for front of ID */}
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            id="idUploadInput"
+                            name="idUploadInput"
+                            data-testid="id-upload-input"
+                            accept="image/jpeg,image/png,image/webp"
+                            disabled={locked || isScanningId || isMatchingFace}
+                            onChange={handleIdFileChange}
+                            className="sr-only"
+                          />
+
+                          {/* ID Card Shape Container */}
+                          <div
+                            className={`relative w-full aspect-[1.586/1] rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
+                              idFile
+                                ? 'border-emerald-300 bg-slate-950 shadow-sm'
+                                : 'border-2 border-dashed border-emerald-300/80 bg-white hover:border-emerald-500 hover:bg-emerald-50/20'
+                            }`}
+                          >
+                            {idFile ? (
+                              <>
+                                {idPreviewUrl ? (
+                                  <img
+                                    src={idPreviewUrl}
+                                    alt="Front of ID Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-emerald-950 flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-emerald-400" />
+                                  </div>
+                                )}
+                                {/* Bottom Action Bar Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 border-t border-slate-700/60 flex items-center justify-between text-white animate-in fade-in">
+                                  <div className="truncate mr-2">
+                                    <p className="text-[11px] font-bold text-white truncate max-w-[120px] sm:max-w-[140px]">
+                                      {idFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-300">
+                                      {(idFile.size / 1024).toFixed(0)} KB &bull; Front Ready
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <label
+                                      htmlFor="idUploadInput"
+                                      title="Replace Front Image"
+                                      aria-label="Replace Front Image"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer transition"
+                                    >
+                                      <Upload className="w-3.5 h-3.5" />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenIdCamera('front')}
+                                      disabled={locked || isScanningId || isMatchingFace}
+                                      title="Retake Front Photo"
+                                      aria-label="Retake Front Photo"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition"
+                                    >
+                                      <Camera className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                                <div className="w-9 h-9 rounded-full bg-emerald-50 border border-emerald-200/80 flex items-center justify-center text-emerald-600 mb-1">
+                                  <CreditCard className="w-4 h-4" />
+                                </div>
+                                <p className="text-xs font-semibold text-slate-800">
+                                  Front Side
+                                </p>
+                                <p className="text-[10px] text-slate-500 mb-2">
+                                  Portrait &amp; Full Legal Name
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                  <label
+                                    htmlFor="idUploadInput"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 hover:border-emerald-500 cursor-pointer shadow-sm transition"
+                                  >
+                                    <Upload className="w-3 h-3 text-emerald-600" />
+                                    <span>Choose ID File</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenIdCamera('front')}
+                                    disabled={locked || isScanningId || isMatchingFace}
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-sm transition"
+                                  >
+                                    <Camera className="w-3 h-3" />
+                                    <span>Scan with Camera</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* ==================== BACK OF ID ==================== */}
+                        <div className="flex flex-col space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                              <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Back of ID</span>
+                              <span className="text-[10px] font-normal text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                                Recommended
+                              </span>
+                            </span>
+                            {idBackFile && (
+                              <button
+                                type="button"
+                                onClick={handleDeleteBackIdImage}
+                                disabled={locked || isScanningId}
+                                aria-label="Delete back ID image"
+                                className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600 hover:text-rose-800 transition"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-600" />
+                                <span>Delete</span>
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Hidden file input for back of ID */}
+                          <input
+                            ref={backFileInputRef}
+                            type="file"
+                            id="idUploadBackInput"
+                            name="idUploadBackInput"
+                            data-testid="id-upload-back-input"
+                            accept="image/jpeg,image/png,image/webp"
+                            disabled={locked || isScanningId || isMatchingFace}
+                            onChange={handleBackIdFileChange}
+                            className="sr-only"
+                          />
+
+                          {/* ID Card Shape Container */}
+                          <div
+                            className={`relative w-full aspect-[1.586/1] rounded-2xl overflow-hidden border transition-all flex flex-col justify-between ${
+                              idBackFile
+                                ? 'border-emerald-300 bg-slate-950 shadow-sm'
+                                : 'border-2 border-dashed border-slate-300 bg-white hover:border-slate-400 hover:bg-slate-50/50'
+                            }`}
+                          >
+                            {idBackFile ? (
+                              <>
+                                {idBackPreviewUrl ? (
+                                  <img
+                                    src={idBackPreviewUrl}
+                                    alt="Back of ID Preview"
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-slate-950 flex items-center justify-center">
+                                    <ImageIcon className="w-8 h-8 text-slate-400" />
+                                  </div>
+                                )}
+                                {/* Bottom Action Bar Overlay */}
+                                <div className="absolute inset-x-0 bottom-0 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 border-t border-slate-700/60 flex items-center justify-between text-white animate-in fade-in">
+                                  <div className="truncate mr-2">
+                                    <p className="text-[11px] font-bold text-white truncate max-w-[120px] sm:max-w-[140px]">
+                                      {idBackFile.name}
+                                    </p>
+                                    <p className="text-[10px] text-emerald-300">
+                                      {(idBackFile.size / 1024).toFixed(0)} KB &bull; Back Ready
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <label
+                                      htmlFor="idUploadBackInput"
+                                      title="Replace Back Image"
+                                      aria-label="Replace Back Image"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer transition"
+                                    >
+                                      <Upload className="w-3.5 h-3.5" />
+                                    </label>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenIdCamera('back')}
+                                      disabled={locked || isScanningId || isMatchingFace}
+                                      title="Retake Back Photo"
+                                      aria-label="Retake Back Photo"
+                                      className="p-1 rounded-md text-slate-300 hover:text-white hover:bg-slate-800 transition"
+                                    >
+                                      <Camera className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center">
+                                <div className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 mb-1">
+                                  <CreditCard className="w-4 h-4" />
+                                </div>
+                                <p className="text-xs font-semibold text-slate-800">
+                                  Back Side
+                                </p>
+                                <p className="text-[10px] text-slate-500 mb-2">
+                                  Barcode, Address &amp; Signature
+                                </p>
+                                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                  <label
+                                    htmlFor="idUploadBackInput"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-slate-700 bg-slate-100 border border-slate-300 hover:bg-slate-200 hover:border-slate-400 cursor-pointer shadow-sm transition"
+                                  >
+                                    <Upload className="w-3 h-3 text-slate-600" />
+                                    <span>Upload Back</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenIdCamera('back')}
+                                    disabled={locked || isScanningId || isMatchingFace}
+                                    aria-label="Take Back Photo"
+                                    className="inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-semibold text-white bg-slate-700 hover:bg-slate-800 shadow-sm transition"
+                                  >
+                                    <Camera className="w-3 h-3" />
+                                    <span>Take Back Photo</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Scan Trigger Button & Feedback */}
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={handleScanId}
+                          disabled={locked || !idFile || isScanningId || Boolean(tempVerificationId)}
+                          className="inline-flex items-center justify-center rounded-full px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 transition"
+                        >
+                          {isScanningId ? (
+                            <>
+                              <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                              Extracting details…
+                            </>
+                          ) : tempVerificationId ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 mr-1.5" />
+                              Details Extracted
+                            </>
+                          ) : (
+                            'Scan & Process ID'
+                          )}
+                        </button>
+
+                        {tempVerificationId ? (
+                          <span className="text-[11px] text-emerald-700 font-medium">
+                            ✓ ID processed. Extracted details pasted below.
+                          </span>
+                        ) : idFile ? (
+                          <span className="text-[11px] text-slate-500">
+                            {idBackFile ? 'Front & Back IDs ready to scan.' : 'Front ID ready to scan (Back ID optional).'}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Feedback banner when ID scan finishes and pastes details */}
+                  {scanSuccessBanner && (
+                    <div className="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 text-emerald-900 text-xs flex items-center gap-2 animate-in fade-in">
+                      <CheckCircle className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span>{scanSuccessBanner}</span>
+                    </div>
+                  )}
+
+                  {/* ---------------------------------------------------- */}
+                  {/* Step 2: Facial Biometric Verification (Always Visible)*/}
+                  {/* ---------------------------------------------------- */}
+                  <div
+                    className={`p-3.5 rounded-xl border transition-all ${
+                      tempVerificationId
+                        ? 'bg-white border-emerald-300 shadow-sm ring-2 ring-emerald-500/10'
+                        : 'bg-slate-50/80 border-slate-200/80 opacity-80'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center ${
+                              tempVerificationId
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            2
+                          </span>
+                          <p className="text-xs font-bold text-slate-800">
+                            Step 2: Live Facial Biometric Verification
+                          </p>
+                        </div>
+                        <p className="text-[11px] text-slate-500 pl-7">
+                          {tempVerificationId
+                            ? 'Camera active liveness: Follow prompts (head turns & blink) to match your live face with the ID portrait.'
+                            : 'Complete Step 1 (Scan Government ID) above to unlock live facial recognition.'}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsCameraModalOpen(true)}
+                        disabled={locked || !tempVerificationId || isMatchingFace}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-full px-5 py-2.5 text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md shadow-emerald-700/20 disabled:opacity-40 disabled:cursor-not-allowed transition shrink-0"
+                      >
+                        {isMatchingFace ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            Matching Biometrics…
+                          </>
+                        ) : (
+                          <>
+                            <Camera className="w-3.5 h-3.5 mr-1.5" />
+                            Start Face Verification
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* Verified Summary */
+                <div className="p-3.5 rounded-xl bg-white border border-emerald-200 shadow-sm space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
+                        <UserCheck className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-900">
+                          {extractedData?.full_name || fullName}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {SUPPORTED_IDS.find((i) => i.type === selectedIdType)?.label} &bull;{' '}
+                          {extractedData?.id_number_masked || residentIdNum}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleResetVerification}
+                      disabled={locked}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 underline"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Re-verify
+                    </button>
+                  </div>
+                  {verificationDetails && (
+                    <div className="text-[11px] text-emerald-900 bg-emerald-50/80 border border-emerald-200/80 rounded-lg p-2.5 leading-relaxed">
+                      <span className="font-bold text-emerald-950">Feature Analysis:</span> {verificationDetails}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Full legal name */}
             <div>
-              <label htmlFor="fullName" className={labelClass}>
-                Full legal name
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="fullName" className={labelClass}>
+                  Full legal name
+                </label>
+                {tempVerificationId && (
+                  <span className="text-[11px] font-semibold text-emerald-700">
+                    Extracted from ID (editable)
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   id="fullName"
                   name="fullName"
                   type="text"
                   autoComplete="name"
-                  autoFocus
                   required
                   disabled={locked}
                   value={fullName}
@@ -393,9 +1101,16 @@ export default function RegisterPage() {
             {/* Resident ID + Purok */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
               <div>
-                <label htmlFor="residentIdNum" className={labelClass}>
-                  Resident ID number
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="residentIdNum" className={labelClass}>
+                    Resident ID number
+                  </label>
+                  {tempVerificationId && (
+                    <span className="text-[11px] font-semibold text-emerald-700">
+                      Extracted from ID
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <input
                     id="residentIdNum"
@@ -415,7 +1130,7 @@ export default function RegisterPage() {
                   <ValidTick show={residentIdNum.trim().length > 3} />
                 </div>
                 <p id="residentIdHelp" className="text-[11px] text-slate-500 mt-1">
-                  Your official Barangay Sabang ID.
+                  Your official Barangay Sabang or verified government ID number.
                 </p>
               </div>
 
@@ -552,11 +1267,28 @@ export default function RegisterPage() {
               </span>
             </label>
 
+            {/* Verification Status Guidance */}
+            {!isVerified && (
+              <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 rounded-xl p-2.5 text-center">
+                Please complete the Government ID and Face Biometrics verification above to enable account creation.
+              </p>
+            )}
+
             {/* Actions */}
             <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 pt-2">
               <button
                 type="submit"
-                disabled={locked || !canSubmit}
+                onClick={
+                  isDone
+                    ? (e) => {
+                        e.preventDefault();
+                        router.push(
+                          `/login?email=${encodeURIComponent(email.trim().toLowerCase())}&registered=true`
+                        );
+                      }
+                    : undefined
+                }
+                disabled={isSubmitting || (!isDone && !canSubmit)}
                 aria-label="Create Resident Account"
                 aria-busy={isSubmitting}
                 className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-bold text-white
@@ -570,12 +1302,11 @@ export default function RegisterPage() {
                 ) : isSubmitting ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" />
                 ) : null}
-                {isDone ? 'Account created' : isSubmitting ? 'Creating account…' : 'Create Resident Account'}
+                {isDone ? 'Proceed to Sign In →' : isSubmitting ? 'Creating account…' : 'Create Resident Account'}
               </button>
 
               <Link
-                href="/login"
-                aria-disabled={locked}
+                href={`/login${email.trim() ? `?email=${encodeURIComponent(email.trim().toLowerCase())}` : ''}`}
                 className="inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold
                   text-emerald-800 border-2 border-emerald-200 bg-white transition
                   hover:border-emerald-500 hover:bg-emerald-50
@@ -585,7 +1316,7 @@ export default function RegisterPage() {
               </Link>
             </div>
 
-            {/* Mobile-only privacy note (desktop shows it in the green panel) */}
+            {/* Mobile-only privacy note */}
             <p className="md:hidden flex items-start gap-2 text-[11px] text-slate-500 leading-relaxed pt-2">
               <ShieldCheck className="w-4 h-4 flex-shrink-0 text-emerald-700" aria-hidden="true" />
               EXIF GPS metadata is removed from report evidence, and your identity is never shown on
@@ -594,6 +1325,21 @@ export default function RegisterPage() {
           </form>
         </div>
       </section>
+
+      {/* Direct Camera Scanner Modal for Government ID */}
+      <IdCaptureModal
+        isOpen={isIdCameraModalOpen}
+        side={activeCameraSide}
+        onCapture={handleIdCameraCaptured}
+        onClose={() => setIsIdCameraModalOpen(false)}
+      />
+
+      {/* Active Liveness Face Capture Modal */}
+      <FaceCaptureModal
+        isOpen={isCameraModalOpen}
+        onCapture={handleFaceCaptured}
+        onClose={() => setIsCameraModalOpen(false)}
+      />
     </div>
   );
 }

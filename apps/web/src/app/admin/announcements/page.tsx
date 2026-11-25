@@ -31,6 +31,7 @@ import {
   AnnouncementCreatePayload,
 } from '@/types/announcements';
 
+// Announcement category options for classifying public notices and emergency advisories.
 const CATEGORIES: { value: AnnouncementCategory; label: string }[] = [
   { value: 'GENERAL', label: 'General Advisory' },
   { value: 'CLEANUP_DRIVE', label: 'Community Clean-Up Drive' },
@@ -39,6 +40,7 @@ const CATEGORIES: { value: AnnouncementCategory; label: string }[] = [
   { value: 'POLICY_UPDATE', label: 'RA 9003 Policy / Ordinance' },
 ];
 
+// Administrative component for composing and publishing official barangay announcements.
 export default function AdminAnnouncementsPage() {
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,7 @@ export default function AdminAnnouncementsPage() {
     is_pinned: false,
   });
 
+  // Loads published announcements from the backend API.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -94,6 +97,7 @@ export default function AdminAnnouncementsPage() {
   };
 
   // Handle Create
+  // Validates character length constraints and publishes new announcement to resident feeds.
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setModalError(null);
@@ -136,6 +140,7 @@ export default function AdminAnnouncementsPage() {
   };
 
   // Handle Delete
+  // Deactivates an announcement record to hide it from resident bulletins.
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to deactivate this announcement?')) return;
     try {

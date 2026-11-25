@@ -41,6 +41,7 @@ import {
 
 const LIME = 'bg-[#b6f23a]';
 
+// Visual badge styling and indicator dot colors for resident complaint status.
 const STATUS_BADGES: Record<
   ReportStatus,
   { label: string; bg: string; text: string; border: string; dot: string }
@@ -79,6 +80,7 @@ function Skeleton({ className = '' }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-slate-200/70 ${className}`} />;
 }
 
+// Renders circular SVG progress meter illustrating progress towards the next 100-point milestone.
 function PointsRing({ value, size = 84 }: { value: number; size?: number }) {
   const stroke = 7;
   const r = (size - stroke) / 2;
@@ -103,6 +105,7 @@ function PointsRing({ value, size = 84 }: { value: number; size?: number }) {
   );
 }
 
+// Multi-step horizontal progress tracker reflecting the 4-phase complaint resolution lifecycle.
 function ReportProgress({ status }: { status: ReportStatus }) {
   if (status === 'REJECTED') {
     return <p className="text-[11px] font-medium text-slate-500">This report was closed without action.</p>;
@@ -133,6 +136,7 @@ function ReportProgress({ status }: { status: ReportStatus }) {
 
 /* ---------- page ---------- */
 
+// Resident portal dashboard providing personal points summary, pickup timetables, and recent report status.
 export default function ResidentDashboard() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -142,6 +146,7 @@ export default function ResidentDashboard() {
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
 
+  // Concurrently retrieves resident reports, points ledger, advisories, announcements, and pickup routes.
   const loadDashboardData = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {

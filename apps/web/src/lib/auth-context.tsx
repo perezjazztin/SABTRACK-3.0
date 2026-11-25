@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, UserRole, LoginCredentials, SessionUserResponse } from '@/types/auth';
-import { login as apiLogin, logout as apiLogout, getMe as apiGetMe } from '@/lib/api-client';
+import { login as apiLogin, loginWithFace as apiLoginWithFace, logout as apiLogout, getMe as apiGetMe } from '@/lib/api-client';
 
 interface AuthContextType {
   user: User | null;
@@ -12,21 +12,28 @@ interface AuthContextType {
   error: string | null;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<User>;
+  loginWithFace: (email: string, faceBlob: Blob) => Promise<User>;
   logout: () => Promise<void>;
   hasPermission: (permission: string) => boolean;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
   refreshSession: () => Promise<void>;
 }
 
+// Context instance providing shared authentication state across the component tree.
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Provider component managing user authentication session, login/logout actions, and role checks.
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Stores current authenticated user object or null when logged out.
   const [user, setUser] = useState<User | null>(null);
+  // Stores atomic permission strings held by current user's role.
   const [permissions, setPermissions] = useState<string[]>([]);
+  // Tracks pending session verification or authentication requests.
   const [loading, setLoading] = useState<boolean>(true);
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Queries /auth/me to restore active user session from HTTP-only cookie on page mount.
   const refreshSession = useCallback(async () => {
     try {
       setLoading(true);
@@ -57,6 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return data.user;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed';
+      setError(message);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loginWithFace = async (email: string, faceBlob: Blob): Promise<User> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiLoginWithFace(email, faceBlob);
+      setUser(data.user);
+      setPermissions(data.permissions || []);
+      return data.user;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Facial verification login failed';
       setError(message);
       throw err;
     } finally {
@@ -108,6 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         error,
         isAuthenticated: !!user,
         login,
+        loginWithFace,
         logout,
         hasPermission,
         hasRole,

@@ -33,6 +33,7 @@ import { getMyPointsSummary, getMyReports } from '@/lib/api-client';
 import { ResidentPointsSummary } from '@/types/gamification';
 import { ReportListResponse } from '@/types/reports';
 
+// Structure representing editable household contact details and notification channel preferences.
 interface ResidentPreferences {
   phone: string;
   householdMembers: number;
@@ -53,6 +54,7 @@ const DEFAULT_PREFERENCES: ResidentPreferences = {
   reportNotifications: true,
 };
 
+// Resident profile component displaying citizen ID credentials, contact preferences, and data privacy safeguards.
 export default function ResidentProfilePage() {
   const { user } = useAuth();
 
@@ -84,6 +86,7 @@ export default function ResidentProfilePage() {
   }, []);
 
   // Fetch real summary & reports data
+  // Retrieves civic stats including awarded SAB-Points balance and report filing history.
   const loadCivicData = useCallback(async () => {
     setLoadingStats(true);
     try {
@@ -114,6 +117,7 @@ export default function ResidentProfilePage() {
     setIsEditModalOpen(true);
   };
 
+  // Persists updated contact preferences to browser storage and triggers confirmation alert.
   const handleSavePreferences = (e: React.FormEvent) => {
     e.preventDefault();
     setPreferences(editForm);

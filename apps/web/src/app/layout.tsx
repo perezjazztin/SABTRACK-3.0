@@ -6,11 +6,12 @@ import { EcoBotWidget } from '@/components/EcoBotWidget';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'SABTRACK 3.0 — Barangay Sabang Solid Waste Management Platform',
+  title: 'SABTRACK 3.0 — A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang',
   description:
-    'Digital governance platform for garbage collection scheduling, community reporting, engagement, and administrative analytics in Barangay Sabang, Lipa City, Batangas.',
+    'A Digital Solid Waste Management and Community Engagement Platform for Barangay Sabang, Lipa City, Batangas.',
 };
 
+// Root application layout injecting global authentication provider and persistent UI chrome.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -19,6 +20,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen flex flex-col bg-civic-sand text-slate-800 antialiased">
+        {/* Global authentication context provider wrapping all client routes */}
         <AuthProvider>
           <Header />
           <main className="flex-1 w-full flex flex-col">

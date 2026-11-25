@@ -37,6 +37,8 @@ from app.modules.gamification.schemas import (
     ArticleReadingCompletion,
     ArticleReadingSessionRead,
     ArticleReadingStatus,
+    AwarenessHeartbeatResponse,
+    AwarenessStatusResponse,
 )
 from app.modules.identity.models import User
 from app.modules.areas.models import Area
@@ -87,17 +89,34 @@ DEFAULT_REWARDS = [
     },
 ]
 
-ELIGIBLE_ARTICLE_IDS = (
-    "article-sdgs-sabtrack",
-    "article-ra-9003",
-    "article-home-composting",
-)
+AWARENESS_RESOURCES = {
+    # Videos
+    "video-segregation-3rs": "Tamang Paghihiwalay ng Basura (Segregation & 3Rs)",
+    "video-ra-9003": "Batas sa Basura (RA 9003 Guidelines)",
+    "video-composting-guide": "Paano Mag-Compost sa Bahay (Home & Container Composting)",
+    # Articles
+    "article-ra-9003": "Republic Act 9003: Ecological Solid Waste Management Act",
+    "article-collection-discipline": "Curbside Collection Etiquette & Schedule Discipline",
+    "article-home-composting": "Backyard & Apartment Composting Guide",
+    "article-diy-waste-reduction": "Zero-Waste Living: 5 Practical Household Swaps",
+    "article-sdgs-sabtrack": "Sustainable Development Goals (SDGs) & Digital Governance",
+    "article-epr-act-11898": "RA 11898: Extended Producer Responsibility (EPR) Act of 2022",
+    "article-open-burning-health": "Health Hazards of Open Burning (Pagsisiga) & Clean Air Act",
+    "article-ewaste-hazardous-safety": "Electronic Waste (E-Waste) & Household Hazardous Materials Protocol",
+    "article-mrf-circular-economy": "Materials Recovery Facility (MRF) Operations & Circular Economy",
+}
+
+ELIGIBLE_ARTICLE_IDS = tuple(AWARENESS_RESOURCES.keys())
 ARTICLE_READING_DAILY_LIMIT = 3
 ARTICLE_READING_POINTS = 5
 ARTICLE_READING_MINIMUM_SECONDS = 20
+AWARENESS_TICK_SECONDS = 45
+AWARENESS_RESOURCE_MAX_POINTS = 5
+AWARENESS_DAILY_POINTS_LIMIT = 20
 PHILIPPINE_TIMEZONE = ZoneInfo("Asia/Manila")
 
 
+# Calculates start and end of current calendar day in Philippine Time (UTC+8) for daily point limits.
 def _article_reading_day_bounds(now: datetime) -> tuple[datetime, datetime]:
     local_now = now.astimezone(PHILIPPINE_TIMEZONE)
     local_start = datetime.combine(
@@ -112,6 +131,7 @@ def _article_reading_day_bounds(now: datetime) -> tuple[datetime, datetime]:
     )
 
 
+# Queries the count of article reading awards claimed today by a resident for daily cap enforcement.
 def _count_article_awards_today(db: Session, resident_id: int, now: datetime) -> int:
     start, end = _article_reading_day_bounds(now)
     return int(
@@ -127,6 +147,7 @@ def _count_article_awards_today(db: Session, resident_id: int, now: datetime) ->
     )
 
 
+# Retrieves educational article reading status and completed article IDs for the current resident.
 def get_article_reading_status(db: Session, resident_id: int) -> ArticleReadingStatus:
     now = datetime.now(timezone.utc)
     completed_article_ids = db.scalars(
@@ -140,6 +161,55 @@ def get_article_reading_status(db: Session, resident_id: int) -> ArticleReadingS
         daily_limit=ARTICLE_READING_DAILY_LIMIT,
         points_per_article=ARTICLE_READING_POINTS,
         minimum_read_seconds=ARTICLE_READING_MINIMUM_SECONDS,
+    )
+
+
+def get_awareness_status(db: Session, resident_id: int) -> AwarenessStatusResponse:
+    now = datetime.now(timezone.utc)
+    start, end = _article_reading_day_bounds(now)
+
+    # Calculate points earned per resource from PointsLedger
+    ledger_points = db.execute(
+        select(PointsLedger.task_source_id)
+        .where(
+            PointsLedger.resident_id == resident_id,
+            PointsLedger.task_key == "awareness_engagement",
+        )
+    ).scalars().all()
+
+    resource_points: dict[str, int] = {}
+    for source_id in ledger_points:
+        if source_id and ":pt-" in source_id:
+            res_id = source_id.split(":pt-")[0]
+            resource_points[res_id] = resource_points.get(res_id, 0) + 1
+
+    # Include legacy awards as 5 base points
+    legacy_awards = db.scalars(
+        select(ArticleReadAward.article_id).where(
+            ArticleReadAward.resident_id == resident_id
+        )
+    ).all()
+    for c_id in legacy_awards:
+        resource_points[c_id] = min(AWARENESS_RESOURCE_MAX_POINTS, resource_points.get(c_id, 0) + 5)
+
+    awareness_pts_today = int(
+        db.scalar(
+            select(func.coalesce(func.sum(PointsLedger.points), 0)).where(
+                PointsLedger.resident_id == resident_id,
+                PointsLedger.transaction_type == TransactionType.ARTICLE_READ_AWARD,
+                PointsLedger.created_at >= start,
+                PointsLedger.created_at < end,
+            )
+        )
+        or 0
+    )
+
+    return AwarenessStatusResponse(
+        resource_points=resource_points,
+        daily_points_today=awareness_pts_today,
+        daily_limit=AWARENESS_DAILY_POINTS_LIMIT,
+        interval_seconds=AWARENESS_TICK_SECONDS,
+        max_points_per_resource=AWARENESS_RESOURCE_MAX_POINTS,
     )
 
 
@@ -306,6 +376,105 @@ def complete_article_reading(
     )
 
 
+def record_awareness_heartbeat(
+    db: Session,
+    resident_id: int,
+    resource_id: str,
+    session_id: Optional[UUID] = None,
+) -> AwarenessHeartbeatResponse:
+    if resource_id not in AWARENESS_RESOURCES:
+        raise ValueError(f"Unknown awareness resource: {resource_id}")
+
+    resident = db.scalar(select(User).where(User.id == resident_id).with_for_update())
+    if not resident:
+        raise ValueError("Resident not found.")
+
+    now = datetime.now(timezone.utc)
+    start, end = _article_reading_day_bounds(now)
+
+    # Count heartbeat points earned for this resource
+    hb_count = int(
+        db.scalar(
+            select(func.count(PointsLedger.id)).where(
+                PointsLedger.resident_id == resident_id,
+                PointsLedger.task_key == "awareness_engagement",
+                PointsLedger.task_source_id.like(f"{resource_id}:pt-%"),
+            )
+        )
+        or 0
+    )
+    legacy_award = db.scalar(
+        select(ArticleReadAward.id).where(
+            ArticleReadAward.resident_id == resident_id,
+            ArticleReadAward.article_id == resource_id,
+        )
+    )
+    base_pts = 5 if legacy_award is not None else 0
+    pts_for_resource = min(AWARENESS_RESOURCE_MAX_POINTS, base_pts + hb_count)
+
+    daily_points = int(
+        db.scalar(
+            select(func.coalesce(func.sum(PointsLedger.points), 0)).where(
+                PointsLedger.resident_id == resident_id,
+                PointsLedger.transaction_type == TransactionType.ARTICLE_READ_AWARD,
+                PointsLedger.created_at >= start,
+                PointsLedger.created_at < end,
+            )
+        )
+        or 0
+    )
+
+    if pts_for_resource >= AWARENESS_RESOURCE_MAX_POINTS:
+        return AwarenessHeartbeatResponse(
+            resource_id=resource_id,
+            status="RESOURCE_CAP_REACHED",
+            points_awarded=0,
+            points_earned=AWARENESS_RESOURCE_MAX_POINTS,
+            max_points=AWARENESS_RESOURCE_MAX_POINTS,
+            daily_points_today=daily_points,
+            daily_limit=AWARENESS_DAILY_POINTS_LIMIT,
+            total_points=get_resident_points_summary(db, resident_id).total_points,
+        )
+
+    if daily_points >= AWARENESS_DAILY_POINTS_LIMIT:
+        return AwarenessHeartbeatResponse(
+            resource_id=resource_id,
+            status="DAILY_LIMIT_REACHED",
+            points_awarded=0,
+            points_earned=pts_for_resource,
+            max_points=AWARENESS_RESOURCE_MAX_POINTS,
+            daily_points_today=daily_points,
+            daily_limit=AWARENESS_DAILY_POINTS_LIMIT,
+            total_points=get_resident_points_summary(db, resident_id).total_points,
+        )
+
+    next_pt = pts_for_resource + 1
+    ledger_entry = PointsLedger(
+        resident_id=resident_id,
+        points=1,
+        transaction_type=TransactionType.ARTICLE_READ_AWARD,
+        description=f"Awareness Hub (+1 pt): {AWARENESS_RESOURCES[resource_id]}",
+        task_key="awareness_engagement",
+        task_source_id=f"{resource_id}:pt-{next_pt}",
+        created_at=now,
+    )
+    db.add(ledger_entry)
+    db.commit()
+
+    new_total = get_resident_points_summary(db, resident_id).total_points
+
+    return AwarenessHeartbeatResponse(
+        resource_id=resource_id,
+        status="AWARDED",
+        points_awarded=1,
+        points_earned=next_pt,
+        max_points=AWARENESS_RESOURCE_MAX_POINTS,
+        daily_points_today=daily_points + 1,
+        daily_limit=AWARENESS_DAILY_POINTS_LIMIT,
+        total_points=new_total,
+    )
+
+
 def ensure_default_rewards(db: Session) -> None:
     """Seeds default rewards catalog if table is empty (e.g. in-memory test isolation)."""
     count = db.scalar(select(func.count(RewardItem.id))) or 0
@@ -450,6 +619,7 @@ def _has_task_award(db: Session, resident_id: int, task_key: str) -> bool:
     ) is not None
 
 
+# Evaluates resident participation submission, updates approval state, and credits points ledger atomically.
 def review_claim(
     db: Session,
     claim_id: int,

@@ -17,6 +17,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+# Categorization enum defining valid waste incident types reported by residents.
 class ReportCategory(str, Enum):
     UNCOLLECTED_GARBAGE = "UNCOLLECTED_GARBAGE"
     ILLEGAL_DUMPING = "ILLEGAL_DUMPING"
@@ -26,6 +27,7 @@ class ReportCategory(str, Enum):
     OTHER = "OTHER"
 
 
+# Lifecycle workflow state enum for community waste incident reports.
 class ReportStatus(str, Enum):
     SUBMITTED = "SUBMITTED"
     UNDER_REVIEW = "UNDER_REVIEW"
@@ -34,10 +36,12 @@ class ReportStatus(str, Enum):
     REJECTED = "REJECTED"
 
 
+# Core database table storing resident waste incident reports with geotags and photos.
 class Report(Base):
     """Community Waste Violation and Uncollected Waste Report."""
     __tablename__ = "reports"
 
+    # Auto-incrementing primary key identifier.
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     resident_id: Mapped[int] = mapped_column(
         Integer,
@@ -113,7 +117,7 @@ class Report(Base):
         nullable=False,
     )
 
-    # Relationships
+    # Relationships with eager loading: resident user, purok area, and audit history.
     resident = relationship("User", foreign_keys=[resident_id], lazy="joined")
     area = relationship("Area", foreign_keys=[area_id], lazy="joined")
     status_history: Mapped[List["ReportStatusHistory"]] = relationship(
@@ -125,6 +129,7 @@ class Report(Base):
     )
 
 
+# Audit trail table recording every status transition and reviewer note for reports.
 class ReportStatusHistory(Base):
     """Immutable audit trail of status transitions for community reports."""
     __tablename__ = "report_status_history"

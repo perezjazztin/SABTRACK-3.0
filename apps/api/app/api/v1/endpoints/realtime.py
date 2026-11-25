@@ -5,6 +5,7 @@ from app.core.logging import logger
 router = APIRouter()
 
 
+# Full duplex WebSocket channel for live browser state updates and client keep-alive pings.
 @router.websocket("/ws")
 async def websocket_realtime_endpoint(websocket: WebSocket):
     """Real-time event notification stream for portal auto-synchronization."""
@@ -18,6 +19,7 @@ async def websocket_realtime_endpoint(websocket: WebSocket):
             if data == "ping":
                 await websocket.send_text("pong")
     except WebSocketDisconnect:
+        # Handles clean client disconnection when user leaves page or closes browser
         ws_manager.disconnect(websocket)
     except Exception as exc:
         logger.debug("WebSocket connection closed: %s", exc)

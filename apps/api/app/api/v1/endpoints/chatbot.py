@@ -12,6 +12,7 @@ from app.modules.chatbot.service import query_ecobot, get_quick_prompts
 
 router = APIRouter()
 
+# POST endpoint handling conversational inquiries with Google Gemini search grounding and offline fallbacks.
 @router.post("/query", response_model=ChatQueryResponse)
 def query_chatbot(
     payload: ChatQueryRequest,

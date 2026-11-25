@@ -7,11 +7,13 @@ from app.modules.announcements.schemas import AnnouncementCreate, AnnouncementRe
 from app.modules.identity.models import User
 
 
+# Queries announcements with eager author loading, prioritizing pinned posts followed by creation date.
 def get_announcements(
     db: Session,
     category: Optional[AnnouncementCategory] = None,
     active_only: bool = True,
 ) -> List[AnnouncementRead]:
+    # Builds select statement with joinedload on author user to prevent lazy load queries.
     stmt = (
         select(Announcement)
         .options(joinedload(Announcement.author))
@@ -48,6 +50,7 @@ def get_announcements(
     return items
 
 
+# Creates and commits a new public announcement published by an authorized barangay staff member.
 def create_announcement(
     db: Session,
     payload: AnnouncementCreate,
@@ -65,6 +68,7 @@ def create_announcement(
         is_demo_data=True,
         author_id=author_id,
     )
+    # Commits announcement to database and refreshes assigned identity.
     db.add(announcement)
     db.commit()
     db.refresh(announcement)
@@ -84,6 +88,7 @@ def create_announcement(
     )
 
 
+# Soft-deactivates an announcement so it no longer displays in active citizen bulletins.
 def deactivate_announcement(db: Session, announcement_id: int) -> bool:
     announcement = db.scalar(select(Announcement).where(Announcement.id == announcement_id))
     if not announcement:

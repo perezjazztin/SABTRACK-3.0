@@ -16,7 +16,9 @@ import { API_BASE_URL } from '@/lib/config';
 import { HealthResponse } from '@/types/api';
 import { StatusCard } from './StatusCard';
 
+// Diagnostic dashboard polling /health and rendering backend and database connection status cards.
 export const HealthDashboard: React.FC = () => {
+  // Local state storing health telemetry, round-trip latency in ms, and fetch errors.
   const [health, setHealth] = useState<HealthResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);

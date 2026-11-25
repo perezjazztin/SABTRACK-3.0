@@ -1,3 +1,4 @@
+// Waste incident category options matching backend ReportCategory enum.
 export type ReportCategory =
   | 'UNCOLLECTED_GARBAGE'
   | 'ILLEGAL_DUMPING'

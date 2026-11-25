@@ -36,7 +36,9 @@ const NAV = [
   { label: 'Contact', id: 'contact', href: '/#contact', icon: PhoneCall },
 ];
 
+// Main civic portal navigation bar with active section indicator, clock, and authentication state.
 export const Header: React.FC = () => {
+  // Consumes authentication session and logout handler from AuthContext.
   const { user, isAuthenticated, logout, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);

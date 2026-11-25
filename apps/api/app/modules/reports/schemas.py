@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from app.modules.reports.models import ReportCategory, ReportStatus
 
 
+# Request schema validating client submission payload for a new waste report.
 class ReportCreate(BaseModel):
     category: ReportCategory = Field(..., description="Category of waste report")
     title: str = Field(..., min_length=5, max_length=200, description="Brief summary of issue")
@@ -15,6 +16,7 @@ class ReportCreate(BaseModel):
     longitude: Optional[float] = Field(None, ge=-180.0, le=180.0, description="GPS Longitude")
     photo_url: str = Field(..., min_length=1, max_length=512, description="Mandatory evidence photo URL or path")
 
+    # Custom validator ensuring photo URL is not empty or whitespace.
     @field_validator("photo_url")
     @classmethod
     def validate_photo_url(cls, v: str) -> str:
@@ -23,12 +25,14 @@ class ReportCreate(BaseModel):
         return v.strip()
 
 
+# Request payload for barangay staff updating report workflow status and remarks.
 class ReportStatusUpdate(BaseModel):
     status: ReportStatus = Field(..., description="New report status")
     remarks: Optional[str] = Field(None, max_length=1000, description="Staff explanation or action taken")
     admin_notes: Optional[str] = Field(None, max_length=1000, description="Internal notes visible to staff/admin")
 
 
+# Historical entry schema showing previous and new status transitions.
 class StatusHistoryRead(BaseModel):
     id: int
     previous_status: Optional[str] = None
@@ -41,6 +45,7 @@ class StatusHistoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Detailed report response schema including creator information, location, and full history.
 class ReportRead(BaseModel):
     id: int
     resident_id: int
@@ -64,6 +69,7 @@ class ReportRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Envelope response schema returning paginated list of reports and total record count.
 class ReportListResponse(BaseModel):
     items: List[ReportRead]
     total: int

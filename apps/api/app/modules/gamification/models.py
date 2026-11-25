@@ -19,18 +19,21 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 
+# Status enum for resident civic task participation claims.
 class ClaimStatus(str, Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
     REJECTED = "REJECTED"
 
 
+# Activity categories eligible for civic participation points.
 class ClaimActivityType(str, Enum):
     SEGREGATION = "SEGREGATION"
     COMMUNITY_CLEANUP = "COMMUNITY_CLEANUP"
     OTHER = "OTHER"
 
 
+# Status enum tracking voucher redemption requests through fulfillment.
 class RedemptionStatus(str, Enum):
     PENDING = "PENDING"
     APPROVED = "APPROVED"
@@ -38,6 +41,7 @@ class RedemptionStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+# Transaction category enum for immutable double-entry ledger bookkeeping.
 class TransactionType(str, Enum):
     CLAIM_AWARD = "CLAIM_AWARD"
     CIVIC_BONUS = "CIVIC_BONUS"
@@ -46,6 +50,7 @@ class TransactionType(str, Enum):
     ARTICLE_READ_AWARD = "ARTICLE_READ_AWARD"
 
 
+# Database table for scheduled environmental campaigns and community cleanups.
 class Initiative(Base):
     """Community clean-up activity or environmental campaign eligible for points."""
     __tablename__ = "initiatives"
@@ -66,6 +71,7 @@ class Initiative(Base):
     )
 
 
+# Database table recording resident participation submissions with evidence photos.
 class ParticipationClaim(Base):
     """Resident submission claiming attendance or verified waste segregation for points."""
     __tablename__ = "participation_claims"
@@ -119,6 +125,7 @@ class ParticipationClaim(Base):
     reviewer = relationship("User", foreign_keys=[reviewed_by_id])
 
 
+# Immutable double-entry ledger tracking points earned and spent with idempotency constraints.
 class PointsLedger(Base):
     """Immutable double-entry transaction record for SAB-Points balance calculation."""
     __tablename__ = "points_ledger"

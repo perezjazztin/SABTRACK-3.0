@@ -5,7 +5,7 @@ from typing import Set
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 
-# Argon2id password hasher with standard memory/time cost parameters
+# Argon2id password hasher configured with memory cost (64MB) and time cost for secure hashing.
 _ph = PasswordHasher(
     time_cost=2,
     memory_cost=65536,  # 64 MiB
@@ -15,6 +15,7 @@ _ph = PasswordHasher(
 )
 
 
+# Defines standard application roles for role-based access control (RBAC).
 class UserRole(str, Enum):
     """User roles for SABTRACK Role-Based Access Control."""
     RESIDENT = "RESIDENT"
@@ -22,6 +23,7 @@ class UserRole(str, Enum):
     BARANGAY_ADMIN = "BARANGAY_ADMIN"
 
 
+# Defines atomic permissions representing distinct system capabilities.
 class Permission(str, Enum):
     """Atomic permissions defining granular access capabilities."""
     PROFILE_READ_SELF = "profile:read:self"
@@ -37,7 +39,7 @@ class Permission(str, Enum):
     USERS_READ = "users:read"
 
 
-# Centralized least-privilege role-to-permission mapping
+# Centralized least-privilege role-to-permission mapping dictionary.
 ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
     UserRole.RESIDENT: {
         Permission.PROFILE_READ_SELF,
@@ -72,16 +74,19 @@ ROLE_PERMISSIONS: dict[UserRole, Set[Permission]] = {
 }
 
 
+# Checks if a given role is granted the requested permission by inspecting the permission set.
 def has_permission(role: UserRole, permission: Permission) -> bool:
     """Verifies whether a given role holds the specified permission."""
     return permission in ROLE_PERMISSIONS.get(role, set())
 
 
+# Produces a secure Argon2id cryptographic hash string from a plaintext password.
 def hash_password(password: str) -> str:
     """Hashes a plaintext password using Argon2id."""
     return _ph.hash(password)
 
 
+# Validates a candidate password against an existing Argon2id hash, resisting timing attacks.
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plaintext password against an Argon2id hash."""
     try:
@@ -92,16 +97,19 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
+# Generates an opaque, cryptographically random URL-safe string for user session tokens.
 def generate_session_token() -> str:
     """Generates an opaque, cryptographically secure 256-bit URL-safe token."""
     return secrets.token_urlsafe(32)
 
 
+# Calculates a deterministic SHA-256 hex digest to store tokens securely without storing raw credentials.
 def hash_token(token: str) -> str:
     """Computes a SHA-256 hash of a session token for secure database storage at rest."""
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+# Generates an anti-CSRF token paired with the user's active session.
 def generate_csrf_token() -> str:
     """Generates a cryptographically secure CSRF token."""
     return secrets.token_urlsafe(32)

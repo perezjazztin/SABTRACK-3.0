@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from app.modules.schedules.models import DayOfWeek, WasteType, AdvisoryType
 
 
+# Request schema for configuring a new collection schedule entry.
 class ScheduleCreate(BaseModel):
     area_id: int = Field(..., description="ID of the barangay area/purok")
     day_of_week: DayOfWeek = Field(..., description="Collection day of week")
@@ -14,6 +15,7 @@ class ScheduleCreate(BaseModel):
     notes: Optional[str] = Field(None, max_length=500, description="Optional pickup guidance")
 
 
+# Schema for partially modifying schedule fields (all fields optional).
 class ScheduleUpdate(BaseModel):
     area_id: Optional[int] = Field(None, description="ID of the barangay area/purok")
     day_of_week: Optional[DayOfWeek] = Field(None, description="Collection day of week")
@@ -24,6 +26,7 @@ class ScheduleUpdate(BaseModel):
     is_active: Optional[bool] = Field(None, description="Active status of the schedule")
 
 
+# Response schema returning schedule details along with human-readable area name.
 class ScheduleRead(BaseModel):
     id: int
     area_id: int
@@ -42,6 +45,7 @@ class ScheduleRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Request schema for broadcasting an emergency or operational collection advisory.
 class AdvisoryCreate(BaseModel):
     area_id: Optional[int] = Field(None, description="Optional area ID (None = barangay-wide)")
     title: str = Field(..., min_length=3, max_length=150, description="Advisory headline")
@@ -50,6 +54,7 @@ class AdvisoryCreate(BaseModel):
     effective_date: str = Field(..., min_length=4, max_length=30, description="Target date or date range")
 
 
+# Response schema for published schedule advisory notices.
 class AdvisoryRead(BaseModel):
     id: int
     area_id: Optional[int] = None
@@ -65,20 +70,24 @@ class AdvisoryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Envelope schema for schedule listing endpoints.
 class ScheduleListResponse(BaseModel):
     items: List[ScheduleRead]
     total: int
 
 
+# Envelope schema for advisory listing endpoints.
 class AdvisoryListResponse(BaseModel):
     items: List[AdvisoryRead]
     total: int
 
 
+# Request schema for dispatching collection reminder notifications.
 class ScheduleNotificationRequest(BaseModel):
     email: Optional[str] = Field(None, max_length=255, description="Recipient email address for reminders")
 
 
+# Response schema confirming reminder dispatch details.
 class ScheduleNotificationResponse(BaseModel):
     message: str
     schedule_id: int

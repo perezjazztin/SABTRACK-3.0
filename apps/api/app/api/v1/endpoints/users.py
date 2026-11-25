@@ -18,6 +18,7 @@ from app.modules.identity.schemas import (
 router = APIRouter()
 
 
+# GET endpoint listing user accounts with role filtering, active status, and search query.
 @router.get("", response_model=UserListResponse, summary="List system users (Admin)")
 def list_users(
     role: Optional[UserRole] = Query(None, description="Filter by user role"),
